@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <title>Pico MultiView</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="drag-region"></div>
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="logo">◉</span>
+          <div>
+            <h1>Pico MultiView</h1>
+            <p id="summary">Nessun visore collegato</p>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="btn-scan" class="btn">Cerca in rete</button>
+          <button id="btn-sync" class="btn">Aggiorna</button>
+          <button id="btn-add" class="btn">Aggiungi IP…</button>
+          <button id="btn-usb" class="btn" title="Prende i visori collegati via USB e li passa al wifi">Adotta USB</button>
+          <label class="switch" title="Quando è armato, il mouse tocca davvero lo schermo del visore">
+            <input type="checkbox" id="pointer-toggle" />
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+            <span class="switch-label">Puntatore</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="commandbar">
+        <div class="selection">
+          <button id="btn-select-all" class="chip">Tutti</button>
+          <button id="btn-select-none" class="chip">Nessuno</button>
+          <span id="selection-count" class="muted">0 selezionati</span>
+        </div>
+
+        <div class="command-group">
+          <select id="app-select" class="select"></select>
+          <button id="btn-launch" class="btn btn-primary">Avvia</button>
+          <button id="btn-stop" class="btn">Chiudi questa</button>
+          <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
+          <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
+        </div>
+
+        <div class="command-group">
+          <button id="btn-home" class="btn">Home</button>
+          <button id="btn-back" class="btn">Indietro</button>
+          <button id="btn-vol-down" class="btn">Vol −</button>
+          <button id="btn-vol-up" class="btn">Vol +</button>
+          <button id="btn-reboot" class="btn btn-danger">Riavvia</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty">
+        <h2>Nessun visore collegato</h2>
+        <p>
+          Collega i PICO 4 alla stessa rete wifi del Mac, autorizza una volta il debug USB su ciascuno,
+          poi premi <strong>Adotta USB</strong> (con il visore attaccato) oppure <strong>Cerca in rete</strong>.
+        </p>
+        <p class="muted">Guida completa: <code>docs/SETUP-PICO.md</code></p>
+      </div>
+    </main>
+
+    <section id="focus" class="focus hidden">
+      <div class="focus-head">
+        <h2 id="focus-title">Visore</h2>
+        <div class="focus-actions">
+          <button id="focus-home" class="btn">Home</button>
+          <button id="focus-back" class="btn">Indietro</button>
+          <button id="focus-close-fg" class="btn">Chiudi app attiva</button>
+          <button id="focus-exit" class="btn btn-primary">Torna al mosaico</button>
+        </div>
+      </div>
+      <div class="focus-video"><canvas id="focus-canvas"></canvas></div>
+      <p class="muted focus-hint">
+        Tasto destro = Indietro · rotellina = scorrimento · frecce/Invio/Esc funzionano da tastiera.
+      </p>
+    </section>
+
+    <footer class="statusbar">
+      <button id="btn-log" class="chip">Log</button>
+      <span id="status-line" class="muted"></span>
+      <span id="pointer-warning" class="pill pill-warn hidden">Puntatore armato</span>
+    </footer>
+
+    <div id="log-panel" class="log-panel hidden"><pre id="log-text"></pre></div>
+
+    <!-- Modale: libreria app -->
+    <div id="apps-modal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Libreria app</h2>
+        <p class="muted">Le app che vuoi poter lanciare sui visori con un clic.</p>
+        <ul id="apps-list" class="apps-list"></ul>
+        <form id="app-form" class="app-form">
+          <input id="app-name" placeholder="Nome (es. Museo VR)" required />
+          <input id="app-package" placeholder="Package (es. com.tuastudio.museo)" required />
+          <input id="app-activity" placeholder="Activity (opzionale)" />
+          <button class="btn btn-primary" type="submit">Aggiungi</button>
+        </form>
+        <div class="modal-actions">
+          <button id="btn-detect" class="btn">Rileva app installate</button>
+          <button id="apps-close" class="btn btn-primary">Chiudi</button>
+        </div>
+        <div id="detect-result" class="detect-result"></div>
+      </div>
+    </div>
+
+    <!-- Modale: impostazioni visore -->
+    <div id="device-modal" class="modal hidden">
+      <div class="modal-card">
+        <h2 id="device-modal-title">Visore</h2>
+        <label class="field">
+          <span>Nome</span>
+          <input id="device-label" placeholder="Visore 1" />
+        </label>
+        <label class="field">
+          <span>Modalità immagine</span>
+          <select id="device-mirror">
+            <option value="scrcpy">scrcpy (video fluido, consigliata)</option>
+            <option value="screencap">screencap (istantanee, compatibilità)</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Display</span>
+          <select id="device-display"></select>
+        </label>
+        <label class="field">
+          <span>Ritaglio (L:A:X:Y, vuoto = nessuno)</span>
+          <input id="device-crop" placeholder="es. 1920:1920:0:0 per un occhio solo" />
+        </label>
+        <div class="modal-actions">
+          <button id="device-remove" class="btn btn-danger">Rimuovi visore</button>
+          <button id="device-save" class="btn btn-primary">Salva</button>
+          <button id="device-cancel" class="btn">Annulla</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale: aggiungi per IP -->
+    <div id="ip-modal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Aggiungi visore per IP</h2>
+        <form id="ip-form" class="app-form">
+          <input id="ip-host" placeholder="192.168.1.51" required />
+          <input id="ip-port" placeholder="5555" value="5555" />
+          <button class="btn btn-primary" type="submit">Collega</button>
+        </form>
+        <div class="modal-actions"><button id="ip-close" class="btn">Chiudi</button></div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
