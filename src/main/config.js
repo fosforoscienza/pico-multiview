@@ -8,6 +8,13 @@ export const DEFAULT_CONFIG = {
   devices: [
     // { serial: "192.168.1.51:5555", label: "Visore 1", crop: null, displayId: 0, mirror: "scrcpy" }
   ],
+  // Postazioni della schermata principale: slots[i] = seriale o null.
+  // Sono la mappa fisica dell'evento, quindi l'ordine conta e va conservato.
+  slotCount: 10,
+  slots: [null, null, null, null, null, null, null, null, null, null],
+  // Visori collegati che l'operatore ha tolto da uno slot: restano raggiungibili
+  // ma non vengono riassegnati da soli alla prima postazione libera.
+  unassigned: [],
   // Libreria app mostrata nella barra comandi.
   apps: [
     // { id, name, package, activity }
@@ -16,8 +23,6 @@ export const DEFAULT_CONFIG = {
     grid: { maxSize: 800, bitRate: 2_000_000, maxFps: 20 },
     focus: { maxSize: 1280, bitRate: 6_000_000, maxFps: 30 },
   },
-  // Il puntatore parte disattivato: durante un evento non vuoi cliccare per sbaglio.
-  pointerEnabled: false,
   autoConnect: true,
   autoReconnect: true,
   screencapIntervalMs: 700,

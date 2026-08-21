@@ -19,25 +19,9 @@ const quitAfter = Number(process.argv.find((a) => a.startsWith('--quit-after='))
 // Anteprima della UI senza visori: "npm start -- --demo=10".
 const demoDevices = Number(process.argv.find((a) => a.startsWith('--demo='))?.split('=')[1] ?? 0);
 
-/** Visori finti, solo per vedere come si dispone il mosaico. */
-function buildDemoDevices(count) {
-  return Array.from({ length: count }, (_, i) => ({
-    serial: `192.168.1.${50 + i}:5555`,
-    label: `Visore ${i + 1}`,
-    displayName: `Visore ${i + 1}`,
-    state: 'streaming',
-    error: null,
-    info: { model: 'PICO 4' },
-    status: { battery: 95 - i * 6, foreground: 'com.esempio.app', updatedAt: Date.now() },
-    videoSize: { width: 800, height: 400 },
-    mirror: 'scrcpy',
-    crop: null,
-    displayId: 0,
-    quality: {},
-  }));
-}
-
 let mainWindow = null;
+let stopDemo = null;
+let demoList = null; // elenco finto usato solo con --demo
 let config = null;
 let manager = null;
 
@@ -135,7 +119,7 @@ function registerIpc() {
   handle('config:get', () => config.data);
   handle('config:patch', (patch) => config.patch(patch));
 
-  handle('devices:list', () => manager.list());
+  handle('devices:list', () => demoList ?? manager.list());
   handle('devices:sync', () => manager.sync());
   handle('devices:scan', ({ subnets, port, timeout }) =>
     manager.scan({
@@ -182,11 +166,13 @@ function registerIpc() {
     config.upsertDevice({ serial, displayId });
     await d.setDisplayId(displayId);
   });
+  // La qualità è una preferenza di visualizzazione: se il visore non c'è più
+  // non è un errore da mostrare all'operatore.
   handle('device:quality', async ({ serial, profile }) => {
     const d = manager.get(serial);
-    if (!d) throw new Error('visore sconosciuto');
-    const quality = config.data.quality[profile] ?? config.data.quality.grid;
-    await d.setQuality(quality);
+    if (!d) return null;
+    await d.setQuality(config.data.quality[profile] ?? config.data.quality.grid);
+    return profile;
   });
   handle('device:packages', ({ serial, includeSystem }) => manager.get(serial)?.listPackages(includeSystem));
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
@@ -240,7 +226,12 @@ app.whenReady().then(async () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  if (demoDevices) setTimeout(() => send('devices', buildDemoDevices(demoDevices)), 1200);
+  if (demoDevices) {
+    const demo = await import('./demo.js');
+    demoList = demo.buildDemoDevices(demoDevices);
+    send('devices', demoList);
+    stopDemo = demo.startDemoFrames(demoDevices, send);
+  }
   if (quitAfter) setTimeout(() => app.quit(), quitAfter * 1000);
 });
 
@@ -249,6 +240,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async (event) => {
+  stopDemo?.();
+  stopDemo = null;
   if (!manager || manager.devices.size === 0) return;
   event.preventDefault();
   await manager.disposeAll();

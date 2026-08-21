@@ -1,20 +1,29 @@
-// UI: mosaico dei visori, barra comandi, focus a schermo intero, modali.
+// UI: postazioni (slot) nella schermata principale, anteprima grande a metà
+// schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
 import { TileRenderer } from './decoder.js';
-import { attachPointer } from './pointer.js';
+import { Viewport } from './viewport.js';
+import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
 
 const $ = (id) => document.getElementById(id);
 
 const state = {
   devices: new Map(), // serial -> json del visore
-  tiles: new Map(), // serial -> { el, canvas, renderer, detach, refs }
-  selected: new Set(),
-  pointerEnabled: false,
-  focusSerial: null,
+  cards: new Map(), // serial -> { el, canvas, renderer, refs }
+  slots: [], // slots[i] = seriale o null
+  slotCount: 10,
+  unassigned: new Set(), // visori tolti dagli slot di proposito
+  selected: new Set(), // selezione per i comandi di gruppo
+  previewSerial: null,
+  previewMode: 'view', // 'view' (guarda) | 'touch' (tocca)
+  viewport: new Viewport(),
+  pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
   keycodes: {},
   logs: [],
 };
+
+let previewCtx = null;
 
 // ---------------------------------------------------------------------------
 // Utilità
@@ -27,8 +36,7 @@ function log(message, level = 'info', serial = null) {
   if (state.logs.length > 500) state.logs.splice(0, state.logs.length - 500);
   const panel = $('log-panel');
   if (!panel.classList.contains('hidden')) {
-    const box = $('log-text');
-    box.textContent = state.logs.join('\n');
+    $('log-text').textContent = state.logs.join('\n');
     panel.scrollTop = panel.scrollHeight;
   }
   if (level === 'error') setStatus(`${prefix}${message}`);
@@ -53,45 +61,56 @@ async function run(promise, okMessage = null) {
   }
 }
 
-/** Visori su cui agiscono i comandi: la selezione, o tutti se non c'è selezione. */
+/** Visori su cui agiscono i comandi: la selezione, o tutte le postazioni. */
 function targetSerials() {
   if (state.selected.size) return [...state.selected];
-  return [...state.devices.keys()];
+  return state.slots.filter(Boolean);
 }
 
 function reportBatch(results, verb) {
   if (!Array.isArray(results)) return;
   const failed = results.filter((r) => !r.ok);
   if (failed.length) {
-    log(`${verb}: ${results.length - failed.length}/${results.length} ok — errori: ${failed.map((f) => shortName(f.serial)).join(', ')}`, 'error');
+    log(
+      `${verb}: ${results.length - failed.length}/${results.length} ok — errori: ${failed
+        .map((f) => shortName(f.serial))
+        .join(', ')}`,
+      'error',
+    );
   } else {
     setStatus(`${verb} su ${results.length} visore/i.`);
   }
 }
 
+function persistSlots() {
+  return window.pico.config
+    .patch({ slots: state.slots, slotCount: state.slotCount, unassigned: [...state.unassigned] })
+    .catch((err) => log(err.message, 'error'));
+}
+
 // ---------------------------------------------------------------------------
-// Mosaico
+// Schede dei visori
 // ---------------------------------------------------------------------------
 
-function createTile(serial) {
+function createCard(serial) {
   const el = document.createElement('div');
-  el.className = 'tile';
+  el.className = 'card';
   el.dataset.serial = serial;
   el.innerHTML = `
-    <div class="tile-head">
-      <input type="checkbox" class="sel" />
+    <div class="card-head">
+      <input type="checkbox" class="sel" title="Seleziona per i comandi di gruppo" />
       <span class="dot"></span>
-      <span class="tile-name"></span>
+      <span class="card-name"></span>
       <span class="battery"></span>
       <button class="icon-btn js-settings" title="Impostazioni visore">⚙︎</button>
-      <button class="icon-btn js-focus" title="Ingrandisci">⤢</button>
     </div>
-    <div class="tile-video">
+    <div class="card-video">
       <canvas width="640" height="360"></canvas>
       <div class="tile-overlay">In attesa dell'immagine…</div>
+      <div class="card-hint">Clicca per aprire l'anteprima</div>
     </div>
-    <div class="tile-foot">
-      <span class="tile-fg"></span>
+    <div class="card-foot">
+      <span class="card-fg"></span>
       <button class="icon-btn js-home" title="Home">⌂</button>
       <button class="icon-btn js-back" title="Indietro">‹</button>
       <button class="icon-btn js-close" title="Chiudi l'app in primo piano">✕</button>
@@ -102,21 +121,14 @@ function createTile(serial) {
   const refs = {
     checkbox: el.querySelector('.sel'),
     dot: el.querySelector('.dot'),
-    name: el.querySelector('.tile-name'),
+    name: el.querySelector('.card-name'),
     battery: el.querySelector('.battery'),
     overlay: el.querySelector('.tile-overlay'),
-    fg: el.querySelector('.tile-fg'),
-    videoBox: el.querySelector('.tile-video'),
+    fg: el.querySelector('.card-fg'),
   };
 
   const renderer = new TileRenderer(canvas);
-  renderer.clear(); // il messaggio lo mostra l'overlay sopra il canvas
-
-  const detach = attachPointer(canvas, {
-    serial,
-    isEnabled: () => state.pointerEnabled,
-    onBack: () => window.pico.actions.key([serial], state.keycodes.BACK),
-  });
+  renderer.clear();
 
   refs.checkbox.addEventListener('change', () => {
     if (refs.checkbox.checked) state.selected.add(serial);
@@ -125,41 +137,38 @@ function createTile(serial) {
     updateSelectionCount();
   });
 
-  el.querySelector('.js-focus').addEventListener('click', () => enterFocus(serial));
+  el.querySelector('.card-video').addEventListener('click', () => selectForPreview(serial));
   el.querySelector('.js-settings').addEventListener('click', () => openDeviceModal(serial));
   el.querySelector('.js-home').addEventListener('click', () => run(window.pico.actions.home([serial])));
   el.querySelector('.js-back').addEventListener('click', () =>
     run(window.pico.actions.key([serial], state.keycodes.BACK)),
   );
-  el.querySelector('.js-close').addEventListener('click', () =>
-    run(window.pico.actions.closeForeground([serial])),
-  );
+  el.querySelector('.js-close').addEventListener('click', () => run(window.pico.actions.closeForeground([serial])));
   el.querySelector('.js-reconnect').addEventListener('click', () => run(window.pico.device.reconnect(serial)));
 
-  const tile = { el, canvas, renderer, detach, refs };
-  state.tiles.set(serial, tile);
-  $('grid').append(el);
-  return tile;
+  const card = { el, canvas, renderer, refs };
+  state.cards.set(serial, card);
+  return card;
 }
 
-function removeTile(serial) {
-  const tile = state.tiles.get(serial);
-  if (!tile) return;
-  tile.detach();
-  tile.renderer.destroy();
-  tile.el.remove();
-  state.tiles.delete(serial);
+function destroyCard(serial) {
+  const card = state.cards.get(serial);
+  if (!card) return;
+  card.renderer.destroy();
+  card.el.remove();
+  state.cards.delete(serial);
   state.selected.delete(serial);
 }
 
-function updateTile(device) {
-  const tile = state.tiles.get(device.serial) ?? createTile(device.serial);
-  const { refs } = tile;
+function updateCard(device) {
+  const card = state.cards.get(device.serial);
+  if (!card) return;
+  const { refs } = card;
   refs.name.textContent = device.displayName;
   refs.name.title = device.serial;
   refs.dot.className = `dot ${device.state}`;
   refs.dot.title = device.error ? `${device.state}: ${device.error}` : device.state;
-  tile.el.classList.toggle('pointer-armed', state.pointerEnabled);
+  card.el.classList.toggle('previewing', state.previewSerial === device.serial);
 
   const battery = device.status?.battery;
   refs.battery.textContent = battery == null ? '' : `${battery}%`;
@@ -168,13 +177,94 @@ function updateTile(device) {
   refs.fg.textContent = device.status?.foreground ?? '';
   refs.fg.title = device.status?.foreground ?? '';
 
-  let overlay = null;
-  if (device.state === 'connecting') overlay = 'Connessione in corso…';
-  else if (device.state === 'error') overlay = device.error ?? 'Errore';
-  else if (device.state === 'offline') overlay = 'Non collegato';
-  else if (tile.renderer.size.width === 0) overlay = 'In attesa dell\'immagine…';
-  refs.overlay.textContent = overlay ?? '';
-  refs.overlay.classList.toggle('hidden', overlay === null);
+  const message = stateMessage(device, card.renderer);
+  refs.overlay.textContent = message ?? '';
+  refs.overlay.classList.toggle('hidden', message === null);
+
+  if (state.previewSerial === device.serial) updatePreviewChrome();
+}
+
+/** Messaggio da mostrare sopra l'immagine, o null se l'immagine basta da sola. */
+function stateMessage(device, renderer) {
+  if (device.state === 'connecting') return 'Connessione in corso…';
+  if (device.state === 'error') return device.error ?? 'Errore';
+  if (device.state === 'offline') return 'Non collegato';
+  if (!renderer || renderer.size.width === 0) return 'In attesa dell\'immagine…';
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Postazioni (slot)
+// ---------------------------------------------------------------------------
+
+/**
+ * Allinea gli slot alla realtà: toglie i visori spariti e assegna i nuovi alla
+ * prima postazione libera (o a quella da cui è stata aperta la modale).
+ */
+function syncSlots() {
+  const before = JSON.stringify(state.slots);
+
+  while (state.slots.length < state.slotCount) state.slots.push(null);
+  if (state.slots.length > state.slotCount) state.slots = state.slots.slice(0, state.slotCount);
+  for (let i = 0; i < state.slots.length; i++) {
+    if (state.slots[i] && !state.devices.has(state.slots[i])) state.slots[i] = null;
+  }
+
+  for (const serial of state.devices.keys()) {
+    if (state.slots.includes(serial) || state.unassigned.has(serial)) continue;
+    const target =
+      state.pendingSlot != null && state.slots[state.pendingSlot] == null
+        ? state.pendingSlot
+        : state.slots.indexOf(null);
+    if (target === -1) {
+      log(`${shortName(serial)} è collegato ma non ci sono postazioni libere.`, 'error');
+      state.unassigned.add(serial);
+      continue;
+    }
+    state.slots[target] = serial;
+    state.pendingSlot = null;
+  }
+
+  if (JSON.stringify(state.slots) !== before) persistSlots();
+  renderSlots();
+}
+
+function renderSlots() {
+  const container = $('slots');
+
+  // Un contenitore per slot, riusato: così le schede (e i loro decoder) restano vive.
+  while (container.children.length < state.slots.length) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'slot';
+    container.append(wrapper);
+  }
+  while (container.children.length > state.slots.length) container.lastElementChild.remove();
+
+  state.slots.forEach((serial, index) => {
+    const wrapper = container.children[index];
+    wrapper.dataset.index = String(index);
+    const device = serial ? state.devices.get(serial) : null;
+
+    if (!device) {
+      if (wrapper.firstElementChild?.classList.contains('slot-empty')) return;
+      wrapper.innerHTML = `
+        <button class="slot-empty">
+          <span class="plus">+</span>
+          <span>Aggiungi visore</span>
+          <span class="slot-index">Postazione ${index + 1}</span>
+        </button>`;
+      wrapper.querySelector('.slot-empty').addEventListener('click', () => openAddModal(index));
+      return;
+    }
+
+    const card = state.cards.get(serial) ?? createCard(serial);
+    if (card.el.parentElement !== wrapper) wrapper.replaceChildren(card.el);
+    updateCard(device);
+  });
+
+  const filled = state.slots.filter(Boolean).length;
+  $('wall-count').textContent = `${filled}/${state.slots.length} occupate`;
+  $('btn-slot-remove').disabled = state.slots.length <= 1 || state.slots.at(-1) != null;
 }
 
 function renderDevices(list) {
@@ -182,73 +272,265 @@ function renderDevices(list) {
   for (const device of list) {
     state.devices.set(device.serial, device);
     seen.add(device.serial);
-    updateTile(device);
   }
-  for (const serial of [...state.tiles.keys()]) {
-    if (!seen.has(serial)) {
-      if (state.focusSerial === serial) exitFocus();
-      removeTile(serial);
-      state.devices.delete(serial);
-    }
+  for (const serial of [...state.devices.keys()]) {
+    if (seen.has(serial)) continue;
+    state.devices.delete(serial);
+    state.unassigned.delete(serial);
+    if (state.previewSerial === serial) closePreview();
+    destroyCard(serial);
   }
+  syncSlots();
   updateSummary();
   updateSelectionCount();
 }
 
 function updateSummary() {
-  const total = state.devices.size;
-  const online = [...state.devices.values()].filter((d) => d.state === 'streaming').length;
-  $('summary').textContent = total
-    ? `${online}/${total} visori in streaming`
-    : 'Nessun visore collegato';
-  $('empty').classList.toggle('hidden', total > 0);
-  $('grid').classList.toggle('hidden', total === 0);
+  const filled = state.slots.filter(Boolean).length;
+  const streaming = state.slots.filter((s) => s && state.devices.get(s)?.state === 'streaming').length;
+  $('summary').textContent = filled
+    ? `${streaming}/${filled} visori in streaming`
+    : 'Nessun visore collegato — clicca una postazione per aggiungerlo';
 }
 
 function updateSelectionCount() {
   const n = state.selected.size;
+  const total = state.slots.filter(Boolean).length;
   $('selection-count').textContent = n
     ? `${n} selezionat${n === 1 ? 'o' : 'i'}`
-    : `nessuna selezione → i comandi valgono per tutti (${state.devices.size})`;
+    : `nessuna selezione → i comandi valgono per tutti (${total})`;
 }
 
 // ---------------------------------------------------------------------------
-// Focus
+// Anteprima grande
 // ---------------------------------------------------------------------------
 
-function enterFocus(serial) {
-  const tile = state.tiles.get(serial);
-  if (!tile) return;
-  if (state.focusSerial) exitFocus();
+function selectForPreview(serial) {
+  if (state.previewSerial === serial) return;
 
-  state.focusSerial = serial;
-  // Spostiamo il canvas: il decoder continua a lavorare, niente ripartenze.
-  $('focus-canvas').replaceWith(tile.canvas);
-  tile.canvas.id = 'focus-canvas';
-  $('focus-title').textContent = `${shortName(serial)} — ${serial}`;
-  $('focus').classList.remove('hidden');
-  $('focus').classList.toggle('pointer-armed', state.pointerEnabled);
+  const previous = state.previewSerial;
+  if (previous) {
+    const old = state.cards.get(previous);
+    if (old) {
+      old.renderer.onPaint = null;
+      old.el.classList.remove('previewing');
+    }
+    run(window.pico.device.setQuality(previous, 'grid'));
+  }
+
+  const card = state.cards.get(serial);
+  if (!card) return;
+
+  state.previewSerial = serial;
+  state.previewMode = 'view'; // si riparte sempre dalla modalità sicura
+  state.viewport = new Viewport();
+  card.renderer.onPaint = drawPreview;
+  card.el.classList.add('previewing');
+
+  $('preview').classList.remove('hidden');
+  $('stage').classList.add('split');
+  updatePreviewChrome();
+  drawPreview();
+
+  // Più risoluzione per il visore in primo piano: lo stream riparte da solo.
   run(window.pico.device.setQuality(serial, 'focus'));
 }
 
-function exitFocus() {
-  const serial = state.focusSerial;
-  if (!serial) return;
-  const tile = state.tiles.get(serial);
-  state.focusSerial = null;
-  $('focus').classList.add('hidden');
-
-  if (tile) {
-    tile.canvas.removeAttribute('id');
-    tile.refs.videoBox.prepend(tile.canvas);
+function closePreview() {
+  const serial = state.previewSerial;
+  state.previewSerial = null;
+  if (serial) {
+    const card = state.cards.get(serial);
+    if (card) {
+      card.renderer.onPaint = null;
+      card.el.classList.remove('previewing');
+    }
     run(window.pico.device.setQuality(serial, 'grid'));
   }
-  // Rimettiamo un canvas segnaposto nel contenitore del focus.
-  if (!$('focus-canvas')) {
-    const placeholder = document.createElement('canvas');
-    placeholder.id = 'focus-canvas';
-    document.querySelector('.focus-video').append(placeholder);
+  $('preview').classList.add('hidden');
+  $('stage').classList.remove('split');
+}
+
+/** Ridisegna l'anteprima prendendo l'inquadratura dal canvas della miniatura. */
+function drawPreview() {
+  const serial = state.previewSerial;
+  if (!serial) return;
+  const source = state.cards.get(serial)?.canvas;
+  if (!source?.width || !source?.height) return;
+
+  const canvas = $('preview-canvas');
+  previewCtx ??= canvas.getContext('2d', { alpha: false });
+
+  state.viewport.setFrameSize(source.width, source.height);
+  const rect = state.viewport.rect();
+  const width = Math.max(1, Math.round(rect.width));
+  const height = Math.max(1, Math.round(rect.height));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
   }
+  previewCtx.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, width, height);
+}
+
+function updatePreviewChrome() {
+  const serial = state.previewSerial;
+  if (!serial) return;
+  const device = state.devices.get(serial);
+  if (!device) return;
+  const card = state.cards.get(serial);
+
+  $('preview-name').textContent = device.displayName;
+  $('preview-dot').className = `dot ${device.state}`;
+  const bits = [serial];
+  if (device.status?.battery != null) bits.push(`${device.status.battery}%`);
+  if (device.status?.foreground) bits.push(device.status.foreground);
+  $('preview-meta').textContent = bits.join(' · ');
+
+  const message = stateMessage(device, card?.renderer);
+  $('preview-overlay').textContent = message ?? '';
+  $('preview-overlay').classList.toggle('hidden', message === null);
+
+  const touch = state.previewMode === 'touch';
+  $('mode-view').classList.toggle('is-active', !touch);
+  $('mode-touch').classList.toggle('is-active', touch);
+  $('touch-warning').classList.toggle('hidden', !touch);
+  $('preview').classList.toggle('mode-touch', touch);
+  $('preview-hint').textContent = touch
+    ? 'Il clic tocca lo schermo del visore · tasto destro = Indietro · rotellina = scorrimento'
+    : 'Trascina per guardarti intorno · rotellina per zoomare · nessun tocco viene inviato al visore';
+
+  const home = state.viewport.isHome;
+  $('btn-recenter').classList.toggle('is-active', !home);
+  const badge = $('view-badge');
+  badge.classList.toggle('hidden', home);
+  badge.textContent = `Visuale spostata · ${state.viewport.zoomLabel}`;
+}
+
+function panPreview(dxClient, dyClient) {
+  const scale = canvasPixelsPerClientPixel($('preview-canvas'));
+  // Trascinando a destra si scopre quello che sta a sinistra: l'inquadratura si
+  // muove al contrario del mouse, come quando si sposta una mappa.
+  state.viewport.panByFramePixels(-dxClient * scale, -dyClient * scale);
+  drawPreview();
+  updatePreviewChrome();
+}
+
+function recenterPreview() {
+  state.viewport.home();
+  drawPreview();
+  updatePreviewChrome();
+}
+
+function wirePreview() {
+  attachPreviewInput($('preview-canvas'), {
+    getMode: () => state.previewMode,
+    onPan: panPreview,
+    onZoom: (factor, nx, ny) => {
+      state.viewport.zoomBy(factor, nx, ny);
+      drawPreview();
+      updatePreviewChrome();
+    },
+    onTouch: (type, nx, ny, button) => {
+      if (!state.previewSerial) return;
+      const point = state.viewport.viewToFrame(nx, ny);
+      window.pico.pointer({ serial: state.previewSerial, type, nx: point.nx, ny: point.ny, button });
+    },
+    onScroll: (nx, ny, hscroll, vscroll) => {
+      if (!state.previewSerial) return;
+      const point = state.viewport.viewToFrame(nx, ny);
+      window.pico.scroll({ serial: state.previewSerial, nx: point.nx, ny: point.ny, hscroll, vscroll });
+    },
+    onBack: () => {
+      if (state.previewSerial) run(window.pico.actions.key([state.previewSerial], state.keycodes.BACK));
+    },
+  });
+
+  $('mode-view').addEventListener('click', () => {
+    state.previewMode = 'view';
+    updatePreviewChrome();
+  });
+  $('mode-touch').addEventListener('click', () => {
+    state.previewMode = 'touch';
+    updatePreviewChrome();
+  });
+  $('btn-recenter').addEventListener('click', recenterPreview);
+  $('preview-close').addEventListener('click', closePreview);
+
+  const onPreview = (fn) => () => state.previewSerial && run(fn(state.previewSerial));
+  $('preview-home').addEventListener('click', onPreview((s) => window.pico.actions.home([s])));
+  $('preview-back').addEventListener('click', onPreview((s) => window.pico.actions.key([s], state.keycodes.BACK)));
+  $('preview-close-fg').addEventListener('click', onPreview((s) => window.pico.actions.closeForeground([s])));
+  $('preview-vol-down').addEventListener('click', onPreview((s) => window.pico.actions.volume([s], -2)));
+  $('preview-vol-up').addEventListener('click', onPreview((s) => window.pico.actions.volume([s], 2)));
+}
+
+// ---------------------------------------------------------------------------
+// Modale "aggiungi visore"
+// ---------------------------------------------------------------------------
+
+function openAddModal(slotIndex) {
+  state.pendingSlot = slotIndex;
+  $('add-title').textContent = `Aggiungi un visore — postazione ${slotIndex + 1}`;
+  $('add-progress').textContent = '';
+  renderAvailable();
+  $('add-modal').classList.remove('hidden');
+  $('ip-host').focus();
+}
+
+function closeAddModal() {
+  $('add-modal').classList.add('hidden');
+  state.pendingSlot = null;
+}
+
+/** Visori collegati che non stanno in nessuna postazione. */
+function availableDevices() {
+  return [...state.devices.values()].filter((d) => !state.slots.includes(d.serial));
+}
+
+function renderAvailable() {
+  const list = $('available-list');
+  list.innerHTML = '';
+  const available = availableDevices();
+  if (!available.length) {
+    list.innerHTML = '<li class="muted">Nessun visore libero: usa "Cerca in rete" o inserisci un IP.</li>';
+    return;
+  }
+  for (const device of available) {
+    const li = document.createElement('li');
+    li.innerHTML = '<strong></strong><span class="pkg"></span><button class="btn btn-primary">Assegna</button>';
+    li.querySelector('strong').textContent = device.displayName;
+    li.querySelector('.pkg').textContent = device.serial;
+    li.querySelector('button').addEventListener('click', () => {
+      assignToSlot(device.serial, state.pendingSlot);
+      closeAddModal();
+    });
+    list.append(li);
+  }
+}
+
+function assignToSlot(serial, slotIndex) {
+  const index = slotIndex != null && state.slots[slotIndex] == null ? slotIndex : state.slots.indexOf(null);
+  if (index === -1) {
+    log('Non ci sono postazioni libere: aggiungi uno slot.', 'error');
+    return;
+  }
+  state.unassigned.delete(serial);
+  state.slots[index] = serial;
+  persistSlots();
+  renderSlots();
+  updateSummary();
+}
+
+function freeSlot(serial) {
+  const index = state.slots.indexOf(serial);
+  if (index === -1) return;
+  state.slots[index] = null;
+  state.unassigned.add(serial);
+  if (state.previewSerial === serial) closePreview();
+  state.cards.get(serial)?.el.remove(); // la scheda resta viva, pronta se la riassegni
+  persistSlots();
+  renderSlots();
+  updateSummary();
 }
 
 // ---------------------------------------------------------------------------
@@ -274,9 +556,8 @@ function renderAppSelect() {
     select.append(opt);
   }
   if (previous) select.value = previous;
-  const hasApp = apps.length > 0;
-  $('btn-launch').disabled = !hasApp;
-  $('btn-stop').disabled = !hasApp;
+  $('btn-launch').disabled = !apps.length;
+  $('btn-stop').disabled = !apps.length;
 }
 
 function renderAppsList() {
@@ -284,7 +565,7 @@ function renderAppsList() {
   list.innerHTML = '';
   for (const [i, app] of (state.config?.apps ?? []).entries()) {
     const li = document.createElement('li');
-    li.innerHTML = `<strong></strong><span class="pkg"></span><button class="icon-btn" title="Rimuovi">✕</button>`;
+    li.innerHTML = '<strong></strong><span class="pkg"></span><button class="icon-btn" title="Rimuovi">✕</button>';
     li.querySelector('strong').textContent = app.name;
     li.querySelector('.pkg').textContent = app.activity ? `${app.package}/${app.activity}` : app.package;
     li.querySelector('button').addEventListener('click', async () => {
@@ -383,8 +664,10 @@ function wireEvents() {
   window.pico.on('devices', (list) => renderDevices(list));
 
   window.pico.on('device-state', (device) => {
+    const known = state.devices.has(device.serial);
     state.devices.set(device.serial, device);
-    updateTile(device);
+    if (!known) syncSlots();
+    updateCard(device);
     updateSummary();
   });
 
@@ -392,7 +675,7 @@ function wireEvents() {
     const device = state.devices.get(serial);
     if (!device) return;
     device.status = status;
-    updateTile(device);
+    updateCard(device);
   });
 
   window.pico.on('device-codec', ({ serial, width, height, codecName }) => {
@@ -400,84 +683,101 @@ function wireEvents() {
   });
 
   window.pico.on('frame', (frame) => {
-    const tile = state.tiles.get(frame.serial);
-    if (!tile) return;
-    tile.renderer.handleFrame(frame);
-    // Arrivano immagini: via il velo "in attesa", a meno che il visore non sia
-    // in uno stato che merita comunque un messaggio (errore, riconnessione).
+    const card = state.cards.get(frame.serial);
+    if (!card) return;
+    card.renderer.handleFrame(frame);
     if (state.devices.get(frame.serial)?.state === 'streaming') {
-      tile.refs.overlay.classList.add('hidden');
+      card.refs.overlay.classList.add('hidden');
+      if (state.previewSerial === frame.serial) $('preview-overlay').classList.add('hidden');
     }
   });
 
   window.pico.on('log', ({ serial, level, message }) => log(message, level, serial));
 
   window.pico.on('scan-progress', ({ done, total, found }) => {
-    setStatus(`Scansione rete: ${done}/${total} indirizzi, ${found} candidati`);
+    const text = `Scansione rete: ${done}/${total} indirizzi, ${found} candidati`;
+    setStatus(text);
+    if (!$('add-modal').classList.contains('hidden')) $('add-progress').textContent = text;
   });
 }
 
-function wireUi() {
-  $('btn-scan').addEventListener('click', async () => {
-    setStatus('Scansione della rete…');
-    const res = await run(window.pico.devices.scan());
-    if (res) setStatus(`Scansione completata: ${res.connected.length} visori collegati su ${res.open.length} candidati.`);
-  });
+async function doScan() {
+  setStatus('Scansione della rete…');
+  const res = await run(window.pico.devices.scan());
+  const text = res
+    ? `Scansione completata: ${res.connected.length} visori collegati su ${res.open.length} candidati.`
+    : 'Scansione fallita.';
+  setStatus(text);
+  $('add-progress').textContent = text;
+  renderAvailable();
+}
 
+async function doAdoptUsb() {
+  setStatus('Passaggio dei visori USB al wifi…');
+  const res = await run(window.pico.devices.adoptUsb());
+  if (!res) return;
+  const ok = res.filter((r) => r.ok);
+  const text = `${ok.length}/${res.length} visori passati al wifi.`;
+  setStatus(text);
+  $('add-progress').textContent = text;
+  for (const r of res.filter((x) => !x.ok)) log(`${r.usb}: ${r.error}`, 'error');
+  renderAvailable();
+}
+
+function wireUi() {
+  $('btn-scan').addEventListener('click', doScan);
+  $('btn-usb').addEventListener('click', doAdoptUsb);
   $('btn-sync').addEventListener('click', () => run(window.pico.devices.sync(), 'Elenco aggiornato.'));
 
-  $('btn-usb').addEventListener('click', async () => {
-    setStatus('Passaggio dei visori USB al wifi…');
-    const res = await run(window.pico.devices.adoptUsb());
-    if (!res) return;
-    const ok = res.filter((r) => r.ok);
-    setStatus(`${ok.length}/${res.length} visori passati al wifi.`);
-    for (const r of res.filter((x) => !x.ok)) log(`${r.usb}: ${r.error}`, 'error');
-  });
-
-  $('btn-add').addEventListener('click', () => $('ip-modal').classList.remove('hidden'));
-  $('ip-close').addEventListener('click', () => $('ip-modal').classList.add('hidden'));
+  $('add-scan').addEventListener('click', doScan);
+  $('add-usb').addEventListener('click', doAdoptUsb);
+  $('add-close').addEventListener('click', closeAddModal);
   $('ip-form').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const host = $('ip-host').value.trim();
     const port = Number($('ip-port').value) || 5555;
+    $('add-progress').textContent = `Collegamento a ${host}…`;
     const serial = await run(window.pico.devices.add(host, port));
     if (serial) {
-      $('ip-modal').classList.add('hidden');
       $('ip-host').value = '';
-      setStatus(`Collegato ${serial}.`);
+      $('add-progress').textContent = `Collegato ${serial}.`;
+      closeAddModal();
     }
   });
 
-  $('pointer-toggle').addEventListener('change', (ev) => {
-    state.pointerEnabled = ev.target.checked;
-    $('pointer-warning').classList.toggle('hidden', !state.pointerEnabled);
-    $('focus').classList.toggle('pointer-armed', state.pointerEnabled);
-    for (const tile of state.tiles.values()) tile.el.classList.toggle('pointer-armed', state.pointerEnabled);
-    window.pico.config.patch({ pointerEnabled: state.pointerEnabled });
+  $('btn-slot-add').addEventListener('click', () => {
+    state.slotCount = Math.min(24, state.slots.length + 1);
+    syncSlots();
+    persistSlots();
+  });
+  $('btn-slot-remove').addEventListener('click', () => {
+    if (state.slots.at(-1) != null || state.slots.length <= 1) return;
+    state.slotCount = state.slots.length - 1;
+    syncSlots();
+    persistSlots();
   });
 
   $('btn-select-all').addEventListener('click', () => {
-    state.selected = new Set(state.devices.keys());
-    for (const [serial, tile] of state.tiles) {
-      tile.refs.checkbox.checked = state.selected.has(serial);
-      tile.el.classList.add('selected');
+    state.selected = new Set(state.slots.filter(Boolean));
+    for (const [serial, card] of state.cards) {
+      const on = state.selected.has(serial);
+      card.refs.checkbox.checked = on;
+      card.el.classList.toggle('selected', on);
     }
     updateSelectionCount();
   });
 
   $('btn-select-none').addEventListener('click', () => {
     state.selected.clear();
-    for (const tile of state.tiles.values()) {
-      tile.refs.checkbox.checked = false;
-      tile.el.classList.remove('selected');
+    for (const card of state.cards.values()) {
+      card.refs.checkbox.checked = false;
+      card.el.classList.remove('selected');
     }
     updateSelectionCount();
   });
 
   const selectedApp = () => {
-    const select = $('app-select');
-    const opt = select.selectedOptions[0];
+    const opt = $('app-select').selectedOptions[0];
     if (!opt?.value) return null;
     return { package: opt.value, activity: opt.dataset.activity || null };
   };
@@ -496,23 +796,21 @@ function wireUi() {
     reportBatch(await run(window.pico.actions.stop(targetSerials(), app.package)), 'Chiusura app');
   });
 
-  $('btn-close-fg').addEventListener('click', async () => {
-    reportBatch(await run(window.pico.actions.closeForeground(targetSerials())), 'Chiusura app attiva');
-  });
-
-  $('btn-home').addEventListener('click', async () => {
-    reportBatch(await run(window.pico.actions.home(targetSerials())), 'Home');
-  });
-
-  $('btn-back').addEventListener('click', async () => {
-    reportBatch(await run(window.pico.actions.key(targetSerials(), state.keycodes.BACK)), 'Indietro');
-  });
-
+  $('btn-close-fg').addEventListener('click', async () =>
+    reportBatch(await run(window.pico.actions.closeForeground(targetSerials())), 'Chiusura app attiva'),
+  );
+  $('btn-home').addEventListener('click', async () =>
+    reportBatch(await run(window.pico.actions.home(targetSerials())), 'Home'),
+  );
+  $('btn-back').addEventListener('click', async () =>
+    reportBatch(await run(window.pico.actions.key(targetSerials(), state.keycodes.BACK)), 'Indietro'),
+  );
   $('btn-vol-up').addEventListener('click', () => run(window.pico.actions.volume(targetSerials(), 2)));
   $('btn-vol-down').addEventListener('click', () => run(window.pico.actions.volume(targetSerials(), -2)));
 
   $('btn-reboot').addEventListener('click', async () => {
     const serials = targetSerials();
+    if (!serials.length) return;
     if (!confirm(`Riavviare ${serials.length} visore/i? Torneranno disponibili dopo circa un minuto.`)) return;
     reportBatch(await run(window.pico.actions.reboot(serials)), 'Riavvio');
   });
@@ -543,23 +841,16 @@ function wireUi() {
 
   $('device-save').addEventListener('click', saveDeviceModal);
   $('device-cancel').addEventListener('click', () => $('device-modal').classList.add('hidden'));
+  $('device-free').addEventListener('click', () => {
+    $('device-modal').classList.add('hidden');
+    if (deviceModalSerial) freeSlot(deviceModalSerial);
+  });
   $('device-remove').addEventListener('click', async () => {
     const serial = deviceModalSerial;
-    if (!serial || !confirm(`Rimuovere ${shortName(serial)} dall'elenco?`)) return;
+    if (!serial || !confirm(`Rimuovere ${shortName(serial)}? Verrà scollegato e tolto dalla postazione.`)) return;
     $('device-modal').classList.add('hidden');
     await run(window.pico.devices.remove(serial, true));
   });
-
-  $('focus-exit').addEventListener('click', exitFocus);
-  $('focus-home').addEventListener('click', () =>
-    state.focusSerial && run(window.pico.actions.home([state.focusSerial])),
-  );
-  $('focus-back').addEventListener('click', () =>
-    state.focusSerial && run(window.pico.actions.key([state.focusSerial], state.keycodes.BACK)),
-  );
-  $('focus-close-fg').addEventListener('click', () =>
-    state.focusSerial && run(window.pico.actions.closeForeground([state.focusSerial])),
-  );
 
   $('btn-log').addEventListener('click', () => {
     const panel = $('log-panel');
@@ -570,34 +861,55 @@ function wireUi() {
     }
   });
 
-  document.addEventListener('keydown', (ev) => {
-    if (ev.target.matches('input, select, textarea')) return;
-    if (ev.key === 'Escape' && !state.focusSerial) {
-      for (const id of ['apps-modal', 'device-modal', 'ip-modal']) $(id).classList.add('hidden');
-      return;
-    }
-    if (!state.focusSerial) return;
+  document.addEventListener('keydown', onKeyDown);
+}
 
-    const K = state.keycodes;
-    const map = {
+function onKeyDown(ev) {
+  if (ev.target.matches('input, select, textarea')) return;
+
+  const openModal = ['add-modal', 'apps-modal', 'device-modal'].find((id) => !$(id).classList.contains('hidden'));
+  if (ev.key === 'Escape') {
+    if (openModal === 'add-modal') closeAddModal();
+    else if (openModal) $(openModal).classList.add('hidden');
+    else if (state.previewSerial) closePreview();
+    return;
+  }
+  if (openModal || !state.previewSerial) return;
+
+  const K = state.keycodes;
+  if (state.previewMode === 'touch') {
+    const keycode = {
       ArrowUp: K.DPAD_UP,
       ArrowDown: K.DPAD_DOWN,
       ArrowLeft: K.DPAD_LEFT,
       ArrowRight: K.DPAD_RIGHT,
       Enter: K.DPAD_CENTER,
       Backspace: K.BACK,
-    };
-    if (ev.key === 'Escape') {
-      ev.preventDefault();
-      exitFocus();
-      return;
-    }
-    const keycode = map[ev.key];
+    }[ev.key];
     if (keycode != null) {
       ev.preventDefault();
-      window.pico.actions.key([state.focusSerial], keycode).catch(() => {});
+      window.pico.actions.key([state.previewSerial], keycode).catch(() => {});
     }
-  });
+    return;
+  }
+
+  // Modalità visuale: le frecce spostano l'inquadratura, "0" torna sul visitatore.
+  const step = 60;
+  const pan = {
+    ArrowUp: [0, step],
+    ArrowDown: [0, -step],
+    ArrowLeft: [step, 0],
+    ArrowRight: [-step, 0],
+  }[ev.key];
+  if (pan) {
+    ev.preventDefault();
+    panPreview(pan[0], pan[1]);
+    return;
+  }
+  if (ev.key === '0') {
+    ev.preventDefault();
+    recenterPreview();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -607,13 +919,14 @@ function wireUi() {
 async function boot() {
   wireEvents();
   wireUi();
+  wirePreview();
 
   const info = await window.pico.info();
   state.config = info.config;
   state.keycodes = info.keycodes;
-  state.pointerEnabled = !!info.config.pointerEnabled;
-  $('pointer-toggle').checked = state.pointerEnabled;
-  $('pointer-warning').classList.toggle('hidden', !state.pointerEnabled);
+  state.slotCount = info.config.slotCount ?? 10;
+  state.slots = Array.isArray(info.config.slots) ? [...info.config.slots] : [];
+  state.unassigned = new Set(info.config.unassigned ?? []);
 
   renderAppSelect();
   log(`adb: ${info.adbPath} · scrcpy-server v${info.scrcpyVersion} · reti: ${info.subnets.join(', ') || 'n/d'}`);

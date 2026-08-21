@@ -20,14 +20,8 @@
 
         <div class="topbar-actions">
           <button id="btn-scan" class="btn">Cerca in rete</button>
-          <button id="btn-sync" class="btn">Aggiorna</button>
-          <button id="btn-add" class="btn">Aggiungi IP…</button>
           <button id="btn-usb" class="btn" title="Prende i visori collegati via USB e li passa al wifi">Adotta USB</button>
-          <label class="switch" title="Quando è armato, il mouse tocca davvero lo schermo del visore">
-            <input type="checkbox" id="pointer-toggle" />
-            <span class="switch-track"><span class="switch-thumb"></span></span>
-            <span class="switch-label">Puntatore</span>
-          </label>
+          <button id="btn-sync" class="btn">Aggiorna</button>
         </div>
       </div>
 
@@ -56,41 +50,110 @@
       </div>
     </header>
 
-    <main>
-      <div id="grid" class="grid"></div>
-      <div id="empty" class="empty">
-        <h2>Nessun visore collegato</h2>
-        <p>
-          Collega i PICO 4 alla stessa rete wifi del Mac, autorizza una volta il debug USB su ciascuno,
-          poi premi <strong>Adotta USB</strong> (con il visore attaccato) oppure <strong>Cerca in rete</strong>.
-        </p>
-        <p class="muted">Guida completa: <code>docs/SETUP-PICO.md</code></p>
-      </div>
-    </main>
+    <main id="stage" class="stage">
+      <!-- Metà sinistra: anteprima grande del visore selezionato -->
+      <section id="preview" class="preview hidden">
+        <div class="preview-head">
+          <span id="preview-dot" class="dot"></span>
+          <h2 id="preview-name">Visore</h2>
+          <span id="preview-meta" class="muted"></span>
+          <span id="touch-warning" class="pill pill-warn hidden">Il mouse tocca il visore</span>
+          <div class="spacer"></div>
 
-    <section id="focus" class="focus hidden">
-      <div class="focus-head">
-        <h2 id="focus-title">Visore</h2>
-        <div class="focus-actions">
-          <button id="focus-home" class="btn">Home</button>
-          <button id="focus-back" class="btn">Indietro</button>
-          <button id="focus-close-fg" class="btn">Chiudi app attiva</button>
-          <button id="focus-exit" class="btn btn-primary">Torna al mosaico</button>
+          <div class="seg-group" role="group" aria-label="Modalità del mouse">
+            <button id="mode-view" class="seg is-active" title="Trascina per guardarti intorno nell'immagine del visore">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12 4v16M4 12h16M12 4l-2.5 2.5M12 4l2.5 2.5M12 20l-2.5-2.5M12 20l2.5-2.5M4 12l2.5-2.5M4 12l2.5 2.5M20 12l-2.5-2.5M20 12l-2.5 2.5"
+                  fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+              Visuale
+            </button>
+            <button id="mode-touch" class="seg" title="Il clic diventa un tocco vero sullo schermo del visore">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M6 3l12 6.2-5.2 1.4L10.6 21z" fill="currentColor" />
+              </svg>
+              Tocco
+            </button>
+          </div>
+
+          <button id="btn-recenter" class="btn btn-face" title="Torna a vedere esattamente quello che guarda chi indossa il visore">
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <circle cx="9.2" cy="10" r="1.15" fill="currentColor" />
+              <circle cx="14.8" cy="10" r="1.15" fill="currentColor" />
+              <path d="M8.2 14.4c1.1 1.3 2.3 1.9 3.8 1.9s2.7-.6 3.8-1.9"
+                fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+            Visuale visitatore
+          </button>
+          <button id="preview-close" class="icon-btn" title="Chiudi l'anteprima">✕</button>
         </div>
-      </div>
-      <div class="focus-video"><canvas id="focus-canvas"></canvas></div>
-      <p class="muted focus-hint">
-        Tasto destro = Indietro · rotellina = scorrimento · frecce/Invio/Esc funzionano da tastiera.
-      </p>
-    </section>
+
+        <div class="preview-video">
+          <canvas id="preview-canvas" width="640" height="360"></canvas>
+          <div id="preview-overlay" class="tile-overlay">In attesa dell'immagine…</div>
+          <div id="view-badge" class="view-badge hidden"></div>
+        </div>
+
+        <div class="preview-foot">
+          <span id="preview-hint" class="muted"></span>
+          <div class="spacer"></div>
+          <button id="preview-home" class="btn">Home</button>
+          <button id="preview-back" class="btn">Indietro</button>
+          <button id="preview-close-fg" class="btn">Chiudi app attiva</button>
+          <button id="preview-vol-down" class="btn">Vol −</button>
+          <button id="preview-vol-up" class="btn">Vol +</button>
+        </div>
+      </section>
+
+      <!-- Metà destra (o schermo intero): le postazioni -->
+      <section id="wall" class="wall">
+        <div class="wall-head">
+          <h2>Postazioni</h2>
+          <span id="wall-count" class="muted"></span>
+          <div class="spacer"></div>
+          <button id="btn-slot-remove" class="chip" title="Togli l'ultimo slot vuoto">−</button>
+          <button id="btn-slot-add" class="chip" title="Aggiungi uno slot">+ slot</button>
+        </div>
+        <div id="slots" class="slots"></div>
+      </section>
+    </main>
 
     <footer class="statusbar">
       <button id="btn-log" class="chip">Log</button>
       <span id="status-line" class="muted"></span>
-      <span id="pointer-warning" class="pill pill-warn hidden">Puntatore armato</span>
     </footer>
 
     <div id="log-panel" class="log-panel hidden"><pre id="log-text"></pre></div>
+
+    <!-- Modale: aggiungi un visore a uno slot -->
+    <div id="add-modal" class="modal hidden">
+      <div class="modal-card">
+        <h2 id="add-title">Aggiungi un visore</h2>
+        <p class="muted">
+          I visori devono essere sulla stessa wifi del Mac e avere il debug ADB già autorizzato
+          (vedi <code>docs/SETUP-PICO.md</code>).
+        </p>
+
+        <div class="add-actions">
+          <button id="add-scan" class="btn btn-primary">Cerca in rete</button>
+          <button id="add-usb" class="btn">Adotta quello collegato via USB</button>
+        </div>
+        <p id="add-progress" class="muted"></p>
+
+        <h3>Visori disponibili</h3>
+        <ul id="available-list" class="apps-list"></ul>
+
+        <h3>Oppure per indirizzo IP</h3>
+        <form id="ip-form" class="app-form app-form-ip">
+          <input id="ip-host" placeholder="192.168.1.51" required />
+          <input id="ip-port" placeholder="5555" value="5555" />
+          <button class="btn btn-primary" type="submit">Collega</button>
+        </form>
+
+        <div class="modal-actions"><button id="add-close" class="btn">Chiudi</button></div>
+      </div>
+    </div>
 
     <!-- Modale: libreria app -->
     <div id="apps-modal" class="modal hidden">
@@ -118,7 +181,7 @@
         <h2 id="device-modal-title">Visore</h2>
         <label class="field">
           <span>Nome</span>
-          <input id="device-label" placeholder="Visore 1" />
+          <input id="device-label" placeholder="Postazione 1" />
         </label>
         <label class="field">
           <span>Modalità immagine</span>
@@ -136,23 +199,11 @@
           <input id="device-crop" placeholder="es. 1920:1920:0:0 per un occhio solo" />
         </label>
         <div class="modal-actions">
+          <button id="device-free" class="btn">Libera lo slot</button>
           <button id="device-remove" class="btn btn-danger">Rimuovi visore</button>
           <button id="device-save" class="btn btn-primary">Salva</button>
           <button id="device-cancel" class="btn">Annulla</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Modale: aggiungi per IP -->
-    <div id="ip-modal" class="modal hidden">
-      <div class="modal-card">
-        <h2>Aggiungi visore per IP</h2>
-        <form id="ip-form" class="app-form">
-          <input id="ip-host" placeholder="192.168.1.51" required />
-          <input id="ip-port" placeholder="5555" value="5555" />
-          <button class="btn btn-primary" type="submit">Collega</button>
-        </form>
-        <div class="modal-actions"><button id="ip-close" class="btn">Chiudi</button></div>
       </div>
     </div>
 

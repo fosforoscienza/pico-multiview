@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "electron": "^43.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^26.0.0"
   },
   "build": {
     "appId": "it.fosforoscienza.picomultiview",
@@ -29,8 +29,15 @@
     "mac": {
       "category": "public.app-category.utilities",
       "target": [
-        "dmg"
-      ]
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
     }
   }
 }

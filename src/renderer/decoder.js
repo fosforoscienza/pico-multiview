@@ -47,6 +47,9 @@ export class TileRenderer {
     this.error = null;
     this.destroyed = false;
     this.pendingBitmap = false;
+    // Chiamata dopo ogni disegno: l'anteprima grande ridisegna da questo canvas
+    // invece di decodificare una seconda volta lo stesso flusso.
+    this.onPaint = null;
   }
 
   reset() {
@@ -82,6 +85,11 @@ export class TileRenderer {
   }
 
   #countFrame() {
+    try {
+      this.onPaint?.();
+    } catch (err) {
+      this.error = err.message;
+    }
     this.frameCount++;
     this.lastFrameAt = performance.now();
     const elapsed = this.lastFrameAt - this.lastFpsAt;

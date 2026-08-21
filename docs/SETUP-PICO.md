@@ -41,9 +41,13 @@ adb devices -l
 
 ## 3. Passa alla wifi
 
-Con il visore ancora collegato, apri Pico MultiView e premi **Adotta USB**.
-L'app fa tre cose: legge l'IP wifi del visore, esegue `adb tcpip 5555`, si ricollega via rete.
-Il visore compare nel mosaico e il cavo può essere staccato.
+Con il visore ancora collegato, apri Pico MultiView, clicca una **postazione vuota** e premi
+**Adotta quello collegato via USB**. L'app fa tre cose: legge l'IP wifi del visore, esegue
+`adb tcpip 5555`, si ricollega via rete. Il visore compare in quella postazione e il cavo può
+essere staccato.
+
+(Lo stesso pulsante c'è anche nella barra in alto, se preferisci lasciar scegliere all'app la
+prima postazione libera.)
 
 Lo stesso a mano, se preferisci il terminale:
 
@@ -65,10 +69,11 @@ adb -s <seriale> shell setprop persist.adb.tcp.port 5555
 Se dopo un riavvio il visore non si ricollega, la proprietà non è stata mantenuta: ricollega
 il cavo e ripremi **Adotta USB**.
 
-## 4. Dai un nome ai visori
+## 4. Dai un nome alle postazioni
 
-Nel mosaico, icona **⚙︎** su ogni riquadro → campo **Nome**: "Postazione 1", "Visore rosso", quello
-che ti torna comodo durante l'evento. Il nome resta salvato insieme all'IP.
+Icona **⚙︎** su ogni miniatura → campo **Nome**: "Postazione 1", "Visore rosso", quello che ti
+torna comodo durante l'evento. Il nome resta salvato insieme all'IP, e la posizione nella
+griglia resta quella anche dopo aver chiuso l'app.
 
 Suggerimento: attacca un'etichetta fisica con lo stesso nome sul visore. Quando qualcuno chiama,
 sapere *quale* riquadro guardare vale più di qualsiasi funzione software.
@@ -85,11 +90,13 @@ l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
 ## Checklist da fare il giorno dell'evento
 
 1. Visori carichi e accesi, tutti sulla rete giusta.
-2. Mac sulla stessa rete, app aperta: i visori noti si ricollegano da soli
+2. Mac sulla stessa rete, app aperta: le postazioni si ricollegano da sole
    (altrimenti **Cerca in rete**).
-3. Controlla le percentuali di batteria nel mosaico.
+3. Controlla le percentuali di batteria su ogni miniatura.
 4. **Avvia** l'app dell'evento su tutti.
-5. Lascia il **Puntatore disarmato** finché non ti serve davvero.
+5. Ricorda che l'anteprima parte sempre in modalità **Visuale**: puoi guardarti intorno nel
+   visore di un visitatore senza toccargli niente. Passa a **Tocco** solo quando devi
+   intervenire davvero.
 
 ## Se qualcosa non torna
 
@@ -98,5 +105,6 @@ l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
 | il visore non compare nella scansione | rete diversa o AP isolation | stessa rete, isolamento client off |
 | stato `unauthorized` | manca l'autorizzazione permanente | ricollega via USB e spunta "Consenti sempre" |
 | si collegava, ora no | visore riavviato | **Adotta USB**, oppure `persist.adb.tcp.port` |
-| immagine ferma su un visore | streaming interrotto | **⟳** nel riquadro, o modalità `screencap` |
+| immagine ferma su un visore | streaming interrotto | **⟳** sulla miniatura, o modalità `screencap` |
 | tutto lento con 10 visori | banda wifi | abbassa `quality.grid` in `config.json` |
+| la postazione resta vuota anche se il visore è acceso | slot liberato a mano | clicca la postazione → **Assegna** dalla lista dei visori disponibili |
