@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { CREDIT, brandForUi, brandLogoDataUri, brandLogoPath } from '../src/main/brand.js';
+import { CREDIT, VERSION, brandForUi, brandLogoDataUri, brandLogoPath } from '../src/main/brand.js';
 
 /** Cartella temporanea con i file indicati, cancellata comunque alla fine. */
 function withBrandDir(names, fn) {
@@ -19,6 +19,16 @@ function withBrandDir(names, fn) {
 
 test('i crediti sono quelli concordati', () => {
   assert.equal(CREDIT, '© 2026 Brown Enterprises Srls');
+});
+
+test('la versione mostrata viene da package.json, in due cifre', () => {
+  const pkg = JSON.parse(
+    fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+  );
+  // npm pretende il semver a tre cifre, a schermo se ne mostrano due.
+  assert.match(pkg.version, /^\d+\.\d+\.\d+$/, 'package.json non ha un semver valido');
+  assert.match(VERSION, /^\d+\.\d+$/);
+  assert.equal(VERSION, pkg.version.split('.').slice(0, 2).join('.'));
 });
 
 test('senza logo non si rompe niente: resta la sola scritta', () => {
@@ -72,5 +82,6 @@ test('l\'interfaccia riceve crediti e logo come data URI', () => {
   // funzionerebbe in entrambi i casi.
   const brand = brandForUi();
   assert.equal(brand.credit, CREDIT);
+  assert.equal(brand.version, VERSION);
   assert.ok(brand.logo === null || brand.logo.startsWith('data:image/'), 'logo malformato');
 });

@@ -966,6 +966,7 @@ function renderRemoteStatus(status) {
 /** Crediti in fondo alla finestra: il logo compare solo se è stato caricato. */
 function renderBrand(brand) {
   if (!brand) return;
+  $('version').textContent = brand.version ? `v${brand.version}` : '';
   $('credit-text').textContent = brand.credit ?? '';
   const logo = $('credit-logo');
   if (brand.logo) {

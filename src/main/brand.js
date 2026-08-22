@@ -13,6 +13,20 @@ export const BRAND_DIR = path.join(ROOT, 'assets', 'brand');
 
 export const CREDIT = '© 2026 Brown Enterprises Srls';
 
+/**
+ * Versione mostrata a schermo e nella guida, letta da package.json così non ci
+ * sono due numeri che possono divergere.
+ *
+ * Le regole: il primo numero cambia per le modifiche corpose (1.4 → 2.0), il
+ * secondo per quelle piccole (1.4 → 1.5). La terza cifra del package.json
+ * esiste solo perché npm pretende il semver, e non si mostra.
+ */
+export const VERSION = (() => {
+  const { version } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const [major, minor] = version.split('.');
+  return `${major}.${minor ?? 0}`;
+})();
+
 /** Estensioni accettate, in ordine di preferenza: l'SVG resta nitido ovunque. */
 const EXTENSIONS = ['.svg', '.png', '.jpg', '.jpeg', '.webp'];
 
@@ -67,5 +81,5 @@ export function brandLogoDataUri(variant, dir = BRAND_DIR) {
 
 /** Blocco crediti da mandare all'interfaccia. Lo sfondo dell'app è scuro. */
 export function brandForUi() {
-  return { credit: CREDIT, logo: brandLogoDataUri('bianco') };
+  return { credit: CREDIT, version: VERSION, logo: brandLogoDataUri('bianco') };
 }

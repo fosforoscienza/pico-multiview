@@ -786,6 +786,15 @@ input[type="checkbox"] {
   }
 }
 
+/* Versione: la prima cosa da chiedere quando qualcuno segnala un problema. */
+.version {
+  color: var(--muted);
+  font-size: 11px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+}
+
 /* Crediti nella barra in basso: presenti ma discreti, non devono rubare
    attenzione allo stato dei visori. */
 .credit {
