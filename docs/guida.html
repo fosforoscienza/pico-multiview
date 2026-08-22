@@ -754,7 +754,6 @@
             <div class="term-body"><span class="prompt">%</span> cd ~/Documents
 <span class="prompt">%</span> git clone https://github.com/fosforoscienza/pico-multiview.git
 <span class="prompt">%</span> cd pico-multiview
-<span class="prompt">%</span> git checkout claude/pico4-remote-control-mac-nlgofc
 <span class="prompt">%</span> npm install
 <span class="prompt">%</span> npm run deps:adb</div>
           </div>
@@ -763,7 +762,6 @@
             <li><code>cd ~/Documents</code> — spostati nella cartella Documenti.</li>
             <li><code>git clone …</code> — scarica il programma da internet.</li>
             <li><code>cd pico-multiview</code> — entra nella cartella appena scaricata.</li>
-            <li><code>git checkout …</code> — passa alla versione giusta del programma.</li>
             <li><code>npm install</code> — installa tutti i pezzi che servono (è il più lungo, anche qualche minuto).</li>
             <li><code>npm run deps:adb</code> — scarica lo strumento che parla con i visori.</li>
           </ul>
@@ -779,16 +777,7 @@
         </p>
       </div>
 
-      <div class="callout warn">
-        <div class="callout-title">Perché quella riga con <code>git checkout</code>?</div>
-        <p>
-          Perché il programma vive per ora su un ramo di sviluppo. Senza quella riga scaricheresti
-          una cartella quasi vuota e non funzionerebbe niente. Quando il progetto verrà pubblicato
-          in via definitiva, quella riga si potrà saltare.
-        </p>
-      </div>
-
-      <div class="step">
+<div class="step">
         <div class="step-num">4</div>
         <div>
           <h4>Avvia il programma</h4>
