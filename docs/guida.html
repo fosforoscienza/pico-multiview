@@ -1,0 +1,1408 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pico MultiView — Guida passo passo</title>
+    <style>
+      /* ---------------------------------------------------------------- base */
+      @page {
+        size: A4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Bitstream Charter", Charter, Georgia, serif;
+        font-size: 10.6pt;
+        line-height: 1.5;
+        color: #1c2530;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      .ui,
+      .kbd,
+      .step-num,
+      .badge,
+      th,
+      .cover-meta,
+      figcaption,
+      .callout-title {
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+      }
+
+      code,
+      pre,
+      .term {
+        font-family: "DejaVu Sans Mono", "Liberation Mono", monospace;
+      }
+
+      :root {
+        --ink: #1c2530;
+        --muted: #5b6875;
+        --accent: #1f5fa0;
+        --accent-soft: #eaf1f9;
+        --line: #d7dee6;
+        --warn: #a4640a;
+        --warn-soft: #fdf3e3;
+        --ok: #1f7a4d;
+        --ok-soft: #e9f6ef;
+      }
+
+      /* -------------------------------------------------------------- layout */
+      .body {
+        padding: 0 18mm;
+      }
+
+      p {
+        margin: 0 0 0.7em;
+        orphans: 3;
+        widows: 3;
+      }
+
+      /* --------------------------------------------------------------- cover */
+      .cover {
+        break-after: page;
+        padding: 26mm 18mm 0;
+      }
+
+      .cover-rule {
+        height: 5px;
+        background: var(--accent);
+        width: 64mm;
+        margin-bottom: 12mm;
+      }
+
+      .cover h1 {
+        font-size: 36pt;
+        line-height: 1.05;
+        margin: 0 0 4mm;
+        letter-spacing: -0.5px;
+      }
+
+      .cover .sub {
+        font-size: 15pt;
+        color: var(--accent);
+        margin: 0 0 8mm;
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+      }
+
+      .cover .lede {
+        font-size: 12pt;
+        max-width: 125mm;
+        color: var(--muted);
+        margin-bottom: 12mm;
+      }
+
+      .cover img {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+      }
+
+      .cover-meta {
+        margin-top: 10mm;
+        font-size: 9pt;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid var(--line);
+        padding-top: 3mm;
+      }
+
+      /* ------------------------------------------------------------ headings */
+      h2.part {
+        break-before: page;
+        font-size: 21pt;
+        line-height: 1.15;
+        margin: 0 0 2mm;
+        padding-top: 2mm;
+        letter-spacing: -0.3px;
+      }
+
+      h2.part .num {
+        display: block;
+        font-size: 10pt;
+        letter-spacing: 1.6px;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 2mm;
+      }
+
+      .part-lede {
+        color: var(--muted);
+        font-size: 11pt;
+        margin: 0 0 7mm;
+        padding-bottom: 5mm;
+        border-bottom: 1px solid var(--line);
+      }
+
+      h3 {
+        font-size: 12.5pt;
+        margin: 7mm 0 2mm;
+        break-after: avoid;
+      }
+
+      h4 {
+        font-size: 10.5pt;
+        margin: 5mm 0 1.5mm;
+        break-after: avoid;
+      }
+
+      /* --------------------------------------------------------------- passi */
+      .step {
+        display: grid;
+        grid-template-columns: 11mm 1fr;
+        gap: 0 4mm;
+        margin: 0 0 6mm;
+        break-inside: avoid;
+      }
+
+      .step-num {
+        width: 9mm;
+        height: 9mm;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12pt;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1mm;
+      }
+
+      .step h4 {
+        margin: 1mm 0 1.5mm;
+        font-size: 12pt;
+      }
+
+      .step > div > *:last-child {
+        margin-bottom: 0;
+      }
+
+      /* ------------------------------------------------------------ elementi */
+      .ui {
+        font-weight: bold;
+        font-size: 0.95em;
+        background: var(--accent-soft);
+        color: #123a63;
+        padding: 0.5mm 1.4mm;
+        border-radius: 2px;
+        white-space: nowrap;
+      }
+
+      .kbd {
+        display: inline-block;
+        border: 1px solid #b9c3cd;
+        border-bottom-width: 2px;
+        border-radius: 3px;
+        background: #f7f9fb;
+        padding: 0 1.6mm;
+        font-size: 0.9em;
+        white-space: nowrap;
+      }
+
+      code {
+        font-size: 0.88em;
+        background: #f1f4f7;
+        padding: 0.4mm 1.2mm;
+        border-radius: 2px;
+      }
+
+      /* Finestra del Terminale */
+      .term {
+        background: #14191f;
+        color: #e6edf3;
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 3mm 0 5mm;
+        font-size: 9pt;
+        line-height: 1.55;
+        break-inside: avoid;
+      }
+
+      .term-bar {
+        background: #232c36;
+        padding: 1.8mm 3mm;
+        display: flex;
+        align-items: center;
+        gap: 1.6mm;
+      }
+
+      .term-bar i {
+        width: 2.6mm;
+        height: 2.6mm;
+        border-radius: 50%;
+        display: block;
+      }
+
+      .term-bar .t {
+        margin-left: 2mm;
+        font-family: "Liberation Sans", Helvetica, sans-serif;
+        font-size: 8pt;
+        color: #9aa7b4;
+      }
+
+      .term-body {
+        padding: 3mm 4mm;
+        white-space: pre-wrap;
+      }
+
+      .term-body .prompt {
+        color: #62b0f5;
+      }
+
+      .term-body .out {
+        color: #93a2b1;
+      }
+
+      /* Riquadri di avviso */
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: var(--accent-soft);
+        padding: 3mm 4mm;
+        margin: 4mm 0;
+        break-inside: avoid;
+        font-size: 10pt;
+      }
+
+      .callout.warn {
+        border-color: var(--warn);
+        background: var(--warn-soft);
+      }
+
+      .callout.ok {
+        border-color: var(--ok);
+        background: var(--ok-soft);
+      }
+
+      .callout-title {
+        font-weight: bold;
+        font-size: 9pt;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--accent);
+        margin-bottom: 1.5mm;
+      }
+
+      .callout.warn .callout-title {
+        color: var(--warn);
+      }
+
+      .callout.ok .callout-title {
+        color: var(--ok);
+      }
+
+      .callout p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Immagini */
+      figure {
+        margin: 5mm 0;
+        break-inside: avoid;
+      }
+
+      figure img {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        display: block;
+      }
+
+      figcaption {
+        font-size: 8.5pt;
+        color: var(--muted);
+        margin-top: 1.8mm;
+      }
+
+      /* Tabelle */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9.5pt;
+        margin: 4mm 0 6mm;
+      }
+
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 2mm 2.5mm;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        background: #f4f7fa;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--muted);
+        border-bottom: 1.5px solid var(--line);
+      }
+
+      tr {
+        break-inside: avoid;
+      }
+
+      ul,
+      ol {
+        margin: 0 0 0.7em;
+        padding-left: 5mm;
+      }
+
+      li {
+        margin-bottom: 1.2mm;
+      }
+
+      /* Checklist */
+      .check {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .check li {
+        padding-left: 7mm;
+        position: relative;
+        margin-bottom: 2.2mm;
+      }
+
+      .check li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.9mm;
+        width: 4mm;
+        height: 4mm;
+        border: 1.2px solid #96a3b1;
+        border-radius: 1.5px;
+      }
+
+      /* Sommario */
+      .toc {
+        list-style: none;
+        padding: 0;
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+      }
+
+      .toc li {
+        padding: 2.2mm 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 11pt;
+      }
+
+      .toc .n {
+        color: var(--accent);
+        font-weight: bold;
+        display: inline-block;
+        width: 22mm;
+      }
+
+      .toc .d {
+        color: var(--muted);
+        font-size: 9.5pt;
+        display: block;
+        margin-left: 22mm;
+      }
+
+      /* Finto Spotlight per spiegare come si apre il Terminale */
+      .spotlight {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f7f9fb;
+        padding: 4mm;
+        margin: 4mm 0;
+        break-inside: avoid;
+      }
+
+      .spotlight-bar {
+        background: #fff;
+        border: 1px solid #cdd6df;
+        border-radius: 6px;
+        padding: 2.5mm 3mm;
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        font-size: 13pt;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+
+      .spotlight-hit {
+        margin-top: 2mm;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 5px;
+        padding: 2mm 3mm;
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        font-size: 10.5pt;
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+      }
+
+      .icon-term {
+        width: 5.5mm;
+        height: 5.5mm;
+        border-radius: 1.5mm;
+        background: #14191f;
+        color: #4ade80;
+        font-size: 6.5pt;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "DejaVu Sans Mono", monospace;
+        flex: 0 0 auto;
+      }
+
+      .lead-in {
+        font-size: 11pt;
+        color: var(--muted);
+      }
+
+      .tag {
+        display: inline-block;
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 0.3mm 1.5mm;
+        vertical-align: 1.5px;
+      }
+
+      .facebtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.5mm;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 3px;
+        padding: 0.6mm 2mm;
+        font-family: "Liberation Sans", Helvetica, Arial, sans-serif;
+        font-size: 8.5pt;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+
+      .facebtn svg {
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ================================================== COPERTINA -->
+    <section class="cover">
+      <div class="cover-rule"></div>
+      <h1>Pico MultiView</h1>
+      <p class="sub">Guida passo passo per chi parte da zero</p>
+      <p class="lede">
+        Come installare il programma sul Mac, preparare dieci visori PICO&nbsp;4 e governarli
+        durante un evento. Nessuna conoscenza tecnica richiesta: si parte da come si apre il
+        Terminale.
+      </p>
+      <img src="screenshot.png" alt="L'interfaccia di Pico MultiView" />
+      <div class="cover-meta">
+        <span>Fosforo Scienza</span>
+        <span>Versione 1 — agosto 2026</span>
+      </div>
+    </section>
+
+    <div class="body">
+      <!-- ================================================== SOMMARIO -->
+      <h2 class="part" style="break-before: auto">
+        <span class="num">Sommario</span>
+        Cosa troverai in questa guida
+      </h2>
+      <p class="part-lede">
+        Ogni parte comincia su una pagina nuova. Se è la prima volta, falle in ordine: dalla 1 alla
+        3 si fa una volta sola, la 4 e le successive sono quelle che userai a ogni evento.
+      </p>
+
+      <ul class="toc">
+        <li>
+          <span class="n">Parte 1</span> Il Terminale, senza paura
+          <span class="d">Che cos'è, come si apre, come si usa. Cinque minuti.</span>
+        </li>
+        <li>
+          <span class="n">Parte 2</span> Installare il programma sul Mac
+          <span class="d">Node.js, scaricare Pico MultiView, primo avvio.</span>
+        </li>
+        <li>
+          <span class="n">Parte 3</span> Preparare i visori
+          <span class="d">Una volta sola per visore: modalità sviluppatore, cavo, passaggio al wifi.</span>
+        </li>
+        <li>
+          <span class="n">Parte 4</span> Usare il programma
+          <span class="d">Postazioni, anteprima, visuale libera, comandi su tutti.</span>
+        </li>
+        <li>
+          <span class="n">Parte 5</span> Comandare dall'iPad
+          <span class="d">Il Mac fa da server, l'iPad diventa il telecomando.</span>
+        </li>
+        <li>
+          <span class="n">Parte 6</span> Il giorno dell'evento
+          <span class="d">La checklist da spuntare prima che arrivi il pubblico.</span>
+        </li>
+        <li>
+          <span class="n">Parte 7</span> Se qualcosa non va
+          <span class="d">I problemi tipici e cosa fare, in tabella.</span>
+        </li>
+        <li>
+          <span class="n">Glossario</span> Le parole tecniche, spiegate
+          <span class="d">Da leggere solo quando serve.</span>
+        </li>
+      </ul>
+
+      <h3>Cosa ti serve prima di cominciare</h3>
+      <ul class="check">
+        <li>Un <strong>Mac</strong> (va bene qualsiasi Mac degli ultimi anni).</li>
+        <li>I tuoi <strong>visori PICO 4</strong>, carichi.</li>
+        <li>
+          Una <strong>rete wifi</strong> a cui collegare Mac e visori. Per gli eventi conviene una
+          rete dedicata, anche un semplice router portatile: la wifi degli ospiti è la causa numero
+          uno dei problemi.
+        </li>
+        <li>
+          Un <strong>cavo USB-C</strong> che trasmetta dati, non solo corrente. Serve una volta
+          sola per visore. Se il visore si ricarica ma il Mac non lo "vede", è un cavo da sola
+          ricarica: cambialo.
+        </li>
+        <li>Circa <strong>mezz'ora</strong> la prima volta, poi due minuti a ogni evento.</li>
+      </ul>
+
+      <!-- ================================================== PARTE 1 -->
+      <h2 class="part">
+        <span class="num">Parte 1</span>
+        Il Terminale, senza paura
+      </h2>
+      <p class="part-lede">
+        Serve solo per l'installazione. Una volta finito, il programma si apre come qualsiasi altra
+        applicazione e il Terminale non lo tocchi più.
+      </p>
+
+      <h3>Che cos'è</h3>
+      <p>
+        Il Terminale è una finestra dove si scrivono comandi invece di cliccare pulsanti. Fa le
+        stesse cose del Finder — copiare file, installare programmi — solo che glielo si chiede a
+        parole. Non è pericoloso: fa esattamente quello che gli scrivi, niente di più.
+      </p>
+
+      <h3>Come si apre</h3>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Premi <span class="kbd">⌘</span> + <span class="kbd">barra spaziatrice</span></h4>
+          <p>
+            Il tasto <span class="kbd">⌘</span> è quello con il quadrifoglio, a sinistra della barra
+            spaziatrice. Si apre una barra di ricerca al centro dello schermo.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Scrivi <code>terminale</code> e premi <span class="kbd">Invio</span></h4>
+          <p>Non serve scriverlo tutto: bastano le prime lettere e il Mac lo trova da solo.</p>
+
+          <div class="spotlight">
+            <div class="spotlight-bar">
+              <span style="color: #8b97a5">🔍</span>
+              <span>terminale</span>
+            </div>
+            <div class="spotlight-hit">
+              <span class="icon-term">&gt;_</span>
+              <span>Terminale — Applicazione</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Si apre una finestra come questa</h4>
+          <div class="term">
+            <div class="term-bar">
+              <i style="background: #ff5f56"></i><i style="background: #ffbd2e"></i
+              ><i style="background: #27c93f"></i>
+              <span class="t">Terminale — zsh</span>
+            </div>
+            <div class="term-body"><span class="prompt">MacBook-di-Anna ~ %</span> </div>
+          </div>
+          <p>
+            Quella riga con il <code>%</code> finale si chiama <em>prompt</em>: vuol dire "sono
+            pronto, dimmi cosa fare". Il testo prima del <code>%</code> cambia da Mac a Mac, non
+            preoccuparti se il tuo è diverso.
+          </p>
+        </div>
+      </div>
+
+      <h3>Le cinque regole d'oro</h3>
+
+      <div class="callout">
+        <div class="callout-title">Come si usa</div>
+        <ul style="margin-bottom: 0">
+          <li>
+            <strong>Un comando alla volta.</strong> Copia una riga, incollala nel Terminale, premi
+            <span class="kbd">Invio</span>, aspetta che ricompaia il prompt <code>%</code>, poi passa
+            alla successiva.
+          </li>
+          <li>
+            <strong>Per incollare</strong> si usa <span class="kbd">⌘</span> +
+            <span class="kbd">V</span>, come dappertutto.
+          </li>
+          <li>
+            <strong>Aspetta.</strong> Alcuni comandi scrivono righe su righe per minuti. È normale:
+            sta lavorando. Hai finito quando ricompare il prompt.
+          </li>
+          <li>
+            <strong>Se ti chiede la password</strong> del Mac, digitala: <em>non vedrai
+            niente</em> mentre scrivi, nemmeno i pallini. È fatto apposta. Scrivi e premi
+            <span class="kbd">Invio</span>.
+          </li>
+          <li>
+            <strong>Le righe gialle non sono errori.</strong> Sono avvisi, e si possono ignorare.
+            I problemi veri dicono <code>error</code> e fermano tutto.
+          </li>
+        </ul>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-title">Attenzione ai caratteri</div>
+        <p>
+          Copia e incolla i comandi, non riscriverli a mano: un trattino o uno spazio sbagliato
+          basta a farli fallire. Se il Terminale risponde
+          <code>command not found</code>, quasi sempre è un errore di battitura.
+        </p>
+      </div>
+
+      <!-- ================================================== PARTE 2 -->
+      <h2 class="part">
+        <span class="num">Parte 2</span>
+        Installare il programma sul Mac
+      </h2>
+      <p class="part-lede">
+        Si fa una volta sola. Circa quindici minuti, quasi tutti di attesa mentre il Mac scarica.
+      </p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Installa Node.js</h4>
+          <p>
+            È il motore su cui gira il programma. Apri Safari e vai su
+            <strong>nodejs.org</strong>: c'è un pulsante grande con scritto <span class="ui">LTS</span>
+            (vuol dire "versione stabile"). Scaricalo, apri il file <code>.pkg</code> che finisce in
+            <em>Download</em> e clicca <span class="ui">Continua</span> fino alla fine, accettando
+            quello che propone.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Controlla che sia andata bene</h4>
+          <p>Apri il Terminale (Parte 1) e incolla:</p>
+          <div class="term">
+            <div class="term-bar">
+              <i style="background: #ff5f56"></i><i style="background: #ffbd2e"></i
+              ><i style="background: #27c93f"></i>
+              <span class="t">Terminale</span>
+            </div>
+            <div class="term-body"><span class="prompt">%</span> node -v
+<span class="out">v22.11.0</span></div>
+          </div>
+          <p>
+            Se risponde con un numero preceduto da <code>v</code>, è installato. Se dice
+            <code>command not found</code>, chiudi il Terminale, riaprilo e riprova: dopo
+            l'installazione va riaperto.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Scarica Pico MultiView</h4>
+          <p>
+            Incolla questi comandi <strong>uno alla volta</strong>, aspettando ogni volta che
+            ricompaia il prompt:
+          </p>
+          <div class="term">
+            <div class="term-bar">
+              <i style="background: #ff5f56"></i><i style="background: #ffbd2e"></i
+              ><i style="background: #27c93f"></i>
+              <span class="t">Terminale</span>
+            </div>
+            <div class="term-body"><span class="prompt">%</span> cd ~/Documents
+<span class="prompt">%</span> git clone https://github.com/fosforoscienza/pico-multiview.git
+<span class="prompt">%</span> cd pico-multiview
+<span class="prompt">%</span> npm install
+<span class="prompt">%</span> npm run deps:adb</div>
+          </div>
+          <p>In parole povere, riga per riga:</p>
+          <ul>
+            <li><code>cd ~/Documents</code> — spostati nella cartella Documenti.</li>
+            <li><code>git clone …</code> — scarica il programma da internet.</li>
+            <li><code>cd pico-multiview</code> — entra nella cartella appena scaricata.</li>
+            <li><code>npm install</code> — installa tutti i pezzi che servono (è il più lungo, anche qualche minuto).</li>
+            <li><code>npm run deps:adb</code> — scarica lo strumento che parla con i visori.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-title">Se al primo comando <code>git</code> compare una finestra</div>
+        <p>
+          Il Mac potrebbe proporti di installare gli "strumenti da riga di comando per
+          sviluppatori". Accetta, aspetta che finisca (qualche minuto) e poi ridai il comando
+          <code>git clone</code>. Succede solo la prima volta.
+        </p>
+      </div>
+
+<div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h4>Avvia il programma</h4>
+          <div class="term">
+            <div class="term-bar">
+              <i style="background: #ff5f56"></i><i style="background: #ffbd2e"></i
+              ><i style="background: #27c93f"></i>
+              <span class="t">Terminale</span>
+            </div>
+            <div class="term-body"><span class="prompt">%</span> npm start</div>
+          </div>
+          <p>
+            Si apre la finestra di Pico MultiView con dieci postazioni vuote. Il Terminale deve
+            restare aperto mentre usi il programma: è lui che lo tiene acceso. Per chiudere tutto,
+            chiudi la finestra del programma.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <h4>Prepara il collegamento per le volte successive</h4>
+          <p>
+            Dentro la cartella del programma c'è un file che fa tutto da solo:
+            <span class="ui">Avvia Pico MultiView.command</span>. Ci fai doppio clic e il programma
+            parte — niente Terminale da aprire, niente comandi da ricordare.
+          </p>
+          <p>Per trovarlo, incolla questo comando: si apre la cartella nel Finder.</p>
+          <div class="term">
+            <div class="term-body"><span class="prompt">%</span> open ~/Documents/pico-multiview</div>
+          </div>
+          <p>
+            Comodo tenerlo a portata di mano: trascina il file sulla
+            <strong>Scrivania</strong> tenendo premuti <span class="kbd">⌥</span> +
+            <span class="kbd">⌘</span> (così crei un collegamento e non sposti l'originale), oppure
+            fai tasto destro → <span class="ui">Crea alias</span> e sposta l'alias dove preferisci.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout ok">
+        <div class="callout-title">Le volte successive: due strade</div>
+        <p>
+          <strong>La più semplice:</strong> doppio clic su
+          <span class="ui">Avvia Pico MultiView.command</span> (o sul collegamento che hai messo
+          sulla Scrivania). Si apre una finestra nera che scrive qualche riga e poi compare il
+          programma: quella finestra va lasciata aperta, è lei che lo tiene acceso.
+        </p>
+        <p style="margin-bottom: 0">
+          <strong>Se preferisci il Terminale:</strong> le due righe di sempre.
+        </p>
+        <div class="term" style="margin-bottom: 0">
+          <div class="term-body"><span class="prompt">%</span> cd ~/Documents/pico-multiview
+<span class="prompt">%</span> npm start</div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-title">La prima volta che fai doppio clic</div>
+        <p>
+          Il file controlla che ci sia tutto e, se manca qualcosa, se lo scarica da solo: la prima
+          volta può metterci qualche minuto. Se qualcosa non va te lo dice in italiano e lascia la
+          finestra aperta per farti leggere il messaggio.
+        </p>
+      </div>
+
+      <h3>Vuoi provarlo subito, senza visori?</h3>
+      <p>
+        C'è una modalità dimostrativa che riempie le dieci postazioni con visori finti e
+        un'immagine finta. Serve a prendere confidenza con i comandi senza rischiare niente:
+      </p>
+      <div class="term">
+        <div class="term-body"><span class="prompt">%</span> npm start -- --demo=10</div>
+      </div>
+
+      <h3>Farne un'app da doppio clic (facoltativo)</h3>
+      <p>
+        Se non vuoi più vedere il Terminale, questo comando crea una vera applicazione Mac. Dentro
+        la cartella <code>dist</code> troverai <code>Pico MultiView.dmg</code>: aprilo e trascina
+        l'icona in <em>Applicazioni</em>. Da lì parte con un doppio clic.
+      </p>
+      <div class="term">
+        <div class="term-body"><span class="prompt">%</span> npm run dist</div>
+      </div>
+
+      <!-- ================================================== PARTE 3 -->
+      <h2 class="part">
+        <span class="num">Parte 3</span>
+        Preparare i visori
+      </h2>
+      <p class="part-lede">
+        Si fa una volta sola per visore, circa un minuto ciascuno. Serve il cavo USB-C, ma solo
+        adesso: dopo si lavora tutto via wifi.
+      </p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Metti tutti sulla stessa wifi</h4>
+          <p>
+            Mac e visori devono stare sulla stessa rete. Se il router ha l'opzione
+            <em>isolamento client</em> (in inglese <em>AP isolation</em>), va disattivata:
+            altrimenti i dispositivi non si vedono fra loro anche se sono sulla stessa wifi.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Attiva la modalità sviluppatore sul visore</h4>
+          <p>Indossa il visore e vai in:</p>
+          <p style="margin-left: 4mm">
+            <span class="ui">Impostazioni</span> → <span class="ui">Generale</span> →
+            <span class="ui">Informazioni sul dispositivo</span>
+          </p>
+          <p>
+            Tocca sette o otto volte di seguito su <span class="ui">Numero build</span> finché non
+            compare un messaggio che dice che la modalità sviluppatore è attiva. Poi torna in
+            <span class="ui">Impostazioni</span> → <span class="ui">Sviluppatore</span> e accendi
+            <span class="ui">Debug USB</span>.
+          </p>
+          <p class="lead-in">
+            I nomi delle voci cambiano un po' fra le versioni di PICO OS, ma la sostanza è questa:
+            cercare "Numero build" e toccarlo tante volte.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>Collega il cavo e autorizza il Mac</h4>
+          <p>
+            Attacca il visore al Mac con il cavo USB-C. Dentro il visore compare la domanda
+            <em>"Consenti debug USB da questo computer?"</em>.
+          </p>
+          <div class="callout warn">
+            <div class="callout-title">Il passaggio che tutti dimenticano</div>
+            <p>
+              Metti la spunta su <span class="ui">Consenti sempre da questo computer</span> prima di
+              confermare. Se non la metti, dovrai riautorizzare ogni volta e niente funzionerà da
+              solo.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h4>Passa al wifi (e togli il cavo)</h4>
+          <p>
+            Nel programma, clicca una <strong>postazione vuota</strong> e poi
+            <span class="ui">Adotta quello collegato via USB</span>. Il Mac legge l'indirizzo del
+            visore, gli dice di mettersi in ascolto sulla rete e si ricollega senza cavo. Il visore
+            compare nella postazione: ora puoi staccare il cavo.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <h4>Dai un nome alla postazione</h4>
+          <p>
+            Clicca l'ingranaggio <span class="ui">⚙︎</span> sulla miniatura e scrivi un nome:
+            "Postazione 1", "Visore rosso", quello che ti torna comodo. Il nome resta salvato.
+          </p>
+          <div class="callout ok">
+            <div class="callout-title">Consiglio da chi ci è passato</div>
+            <p>
+              Attacca un'etichetta fisica con lo stesso nome sul visore. Quando qualcuno alza la
+              mano, sapere <em>quale</em> riquadro guardare vale più di qualsiasi funzione del
+              programma.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div>
+          <h4>Ripeti per tutti i visori</h4>
+          <p>
+            Passi 3, 4 e 5 per ciascuno. Alla fine avrai dieci postazioni piene e il cavo lo puoi
+            mettere via.
+          </p>
+        </div>
+      </div>
+
+      <h3>Un'accortezza che ti risparmia lavoro</h3>
+      <p>
+        Il collegamento via wifi si perde quando il visore si <strong>riavvia</strong>: bisognerebbe
+        rifare il giro col cavo. Su molti visori si può rendere permanente con questo comando, da
+        dare con il visore ancora collegato (sostituisci <code>&lt;numero&gt;</code> con quello che
+        compare scrivendo <code>adb devices</code>):
+      </p>
+      <div class="term">
+        <div class="term-body"><span class="prompt">%</span> adb -s &lt;numero&gt; shell setprop persist.adb.tcp.port 5555</div>
+      </div>
+      <p>
+        Se dopo un riavvio il visore non si ricollega lo stesso, vuol dire che quel modello non
+        conserva l'impostazione: ricollega il cavo e ripremi <span class="ui">Adotta USB</span>.
+      </p>
+
+      <!-- ================================================== PARTE 4 -->
+      <h2 class="part">
+        <span class="num">Parte 4</span>
+        Usare il programma
+      </h2>
+      <p class="part-lede">
+        Da qui in poi non serve più il Terminale: si clicca e basta.
+      </p>
+
+      <h3>La schermata principale: le postazioni</h3>
+      <figure>
+        <img src="screenshot-postazioni.png" alt="Le dieci postazioni vuote" />
+        <figcaption>
+          Dieci slot da riempire. Cliccandone uno si sceglie come aggiungere il visore: cercarlo in
+          rete, prenderlo dal cavo USB, o scrivere l'indirizzo a mano.
+        </figcaption>
+      </figure>
+      <p>
+        Ogni postazione resta associata al suo visore anche dopo aver chiuso il programma: la
+        disposizione della sala non si perde. Con <span class="ui">+ slot</span> ne aggiungi altre
+        se un giorno i visori diventano di più.
+      </p>
+
+      <h3>Guardare un visore da vicino</h3>
+      <p>
+        Clicca la miniatura di un visore: lo schermo si divide. A sinistra quel visore, grande e a
+        più risoluzione; a destra le miniature di tutti gli altri, sempre vive. Non perdi mai di
+        vista la sala mentre segui una persona.
+      </p>
+      <figure>
+        <img src="screenshot.png" alt="Anteprima e miniature affiancate" />
+        <figcaption>
+          A sinistra la persona che stai seguendo, a destra tutti gli altri. Ogni miniatura è
+          cliccabile: si passa da un visore all'altro con un clic.
+        </figcaption>
+      </figure>
+
+      <h3>La visuale libera</h3>
+      <p>
+        Nell'anteprima, <strong>tieni premuto il tasto sinistro del mouse e muovilo</strong>: ti
+        sposti dentro l'immagine del visore. La rotellina ingrandisce. In questa modalità
+        <strong>non viene inviato nessun tocco al visore</strong>, quindi puoi guardare in giro
+        mentre la persona sta usando l'applicazione, senza disturbarla.
+      </p>
+      <p>
+        Quando ti sei spostato compare in basso la scritta <em>Visuale spostata</em> e il pulsante
+        <span class="facebtn"
+          ><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <circle cx="9.2" cy="10" r="1.2" fill="currentColor" />
+            <circle cx="14.8" cy="10" r="1.2" fill="currentColor" />
+            <path
+              d="M8.2 14.4c1.1 1.3 2.3 1.9 3.8 1.9s2.7-.6 3.8-1.9"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+          Visuale visitatore</span
+        >
+        si accende. Cliccalo (o premi <span class="kbd">0</span>) per tornare esattamente a quello
+        che sta guardando chi indossa il visore.
+      </p>
+
+      <div class="callout warn">
+        <div class="callout-title">Una cosa da sapere prima dell'evento</div>
+        <p>
+          Il programma riceve <em>solo quello che il visore disegna</em>, cioè il campo visivo di
+          chi lo indossa. La visuale libera si muove dentro quell'immagine — e siccome la cattura è
+          "a due occhi affiancati", di norma c'è più spazio di quanto sembri — ma
+          <strong>non puoi girarti a guardare dietro le spalle del visitatore</strong>: quei pixel
+          semplicemente non esistono.
+        </p>
+      </div>
+
+      <h3>La modalità Tocco</h3>
+      <p>
+        Il segmento <span class="ui">Tocco</span> nella barra dell'anteprima trasforma il mouse in
+        un dito: clic e trascinamenti diventano tocchi veri sullo schermo del visore, il tasto
+        destro fa "indietro". Serve per sbloccare qualcuno: rimetterlo nell'app giusta, chiudere un
+        avviso, tornare alla home.
+      </p>
+      <p>
+        Si riparte sempre da <span class="ui">Visuale</span> quando cambi visore, apposta: durante
+        un evento non vuoi cliccare per sbaglio dentro il visore di un visitatore.
+      </p>
+
+      <div class="callout">
+        <div class="callout-title">Dove il tocco funziona e dove no</div>
+        <p>
+          Sui <strong>pannelli 2D</strong> — la home di PICO, i menu di sistema, il browser, le app
+          non immersive — il puntatore funziona molto bene. Dentro le <strong>esperienze
+          immersive</strong> invece l'app ascolta i controller, non il touchscreen: il clic può non
+          produrre nulla. Lì restano validi i comandi di sistema (Home, Indietro, Chiudi app
+          attiva, avvio app, volume) e, in modalità Tocco, i tasti freccia e Invio.
+        </p>
+      </div>
+
+      <h3>I comandi su tutti insieme</h3>
+      <p>
+        La barra in alto agisce su <strong>tutte</strong> le postazioni se non hai selezionato
+        niente, oppure solo su quelle con la casella spuntata.
+      </p>
+      <table>
+        <tr>
+          <th style="width: 42%">Voglio…</th>
+          <th>Come</th>
+        </tr>
+        <tr>
+          <td>lanciare l'esperienza su tutti</td>
+          <td>nessuna selezione → scegli l'app dal menù a tendina → <span class="ui">Avvia</span></td>
+        </tr>
+        <tr>
+          <td>lanciarla solo su alcuni</td>
+          <td>spunta le caselle delle postazioni → <span class="ui">Avvia</span></td>
+        </tr>
+        <tr>
+          <td>far uscire uno dall'app</td>
+          <td>il tasto <span class="ui">✕</span> sulla sua miniatura</td>
+        </tr>
+        <tr>
+          <td>rimettere tutti alla home</td>
+          <td><span class="ui">Home</span> senza selezione</td>
+        </tr>
+        <tr>
+          <td>alzare o abbassare il volume</td>
+          <td><span class="ui">Vol +</span> / <span class="ui">Vol −</span></td>
+        </tr>
+        <tr>
+          <td>controllare le batterie</td>
+          <td>la percentuale su ogni miniatura; diventa rossa sotto il 20%</td>
+        </tr>
+      </table>
+
+      <h3>Preparare la lista delle app</h3>
+      <p>
+        Clicca <span class="ui">Libreria…</span> e poi <span class="ui">Rileva app installate</span>:
+        il programma elenca le applicazioni presenti sui visori, con una spunta accanto a quelle
+        installate su tutti. Clicca quella del tuo evento, dalle un nome leggibile e salva. Da quel
+        momento la lanci ovunque con un clic.
+      </p>
+
+      <!-- ================================================== PARTE 5 -->
+      <h2 class="part">
+        <span class="num">Parte 5</span>
+        Comandare dall'iPad
+      </h2>
+      <p class="part-lede">
+        Comodo quando devi girare per la sala invece di stare davanti al portatile.
+      </p>
+
+      <figure>
+        <img src="screenshot-ipad.png" alt="L'interfaccia su iPad" />
+        <figcaption>Sull'iPad si comanda con le dita: uno per la visuale, due per lo zoom.</figcaption>
+      </figure>
+
+      <p>
+        L'iPad non parla direttamente ai visori, ma non serve: il Mac fa già tutto il lavoro e può
+        servire la stessa identica schermata sulla wifi.
+      </p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h4>Sul Mac</h4>
+          <p>
+            Clicca <span class="ui">Telecomando…</span> nella barra in alto, poi
+            <span class="ui">Accendi</span>. Compaiono un indirizzo e un PIN di sei caratteri.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h4>Sull'iPad</h4>
+          <p>
+            Apri Safari e scrivi l'indirizzo così come lo vedi sul Mac, per esempio
+            <code>http://192.168.1.10:8788/?k=K7M2Q4</code>. Ha già il PIN dentro, quindi entri
+            diretto.
+          </p>
+          <p>
+            Per averlo come un'app: <span class="ui">Condividi</span> →
+            <span class="ui">Aggiungi a Home</span>. Parte a tutto schermo, senza le barre di Safari.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h4>I gesti</h4>
+          <p>
+            <strong>Un dito</strong> trascina la visuale. <strong>Due dita</strong> pizzicano per
+            ingrandire. Il pulsante con la faccia riporta sulla visuale del visitatore. In modalità
+            <span class="ui">Tocco</span> il tuo dito diventa il dito del visitatore sullo schermo
+            del visore.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-title">Tre cose da tenere a mente</div>
+        <ul style="margin-bottom: 0">
+          <li>
+            Il <strong>Mac deve restare acceso</strong> e collegato alla rete: è lui che parla ai
+            visori. Se lo chiudi, l'iPad perde il collegamento (e te lo dice, riprovando da solo).
+          </li>
+          <li>
+            <strong>Chi conosce indirizzo e PIN comanda i visori.</strong> Se un iPad gira per la
+            sala in mano ad altri, cambia il PIN dallo stesso pannello: chi era collegato viene
+            staccato subito.
+          </li>
+          <li>
+            Il video viaggia due volte sulla wifi. Con dieci visori conviene tenere aperto
+            <strong>un solo telecomando alla volta</strong>.
+          </li>
+        </ul>
+      </div>
+
+      <!-- ================================================== PARTE 6 -->
+      <h2 class="part">
+        <span class="num">Parte 6</span>
+        Il giorno dell'evento
+      </h2>
+      <p class="part-lede">Dieci minuti prima che arrivi il pubblico, in ordine.</p>
+
+      <ul class="check">
+        <li><strong>Visori carichi e accesi</strong>, tutti sulla rete giusta.</li>
+        <li>
+          <strong>Mac sulla stessa rete</strong>, programma aperto: le postazioni si ricollegano da
+          sole. Se qualcuno manca, premi <span class="ui">Cerca in rete</span>.
+        </li>
+        <li><strong>Controlla le percentuali di batteria</strong> su ogni miniatura.</li>
+        <li>
+          <strong>Avvia l'app dell'evento</strong> su tutti: nessuna selezione → scegli l'app →
+          <span class="ui">Avvia</span>.
+        </li>
+        <li>
+          <strong>Se usi l'iPad</strong>, accendi il telecomando sul Mac e collegalo <em>prima</em>
+          che arrivi la gente.
+        </li>
+        <li>
+          <strong>Ricorda che l'anteprima parte in modalità Visuale</strong>: puoi guardarti intorno
+          nel visore di un visitatore senza toccargli niente. Passa a
+          <span class="ui">Tocco</span> solo quando devi intervenire davvero.
+        </li>
+      </ul>
+
+      <div class="callout ok">
+        <div class="callout-title">Durante l'evento</div>
+        <p>
+          Il pannello <span class="ui">Log</span> in basso racconta cosa è successo, visore per
+          visore. È la prima cosa da guardare quando qualcosa non torna: spesso la risposta è già
+          scritta lì.
+        </p>
+      </div>
+
+      <!-- ================================================== PARTE 7 -->
+      <h2 class="part">
+        <span class="num">Parte 7</span>
+        Se qualcosa non va
+      </h2>
+      <p class="part-lede">I problemi tipici, in ordine di quanto capitano spesso.</p>
+
+      <table>
+        <tr>
+          <th style="width: 32%">Cosa vedi</th>
+          <th style="width: 30%">Perché succede</th>
+          <th>Cosa fare</th>
+        </tr>
+        <tr>
+          <td>Un visore non compare quando cerco in rete</td>
+          <td>È su un'altra wifi, è addormentato, o il router isola i dispositivi</td>
+          <td>
+            Sveglialo indossandolo un attimo, controlla la rete, disattiva l'isolamento client sul
+            router
+          </td>
+        </tr>
+        <tr>
+          <td>Nel log leggo <code>unauthorized</code></td>
+          <td>Manca la spunta "Consenti sempre da questo computer"</td>
+          <td>Ricollega quel visore col cavo e autorizza mettendo la spunta</td>
+        </tr>
+        <tr>
+          <td>Si collegava, adesso no</td>
+          <td>Il visore è stato riavviato e ha perso l'ascolto sulla rete</td>
+          <td>Cavo + <span class="ui">Adotta USB</span>, oppure imposta <code>persist.adb.tcp.port</code> (Parte 3)</td>
+        </tr>
+        <tr>
+          <td>Un riquadro resta nero o fermo</td>
+          <td>Lo streaming di quel visore si è interrotto</td>
+          <td>
+            Premi <span class="ui">⟳</span> sulla miniatura. Se ricapita, passa quel visore alla
+            modalità <em>screencap</em> dall'ingranaggio
+          </td>
+        </tr>
+        <tr>
+          <td>Tutto va a scatti con dieci visori</td>
+          <td>La wifi non regge dieci flussi video</td>
+          <td>Usa una rete dedicata; in alternativa abbassa la qualità delle miniature</td>
+        </tr>
+        <tr>
+          <td>Il Terminale dice <code>command not found</code></td>
+          <td>Comando scritto a mano con un errore, o Node non installato</td>
+          <td>Copia e incolla il comando; controlla <code>node -v</code> (Parte 2)</td>
+        </tr>
+        <tr>
+          <td>L'iPad non apre la pagina</td>
+          <td>Telecomando spento sul Mac, o iPad su un'altra rete</td>
+          <td><span class="ui">Telecomando…</span> → <span class="ui">Accendi</span>; stessa wifi</td>
+        </tr>
+        <tr>
+          <td>Clicco nell'anteprima e non succede niente</td>
+          <td>Sei in modalità <span class="ui">Visuale</span>, oppure l'app è immersiva</td>
+          <td>Passa a <span class="ui">Tocco</span>; se è immersiva usa i comandi di sistema</td>
+        </tr>
+      </table>
+
+      <h3>Usare un secondo computer</h3>
+      <p>
+        Se apri il programma da un altro Mac sulla stessa rete, i visori sono già raggiungibili
+        (quella parte sta nel visore, non nel computer), ma il nuovo Mac non è ancora autorizzato:
+        ha una sua "chiave" che i visori non conoscono. La via veloce è copiare la chiave dal
+        computer già autorizzato — sono due file nella cartella <code>~/.android/</code> chiamati
+        <code>adbkey</code> e <code>adbkey.pub</code>. Copiali nella stessa posizione sul computer
+        nuovo e i visori lo riconosceranno subito, tutti insieme.
+      </p>
+      <p>
+        Per portarti dietro anche postazioni, nomi e libreria app, copia il file di configurazione:
+        <code>~/Library/Application Support/pico-multiview/config.json</code>.
+      </p>
+
+      <!-- ================================================== GLOSSARIO -->
+      <h2 class="part">
+        <span class="num">Glossario</span>
+        Le parole tecniche, spiegate
+      </h2>
+      <p class="part-lede">Da leggere solo quando ne incontri una e ti chiedi cosa voglia dire.</p>
+
+      <table>
+        <tr>
+          <th style="width: 26%">Parola</th>
+          <th>Che cosa vuol dire qui</th>
+        </tr>
+        <tr>
+          <td><strong>Terminale</strong></td>
+          <td>
+            La finestra del Mac dove si scrivono comandi invece di cliccare. Serve solo per
+            installare il programma.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Comando</strong></td>
+          <td>Una riga di testo che dici al Mac di eseguire, seguita da <span class="kbd">Invio</span>.</td>
+        </tr>
+        <tr>
+          <td><strong>Node.js</strong></td>
+          <td>Il motore su cui gira il programma. Si installa una volta e poi ci si dimentica.</td>
+        </tr>
+        <tr>
+          <td><strong>adb</strong></td>
+          <td>
+            Lo strumento che permette al Mac di parlare con i visori (sono computer Android sotto
+            sotto). Lo scarica il comando <code>npm run deps:adb</code>.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Indirizzo IP</strong></td>
+          <td>
+            Il "numero civico" di un dispositivo sulla rete, tipo <code>192.168.1.51</code>. Ogni
+            visore ne ha uno.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Isolamento client</strong><br /><em>(AP isolation)</em></td>
+          <td>
+            Un'impostazione del router che impedisce ai dispositivi sulla stessa wifi di vedersi fra
+            loro. Va spenta, altrimenti il Mac non trova i visori.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Modalità sviluppatore</strong></td>
+          <td>
+            Un interruttore nascosto nelle impostazioni del visore che permette a un computer di
+            comandarlo. Si attiva toccando sette volte "Numero build".
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Package</strong></td>
+          <td>
+            Il nome tecnico di un'app, tipo <code>com.tuostudio.museo</code>. Il programma lo trova
+            da solo con <span class="ui">Rileva app installate</span>.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Streaming</strong></td>
+          <td>Il video in diretta che arriva dal visore al Mac.</td>
+        </tr>
+        <tr>
+          <td><strong>PIN del telecomando</strong></td>
+          <td>
+            I sei caratteri che proteggono l'accesso dall'iPad. Chi li ha può comandare i visori:
+            trattali come una password.
+          </td>
+        </tr>
+      </table>
+
+      <div class="callout" style="margin-top: 8mm">
+        <div class="callout-title">Dove trovare il resto</div>
+        <p>
+          Nella cartella del programma ci sono due documenti più tecnici, aggiornati insieme al
+          codice: <code>README.md</code> (come è fatto e cosa sa fare) e
+          <code>docs/SETUP-PICO.md</code> (la preparazione dei visori nei dettagli, compresi i casi
+          particolari). Si aprono con qualsiasi editor di testo, o direttamente su GitHub.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

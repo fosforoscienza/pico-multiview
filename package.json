@@ -1,0 +1,48 @@
+{
+  "name": "pico-multiview",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Regia multi-visore per PICO 4: mosaico dei 10 schermi, avvio/chiusura app e puntatore mouse su ogni visore.",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "postinstall": "node scripts/fetch-deps.mjs",
+    "deps": "node scripts/fetch-deps.mjs",
+    "deps:adb": "node scripts/fetch-deps.mjs --with-platform-tools",
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test \"test/*.test.mjs\"",
+    "dist": "electron-builder --mac",
+    "guida": "node scripts/build-guida.mjs"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "it.fosforoscienza.picomultiview",
+    "productName": "Pico MultiView",
+    "files": [
+      "src/**",
+      "assets/**",
+      "vendor/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null
+    }
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
+  }
+}
