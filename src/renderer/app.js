@@ -963,6 +963,19 @@ function renderRemoteStatus(status) {
   }
 }
 
+/** Crediti in fondo alla finestra: il logo compare solo se è stato caricato. */
+function renderBrand(brand) {
+  if (!brand) return;
+  $('credit-text').textContent = brand.credit ?? '';
+  const logo = $('credit-logo');
+  if (brand.logo) {
+    logo.src = brand.logo;
+    logo.classList.remove('hidden');
+  } else {
+    logo.classList.add('hidden');
+  }
+}
+
 function wireRemotePanel() {
   // Un telecomando non può accendere o spegnere il server che lo sta servendo.
   if (window.pico.isRemote) return;
@@ -1008,6 +1021,7 @@ async function boot() {
   state.unassigned = new Set(info.config.unassigned ?? []);
 
   renderAppSelect();
+  renderBrand(info.brand);
   renderRemoteStatus(info.remote);
   log(`adb: ${info.adbPath} · scrcpy-server v${info.scrcpyVersion} · reti: ${info.subnets.join(', ') || 'n/d'}`);
   for (const problem of info.problems) log(problem, 'error');

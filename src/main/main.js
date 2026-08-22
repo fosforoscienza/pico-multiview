@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import * as adb from './adb.js';
 import { Config } from './config.js';
+import { brandForUi } from './brand.js';
 import { DeviceManager } from './device-manager.js';
 import { KEYCODE } from '../shared/protocol.js';
 import { RemoteServer, generatePin } from './server.js';
@@ -181,6 +182,7 @@ function registerHandlers() {
     config: config.data,
     keycodes: KEYCODE,
     remote: remote?.status ?? null,
+    brand: brandForUi(),
   }));
 
   handle('config:get', () => config.data);

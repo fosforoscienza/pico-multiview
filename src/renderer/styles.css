@@ -786,6 +786,24 @@ input[type="checkbox"] {
   }
 }
 
+/* Crediti nella barra in basso: presenti ma discreti, non devono rubare
+   attenzione allo stato dei visori. */
+.credit {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.credit img {
+  height: 14px;
+  width: auto;
+  display: block;
+}
+
 /* --------------------------------------------------- telecomando da iPad */
 
 /* Da browser non c'è la barra del titolo di macOS da trascinare. */

@@ -260,6 +260,7 @@ Si rigenera con `npm run guida` (la sorgente è `docs/guida.html`).
 
 ```
 Avvia Pico MultiView.command   avvio con doppio clic, senza Terminale
+assets/brand/                  logo Brown Enterprises (bianco e nero)
 src/
   shared/protocol.js       codifica dei messaggi di controllo scrcpy (tocco, tasti, scroll)
   shared/stream-parser.js  parser del flusso video (header 12B + frame Annex-B)
@@ -268,6 +269,7 @@ src/
   main/device.js           un visore: stato, mirroring, puntatore, comandi
   main/device-manager.js   registro dei visori e operazioni di gruppo
   main/apps.js             pm/am/dumpsys: elenco app, avvio, chiusura, batteria
+  main/brand.js            crediti e logo, in un punto solo
   main/demo.js             visori finti e immagine sintetica per --demo
   main/server.js           telecomando: HTTP + WebSocket, accesso con PIN
   main/main.js             finestra Electron e ponte verso finestra e telecomandi
@@ -322,6 +324,26 @@ gli altri telecomandi, oppure abbassa la qualità delle miniature.
 - Niente audio: lo streaming è solo video, di proposito (serve banda per dieci flussi).
 - Il telecomando richiede che il Mac resti acceso: è lui a parlare con i visori.
 - Testato per dieci visori su una rete dedicata; su wifi molto affollate conviene una rete a parte.
+
+## Crediti e logo
+
+In fondo alla finestra dell'app e nel piè di pagina della guida PDF compare
+**© 2026 Brown Enterprises Srls**, accompagnato dal logo quando è presente.
+
+I due file del logo vanno in **`assets/brand/`**:
+
+| File | Versione | Dove viene usata |
+|---|---|---|
+| `brown-enterprises-bianco.svg` | bianco | barra in basso dell'app (sfondo scuro) |
+| `brown-enterprises-nero.svg` | nero | piè di pagina della guida PDF (sfondo chiaro) |
+
+Vanno bene anche in `.png` con gli stessi nomi; a parità di nome vince l'SVG.
+Finché i file non ci sono resta la sola scritta, quindi si possono caricare in
+qualsiasi momento senza toccare il codice. Le istruzioni per caricarli da GitHub
+sono in [`assets/brand/README.md`](assets/brand/README.md).
+
+Il testo dei crediti sta in un punto solo, `src/main/brand.js`, così app e guida
+non possono andare in disaccordo.
 
 ## Licenze di terze parti
 

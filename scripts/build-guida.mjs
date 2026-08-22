@@ -9,6 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { CREDIT, brandLogoDataUri } from '../src/main/brand.js';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(ROOT, 'docs', 'guida.html');
 const OUTPUT = path.join(ROOT, 'docs', 'Guida-Pico-MultiView.pdf');
@@ -28,11 +30,17 @@ async function loadChromium() {
   }
 }
 
+// La pagina è bianca, quindi qui serve il logo nero. Se non è ancora stato
+// caricato resta la sola scritta dei crediti.
+const logo = brandLogoDataUri('nero');
+const logoImg = logo ? `<img src="${logo}" style="height:3mm; width:auto; display:block;">` : '';
+
 const footer = `
   <div style="width:100%; font-family: Helvetica, Arial, sans-serif; font-size:8.5px;
-              color:#8a8a8a; padding:0 18mm; display:flex; justify-content:space-between;">
-    <span>Pico MultiView — Guida passo passo</span>
-    <span class="pageNumber"></span>
+              color:#8a8a8a; padding:0 18mm; display:flex; align-items:center;
+              justify-content:space-between;">
+    <span style="display:flex; align-items:center; gap:2mm;">${logoImg}<span>${CREDIT}</span></span>
+    <span>Pico MultiView — Guida passo passo · <span class="pageNumber"></span></span>
   </div>`;
 
 const chromium = await loadChromium();
