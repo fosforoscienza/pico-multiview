@@ -131,12 +131,12 @@ npm start            # avvia l'app
 
 ### Le volte successive: doppio clic
 
-Nella cartella del progetto c'è **`Avvia Pico MultiView.command`**: doppio clic e il programma
-parte, senza Terminale. Controlla che ci sia tutto, scarica quello che manca e, se qualcosa non
-va, lo dice in italiano lasciando la finestra aperta.
+Nella cartella del progetto c'è **`Pico Multiview`**, l'icona con il visore VR: doppio clic e il
+programma parte, senza scrivere comandi. Controlla che ci sia tutto, scarica quello che manca e,
+se qualcosa non va, lo dice in italiano lasciando la finestra aperta.
 
-Per tenerlo a portata di mano, trascinalo sulla Scrivania con <kbd>⌥</kbd>+<kbd>⌘</kbd> premuti
-(crea un collegamento senza spostare l'originale), oppure tasto destro → *Crea alias*.
+Per tenerla a portata di mano, trascinala sulla Scrivania (o nel Dock) con <kbd>⌥</kbd>+<kbd>⌘</kbd>
+premuti: crea un collegamento e l'originale resta nella cartella, dove deve stare per funzionare.
 
 Se preferisci il Terminale, restano valide le due righe di sempre:
 
@@ -259,8 +259,9 @@ Si rigenera con `npm run guida` (la sorgente è `docs/guida.html`).
 ## Struttura del progetto
 
 ```
-Avvia Pico MultiView.command   avvio con doppio clic, senza Terminale
+Pico Multiview.app/            avvio con doppio clic: icona, nome e nient'altro
 assets/brand/                  logo Brown Enterprises (bianco e nero)
+assets/icona/                  icona del visore VR (sorgente SVG + PNG)
 src/
   shared/protocol.js       codifica dei messaggi di controllo scrcpy (tocco, tasti, scroll)
   shared/stream-parser.js  parser del flusso video (header 12B + frame Annex-B)
@@ -279,6 +280,7 @@ src/
   renderer/pico-remote.js  stessa API della finestra, ma sopra un WebSocket
   renderer/bootstrap.js    sceglie il trasporto e avvia l'interfaccia
   renderer/app.js          postazioni, anteprima, comandi
+scripts/                   avvio, download dipendenze, guida PDF, icona
 test/                      test di protocollo, parser video e telecamera (npm test)
 ```
 

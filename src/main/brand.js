@@ -9,25 +9,47 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const BRAND_DIR = path.join(ROOT, 'assets', 'brand');
+export const BRAND_DIR = path.join(ROOT, 'assets', 'brand');
 
 export const CREDIT = '© 2026 Brown Enterprises Srls';
 
 /** Estensioni accettate, in ordine di preferenza: l'SVG resta nitido ovunque. */
-const EXTENSIONS = ['.svg', '.png'];
+const EXTENSIONS = ['.svg', '.png', '.jpg', '.jpeg', '.webp'];
 
-const MIME = { '.svg': 'image/svg+xml', '.png': 'image/png' };
+const MIME = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
 
 /**
- * Percorso del logo, o null se non è stato ancora caricato.
+ * Trova il logo di una variante. Il riconoscimento è per parola contenuta nel
+ * nome ("bianco" o "nero"), non per nome esatto: i file li carica chi possiede
+ * il marchio, spesso trascinandoli su GitHub, e non ha senso far dipendere il
+ * funzionamento da un trattino o da un refuso nel nome.
+ *
  * @param variant 'bianco' (per sfondi scuri) | 'nero' (per sfondi chiari)
+ * @param dir cartella da guardare (parametrico per i test)
  */
-export function brandLogoPath(variant) {
-  for (const ext of EXTENSIONS) {
-    const candidate = path.join(BRAND_DIR, `brown-enterprises-${variant}${ext}`);
-    if (fs.existsSync(candidate)) return candidate;
+export function brandLogoPath(variant, dir = BRAND_DIR) {
+  let candidates;
+  try {
+    candidates = fs.readdirSync(dir);
+  } catch {
+    return null; // cartella assente: nessun logo, e va benissimo
   }
-  return null;
+
+  const matching = candidates
+    .filter((name) => name.toLowerCase().includes(variant))
+    .filter((name) => EXTENSIONS.includes(path.extname(name).toLowerCase()))
+    .sort((a, b) => {
+      const rank = (n) => EXTENSIONS.indexOf(path.extname(n).toLowerCase());
+      return rank(a) - rank(b) || a.localeCompare(b); // a parità, ordine stabile
+    });
+
+  return matching.length ? path.join(dir, matching[0]) : null;
 }
 
 /**
@@ -35,8 +57,8 @@ export function brandLogoPath(variant) {
  * dei dati dell'app, quindi funziona identico nella finestra sul Mac e nel
  * telecomando via browser, senza rotte o percorsi da gestire.
  */
-export function brandLogoDataUri(variant) {
-  const file = brandLogoPath(variant);
+export function brandLogoDataUri(variant, dir = BRAND_DIR) {
+  const file = brandLogoPath(variant, dir);
   if (!file) return null;
   const ext = path.extname(file).toLowerCase();
   const data = fs.readFileSync(file).toString('base64');

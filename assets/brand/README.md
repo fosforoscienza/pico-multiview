@@ -8,12 +8,12 @@ puoi caricarli quando vuoi, senza che nulla si rompa.
 
 | Nome del file | Versione | Dove viene usata |
 |---|---|---|
-| `brown-enterprises-bianco.svg` | logo **bianco** | nella barra in basso dell'app, che ha lo sfondo scuro |
-| `brown-enterprises-nero.svg` | logo **nero** | nel piè di pagina della guida PDF, che ha lo sfondo bianco |
+| un file con **`bianco`** nel nome | logo **bianco** | nella barra in basso dell'app, che ha lo sfondo scuro |
+| un file con **`nero`** nel nome | logo **nero** | nel piè di pagina della guida PDF, che ha lo sfondo bianco |
 
-Vanno bene anche in `.png` (stessi nomi, estensione diversa). Se ci sono
-entrambi, viene preferito l'SVG perché resta nitido a qualsiasi dimensione, sia a
-schermo che stampato.
+Il nome esatto non conta: basta che contenga la parola `bianco` o `nero`. Vanno
+bene `.svg`, `.png`, `.jpg` e `.webp`; se per la stessa variante ci sono più
+file, viene preferito l'SVG perché resta nitido a qualsiasi dimensione.
 
 ## Come caricarli su GitHub
 
@@ -21,7 +21,7 @@ Dalla pagina del progetto su GitHub:
 
 1. entra nella cartella `assets/brand`;
 2. **Add file → Upload files**;
-3. trascina i due file (con i nomi esatti della tabella qui sopra);
+3. trascina i due file (basta che il nome contenga `bianco` e `nero`);
 4. **Commit changes**.
 
 Se invece lavori dal Mac con la cartella già scaricata, copiali dentro
@@ -29,8 +29,10 @@ Se invece lavori dal Mac con la cartella già scaricata, copiali dentro
 
 ## Note pratiche
 
-- Il logo viene mostrato **alto circa 14 pixel** nell'app e **3 mm** nel PDF:
-  assicurati che si legga anche in piccolo. Un logo con testo molto fine sparisce.
+- Il logo viene mostrato **alto 24 pixel** nell'app e **6 mm** nel PDF. Su un
+  marchio a più righe come questo è il minimo per leggere la scritta principale:
+  se un giorno avete una versione **orizzontale a una riga sola**, in questi
+  spazi renderebbe molto meglio.
 - Meglio se il file ha lo sfondo **trasparente** (l'SVG ce l'ha per natura, il PNG
   va salvato con trasparenza).
 - Dopo aver caricato i file, rigenera la guida con `npm run guida` per vederli

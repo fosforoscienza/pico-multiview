@@ -1,0 +1,30 @@
+#!/bin/bash
+# Avviatore di Pico Multiview: è quello che parte quando fai doppio clic
+# sull'icona con il visore.
+#
+# Non fa il lavoro da solo: apre il Terminale sullo script di avvio vero
+# (scripts/avvia-pico-multiview.command). Così durante la prima installazione,
+# che dura qualche minuto, si vede che sta succedendo qualcosa — e se qualcosa
+# va storto il messaggio resta lì da leggere invece di sparire.
+
+# .../Pico Multiview.app/Contents/MacOS -> tre livelli sopra c'è la cartella del progetto.
+CARTELLA="$(cd "$(dirname "$0")/../../.." && pwd)"
+AVVIO="$CARTELLA/scripts/avvia-pico-multiview.command"
+
+avviso() {
+  osascript -e "display dialog \"$1\" buttons {\"OK\"} default button \"OK\" with icon caution with title \"Pico Multiview\"" >/dev/null 2>&1
+}
+
+if [ ! -f "$AVVIO" ]; then
+  avviso "Non trovo i file del programma.\n\nQuesta icona deve restare dentro la cartella 'pico-multiview': se la vuoi sulla Scrivania o nel Dock, non spostarla — trascinala tenendo premuti i tasti Opzione e Comando, così crei un collegamento e l'originale resta al suo posto."
+  exit 1
+fi
+
+# Il permesso di esecuzione può perdersi copiando la cartella su una chiavetta
+# o scompattando uno zip: lo rimettiamo invece di fallire.
+[ -x "$AVVIO" ] || chmod +x "$AVVIO" 2>/dev/null
+
+if ! open -a Terminal "$AVVIO" 2>/dev/null; then
+  avviso "Non riesco ad aprire il Terminale.\n\nPuoi avviare il programma a mano: apri la cartella 'pico-multiview' e fai doppio clic su scripts/avvia-pico-multiview.command"
+  exit 1
+fi

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Icona di Pico MultiView: un visore VR visto di fronte.
+    Disegnata piatta e con poche forme, perché deve restare riconoscibile anche
+    a 32 pixel nel Finder. Da qui si generano il PNG e il file .icns.
+  -->
+  <defs>
+    <linearGradient id="sfondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b7bd4" />
+      <stop offset="0.55" stop-color="#1c5794" />
+      <stop offset="1" stop-color="#102f52" />
+    </linearGradient>
+
+    <linearGradient id="scocca" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#dde7f1" />
+    </linearGradient>
+
+    <!-- L'incavo per il naso, tolto dalla scocca. -->
+    <mask id="incavo">
+      <rect x="0" y="0" width="1024" height="1024" fill="black" />
+      <rect x="150" y="352" width="724" height="304" rx="126" fill="white" />
+      <path d="M424 668 Q512 528 600 668 Z" fill="black" />
+    </mask>
+  </defs>
+
+  <!-- Fondo: quadrato con angoli morbidi, come vuole il Dock. -->
+  <rect x="0" y="0" width="1024" height="1024" rx="230" fill="url(#sfondo)" />
+
+  <!-- Cinghie laterali, dietro la scocca. -->
+  <g fill="#ffffff" opacity="0.42">
+    <rect x="72" y="452" width="120" height="104" rx="52" />
+    <rect x="832" y="452" width="120" height="104" rx="52" />
+  </g>
+
+  <!-- Scocca del visore. -->
+  <g mask="url(#incavo)">
+    <rect x="150" y="352" width="724" height="304" rx="126" fill="url(#scocca)" />
+  </g>
+
+  <!-- Le due lenti. -->
+  <g fill="#102f52">
+    <rect x="228" y="430" width="228" height="150" rx="75" />
+    <rect x="568" y="430" width="228" height="150" rx="75" />
+  </g>
+
+  <!-- Riflesso sulle lenti: dà profondità senza sporcare le dimensioni piccole. -->
+  <g fill="#ffffff" opacity="0.16">
+    <rect x="256" y="452" width="92" height="44" rx="22" />
+    <rect x="596" y="452" width="92" height="44" rx="22" />
+  </g>
+</svg>
