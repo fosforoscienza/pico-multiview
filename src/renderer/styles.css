@@ -320,11 +320,13 @@ input[type="checkbox"] {
   grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
 }
 
-/* Sotto i 1250px l'affiancamento stringe troppo: impila anteprima e postazioni. */
-@media (max-width: 1250px) {
+/* Sotto i 1000px l'affiancamento stringe troppo: anteprima sopra, postazioni
+   sotto. Un iPad in orizzontale (1194px) resta affiancato, che è il modo in cui
+   si usa davvero: anteprima grande a sinistra, sala sott'occhio a destra. */
+@media (max-width: 1000px) {
   .stage.split {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-rows: minmax(0, 1.7fr) minmax(0, 1fr);
   }
 }
 
@@ -356,6 +358,36 @@ input[type="checkbox"] {
 .preview-head h2 {
   font-size: 14px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+/* I comandi non si comprimono mai: su iPad il segmento "Tocco" finiva
+   schiacciato fuori dalla barra e diventava irraggiungibile. */
+.preview-head .seg-group,
+.preview-head .btn-face,
+.preview-head .icon-btn,
+.preview-head .pill {
+  flex: 0 0 auto;
+}
+
+#preview-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Il suggerimento si accorcia, non manda a capo mezza barra. */
+#preview-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .preview-foot {
@@ -377,6 +409,10 @@ input[type="checkbox"] {
   object-fit: contain;
   display: block;
   cursor: grab;
+  /* Su iPad il gesto è nostro: niente scroll o zoom della pagina. */
+  touch-action: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .preview-video canvas.grabbing {
@@ -740,4 +776,132 @@ input[type="checkbox"] {
 
 .detect-result button {
   margin: 2px 4px 2px 0;
+}
+
+/* Quando lo spazio in orizzontale scarseggia (iPad), l'indirizzo del visore
+   nell'intestazione è la prima cosa che può sparire. */
+@media (max-width: 1250px) {
+  #preview-meta {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------- telecomando da iPad */
+
+/* Da browser non c'è la barra del titolo di macOS da trascinare. */
+body.is-remote .drag-region {
+  display: none;
+}
+
+/* Il server telecomando si accende solo dal Mac. */
+body.is-remote .desktop-only {
+  display: none;
+}
+
+.offline-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(42px + env(safe-area-inset-bottom));
+  z-index: 60;
+  background: rgba(255, 176, 32, 0.16);
+  color: var(--warn);
+  border: 1px solid rgba(255, 176, 32, 0.4);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.remote-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+}
+
+.pin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.pin {
+  font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 8px;
+  padding: 10px 14px;
+  background: #12171d;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  user-select: text;
+}
+
+/* ------------------------------------------------------------ touch (iPad) */
+
+@media (pointer: coarse) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .btn,
+  .seg {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .chip {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+
+  .icon-btn {
+    padding: 8px 10px;
+    font-size: 16px;
+  }
+
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .card-head,
+  .card-foot {
+    min-height: 44px;
+  }
+
+  /* Il suggerimento "clicca per aprire" non serve dove si tocca e basta. */
+  .card-hint {
+    display: none;
+  }
+
+  .topbar-actions,
+  .commandbar {
+    gap: 10px;
+  }
+}
+
+/* Su schermi stretti (iPad in verticale, iPhone) la barra comandi va a capo
+   e le postazioni diventano una colonna sola. */
+@media (max-width: 820px) {
+  .brand p {
+    display: none;
+  }
+
+  .slots {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+
+  .preview-head,
+  .preview-foot {
+    flex-wrap: wrap;
+  }
+
+  .preview-head h2 {
+    font-size: 13px;
+  }
 }

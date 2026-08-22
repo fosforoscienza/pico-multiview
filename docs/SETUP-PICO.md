@@ -87,6 +87,15 @@ e salva. Da quel momento lo lanci ovunque con **Avvia**.
 Se conosci anche l'activity puoi indicarla per un avvio più diretto; altrimenti l'app usa
 l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
 
+## 6. Se vuoi comandare dall'iPad
+
+Sul Mac: **Telecomando…** nella barra in alto → **Accendi**. Compaiono l'indirizzo e il PIN.
+Sull'iPad apri Safari su quell'indirizzo (quello con `?k=` dentro entra diretto) e, se vuoi,
+**Condividi → Aggiungi a Home** per averlo come un'app a tutto schermo.
+
+Il Mac deve restare acceso e collegato alla rete: è lui a parlare con i visori. Sull'iPad un
+dito trascina la visuale, due dita zoomano.
+
 ## Checklist da fare il giorno dell'evento
 
 1. Visori carichi e accesi, tutti sulla rete giusta.
@@ -97,6 +106,7 @@ l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
 5. Ricorda che l'anteprima parte sempre in modalità **Visuale**: puoi guardarti intorno nel
    visore di un visitatore senza toccargli niente. Passa a **Tocco** solo quando devi
    intervenire davvero.
+6. Se usi l'iPad, accendi il telecomando sul Mac e collegalo prima che arrivi il pubblico.
 
 ## Se qualcosa non torna
 
@@ -108,3 +118,5 @@ l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
 | immagine ferma su un visore | streaming interrotto | **⟳** sulla miniatura, o modalità `screencap` |
 | tutto lento con 10 visori | banda wifi | abbassa `quality.grid` in `config.json` |
 | la postazione resta vuota anche se il visore è acceso | slot liberato a mano | clicca la postazione → **Assegna** dalla lista dei visori disponibili |
+| l'iPad non apre la pagina | telecomando spento o rete diversa | **Telecomando…** sul Mac → **Accendi**; stessa wifi |
+| l'iPad chiede di nuovo il PIN | PIN cambiato o sessione scaduta | reinseriscilo, oppure riapri l'indirizzo con `?k=` |

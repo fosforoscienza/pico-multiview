@@ -20,6 +20,7 @@ const state = {
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
   keycodes: {},
+  remote: null, // stato del server telecomando (solo sul Mac)
   logs: [],
 };
 
@@ -315,7 +316,6 @@ function selectForPreview(serial) {
       old.renderer.onPaint = null;
       old.el.classList.remove('previewing');
     }
-    run(window.pico.device.setQuality(previous, 'grid'));
   }
 
   const card = state.cards.get(serial);
@@ -332,8 +332,9 @@ function selectForPreview(serial) {
   updatePreviewChrome();
   drawPreview();
 
-  // Più risoluzione per il visore in primo piano: lo stream riparte da solo.
-  run(window.pico.device.setQuality(serial, 'focus'));
+  // Dichiariamo cosa stiamo guardando: il Mac alza la qualità di questo visore
+  // (e la tiene alta finché almeno un client lo sta guardando).
+  run(window.pico.device.preview(serial));
 }
 
 function closePreview() {
@@ -345,7 +346,7 @@ function closePreview() {
       card.renderer.onPaint = null;
       card.el.classList.remove('previewing');
     }
-    run(window.pico.device.setQuality(serial, 'grid'));
+    run(window.pico.device.preview(null));
   }
   $('preview').classList.add('hidden');
   $('stage').classList.remove('split');
@@ -694,6 +695,18 @@ function wireEvents() {
 
   window.pico.on('log', ({ serial, level, message }) => log(message, level, serial));
 
+  window.pico.on('remote-status', renderRemoteStatus);
+
+  // Solo da browser: il collegamento al Mac può cadere e va ripreso.
+  if (window.pico.isRemote) {
+    window.pico.on('connection', async ({ connected }) => {
+      $('offline-banner').classList.toggle('hidden', connected);
+      if (!connected) return;
+      setStatus('Ricollegato al Mac.');
+      renderDevices(await window.pico.devices.list().catch(() => []));
+    });
+  }
+
   window.pico.on('scan-progress', ({ done, total, found }) => {
     const text = `Scansione rete: ${done}/${total} indirizzi, ${found} candidati`;
     setStatus(text);
@@ -867,7 +880,9 @@ function wireUi() {
 function onKeyDown(ev) {
   if (ev.target.matches('input, select, textarea')) return;
 
-  const openModal = ['add-modal', 'apps-modal', 'device-modal'].find((id) => !$(id).classList.contains('hidden'));
+  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal'].find(
+    (id) => !$(id).classList.contains('hidden'),
+  );
   if (ev.key === 'Escape') {
     if (openModal === 'add-modal') closeAddModal();
     else if (openModal) $(openModal).classList.add('hidden');
@@ -913,6 +928,69 @@ function onKeyDown(ev) {
 }
 
 // ---------------------------------------------------------------------------
+// Telecomando da iPad (pannello visibile solo sul Mac)
+// ---------------------------------------------------------------------------
+
+function renderRemoteStatus(status) {
+  if (!status) return;
+  state.remote = status;
+
+  $('remote-dot').className = `dot ${status.running ? 'streaming' : ''}`;
+  $('remote-label').textContent = status.running
+    ? `Acceso sulla porta ${status.port}`
+    : 'Spento';
+  $('remote-toggle').textContent = status.running ? 'Spegni' : 'Accendi';
+  $('remote-pin').textContent = status.pin ?? '------';
+  $('remote-clients').textContent = status.running
+    ? `${status.clients} telecomando/i collegato/i in questo momento.`
+    : '';
+
+  const list = $('remote-urls');
+  list.innerHTML = '';
+  if (!status.running) {
+    list.innerHTML = '<li class="muted">Accendi il telecomando per vedere l\'indirizzo.</li>';
+    return;
+  }
+  if (!status.urls.length) {
+    list.innerHTML = '<li class="muted">Il Mac non risulta collegato a nessuna rete.</li>';
+    return;
+  }
+  for (const url of status.urls) {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="pkg"></span><span class="muted">apre già sbloccato</span>';
+    li.querySelector('.pkg').textContent = `${url}/?k=${status.pin}`;
+    list.append(li);
+  }
+}
+
+function wireRemotePanel() {
+  // Un telecomando non può accendere o spegnere il server che lo sta servendo.
+  if (window.pico.isRemote) return;
+
+  $('btn-remote').addEventListener('click', async () => {
+    renderRemoteStatus(await run(window.pico.remote.status()));
+    $('remote-modal').classList.remove('hidden');
+  });
+  $('remote-close').addEventListener('click', () => $('remote-modal').classList.add('hidden'));
+
+  $('remote-toggle').addEventListener('click', async () => {
+    const running = state.remote?.running;
+    $('remote-toggle').disabled = true;
+    const status = await run(running ? window.pico.remote.stop() : window.pico.remote.start());
+    $('remote-toggle').disabled = false;
+    if (status) {
+      renderRemoteStatus(status);
+      setStatus(status.running ? `Telecomando acceso sulla porta ${status.port}.` : 'Telecomando spento.');
+    }
+  });
+
+  $('remote-newpin').addEventListener('click', async () => {
+    if (!confirm('Cambiare il PIN? I telecomandi già collegati verranno disconnessi.')) return;
+    renderRemoteStatus(await run(window.pico.remote.newPin(), 'PIN cambiato.'));
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Avvio
 // ---------------------------------------------------------------------------
 
@@ -920,6 +998,7 @@ async function boot() {
   wireEvents();
   wireUi();
   wirePreview();
+  wireRemotePanel();
 
   const info = await window.pico.info();
   state.config = info.config;
@@ -929,6 +1008,7 @@ async function boot() {
   state.unassigned = new Set(info.config.unassigned ?? []);
 
   renderAppSelect();
+  renderRemoteStatus(info.remote);
   log(`adb: ${info.adbPath} · scrcpy-server v${info.scrcpyVersion} · reti: ${info.subnets.join(', ') || 'n/d'}`);
   for (const problem of info.problems) log(problem, 'error');
 

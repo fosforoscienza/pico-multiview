@@ -23,6 +23,8 @@ export const DEFAULT_CONFIG = {
     grid: { maxSize: 800, bitRate: 2_000_000, maxFps: 20 },
     focus: { maxSize: 1280, bitRate: 6_000_000, maxFps: 30 },
   },
+  // Telecomando da iPad: server spento finché non lo accendi tu.
+  remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,
   autoReconnect: true,
   screencapIntervalMs: 700,

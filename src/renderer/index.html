@@ -2,7 +2,10 @@
 <html lang="it">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
     <title>Pico MultiView</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -22,6 +25,7 @@
           <button id="btn-scan" class="btn">Cerca in rete</button>
           <button id="btn-usb" class="btn" title="Prende i visori collegati via USB e li passa al wifi">Adotta USB</button>
           <button id="btn-sync" class="btn">Aggiorna</button>
+          <button id="btn-remote" class="btn desktop-only" title="Comanda i visori da iPad">Telecomando…</button>
         </div>
       </div>
 
@@ -126,6 +130,44 @@
 
     <div id="log-panel" class="log-panel hidden"><pre id="log-text"></pre></div>
 
+    <div id="offline-banner" class="offline-banner hidden">
+      Collegamento al Mac perso — riprovo…
+    </div>
+
+    <!-- Modale: telecomando da iPad -->
+    <div id="remote-modal" class="modal hidden">
+      <div class="modal-card">
+        <h2>Telecomando da iPad</h2>
+        <p class="muted">
+          Il Mac resta collegato ai visori e serve la stessa interfaccia sulla wifi. Sull'iPad apri
+          Safari, vai a uno di questi indirizzi e inserisci il PIN.
+        </p>
+
+        <div class="remote-state">
+          <span id="remote-dot" class="dot"></span>
+          <span id="remote-label">Spento</span>
+          <div class="spacer"></div>
+          <button id="remote-toggle" class="btn btn-primary">Accendi</button>
+        </div>
+
+        <h3>Indirizzo</h3>
+        <ul id="remote-urls" class="apps-list"></ul>
+
+        <h3>PIN</h3>
+        <div class="pin-row">
+          <code id="remote-pin" class="pin">------</code>
+          <button id="remote-newpin" class="btn">Cambia PIN</button>
+        </div>
+        <p class="muted" id="remote-clients"></p>
+        <p class="muted">
+          Chi conosce indirizzo e PIN comanda i visori: usalo su una rete di cui ti fidi e cambia
+          il PIN se un iPad gira per la sala in mano ad altri.
+        </p>
+
+        <div class="modal-actions"><button id="remote-close" class="btn">Chiudi</button></div>
+      </div>
+    </div>
+
     <!-- Modale: aggiungi un visore a uno slot -->
     <div id="add-modal" class="modal hidden">
       <div class="modal-card">
@@ -207,6 +249,6 @@
       </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="bootstrap.js"></script>
   </body>
 </html>

@@ -39,6 +39,10 @@ non vuoi cliccare per sbaglio nel visore di un visitatore.
 **Comandi di gruppo.** Avvia un'app, chiudi quella in primo piano, torna alla home, volume,
 riavvio: su una selezione (le caselle sulle miniature) o su tutte le postazioni.
 
+**Telecomando da iPad.** Il Mac può servire la stessa identica interfaccia sulla wifi: apri Safari
+sull'iPad e ti ritrovi postazioni, anteprima e comandi, con i gesti al posto del mouse — un dito
+per guardarti intorno, due dita per zoomare. Vedi *[Comandare tutto dall'iPad](#comandare-tutto-dalliPad)*.
+
 ### Fin dove arriva la visuale libera — e dove no
 
 Lo stream contiene **solo quello che il visore sta disegnando**, cioè il campo visivo di chi lo
@@ -57,6 +61,44 @@ touchscreen, quindi il clic può non produrre nulla. Restano sempre validi i com
 (Home, Indietro, Chiudi app attiva, avvio app, volume) e, in modalità Tocco, i tasti freccia +
 Invio che diventano eventi DPAD. Sui **pannelli 2D** — home di PICO, menu di sistema, browser,
 app 2D — il puntatore funziona invece molto bene.
+
+---
+
+## Comandare tutto dall'iPad
+
+![L'interfaccia su iPad](docs/screenshot-ipad.png)
+
+L'iPad non può parlare direttamente ai visori: `adb` non esiste su iPadOS. Ma non serve — il Mac
+fa già tutto il lavoro e può servire la stessa interfaccia sulla rete locale. L'iPad diventa il
+telecomando che ti porti in giro per la sala.
+
+1. Sul Mac: **Telecomando…** nella barra in alto → **Accendi**.
+2. Compaiono l'indirizzo (uno per ogni rete a cui il Mac è collegato) e un PIN di sei caratteri.
+3. Sull'iPad apri Safari e digita l'indirizzo con il PIN già dentro, per esempio
+   `http://192.168.1.10:8788/?k=K7M2Q4`: entri diretto. In alternativa vai a
+   `http://192.168.1.10:8788` e inserisci il PIN nel modulo.
+4. Per averlo come un'app: **Condividi → Aggiungi a Home**. Parte a tutto schermo, senza barre.
+
+Funziona uguale da iPhone o da un secondo portatile: è una normale pagina web.
+
+**I gesti.** Un dito trascina l'inquadratura, due dita pizzicano per zoomare, il pulsante con la
+faccia riporta sulla visuale del visitatore. In modalità **Tocco** il dito diventa il dito del
+visitatore sullo schermo del visore.
+
+**Da sapere:**
+
+- Il **Mac deve restare acceso e in rete**: è lui che parla ai visori. Se lo chiudi, l'iPad perde
+  il collegamento (e lo dice, riprovando da solo finché non torna).
+- Chi conosce indirizzo e PIN comanda i visori. Usalo su una rete di cui ti fidi e cambia il PIN
+  (**Cambia PIN** nello stesso pannello) se un iPad gira per la sala in mano ad altri: i
+  telecomandi collegati vengono staccati subito.
+- La comunicazione è in chiaro sulla rete locale, come una normale pagina http. Va bene per la
+  wifi dell'evento, non per una rete pubblica.
+- Più client insieme convivono: se il Mac guarda il visore 3 e l'iPad il 5, entrambi restano in
+  alta risoluzione. Il video però viaggia due volte sulla wifi, quindi con dieci visori conviene
+  tenere aperto un solo telecomando alla volta.
+- Vuoi che parta da solo a ogni avvio? Resta acceso come lo lasci: lo stato è salvato in
+  configurazione. Da riga di comando: `npm start -- --remote` (o `--remote=8900` per la porta).
 
 ---
 
@@ -208,17 +250,20 @@ src/
   main/device-manager.js   registro dei visori e operazioni di gruppo
   main/apps.js             pm/am/dumpsys: elenco app, avvio, chiusura, batteria
   main/demo.js             visori finti e immagine sintetica per --demo
-  main/main.js             finestra Electron e ponte IPC
+  main/server.js           telecomando: HTTP + WebSocket, accesso con PIN
+  main/main.js             finestra Electron e ponte verso finestra e telecomandi
   renderer/viewport.js     telecamera virtuale: visuale libera, zoom, "visuale visitatore"
   renderer/decoder.js      decodifica H.264 con WebCodecs, disegno sul canvas
   renderer/pointer.js      mouse → spostamento visuale oppure tocchi sul visore
+  renderer/pico-remote.js  stessa API della finestra, ma sopra un WebSocket
+  renderer/bootstrap.js    sceglie il trasporto e avvia l'interfaccia
   renderer/app.js          postazioni, anteprima, comandi
 test/                      test di protocollo, parser video e telecamera (npm test)
 ```
 
 `npm test` non richiede visori: verifica byte per byte i messaggi di controllo, il parser del
-flusso video e la matematica della visuale libera — le tre parti dove un errore si nota solo
-sul campo.
+flusso video, la matematica della visuale libera e il server del telecomando (accesso col PIN,
+WebSocket, frame che arrivano interi) — le parti dove un errore si nota solo sul campo.
 
 ## Problemi frequenti
 
@@ -241,12 +286,20 @@ in `src/main/scrcpy-session.js` alla versione scaricata in `scripts/fetch-deps.m
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.
 
+**L'iPad non apre la pagina** → controlla che sia sulla stessa wifi del Mac e che il telecomando
+sia acceso (pannello **Telecomando…**). Se la porta 8788 è già occupata da un altro programma,
+cambiala in `config.json` → `remote.port`.
+
+**Sull'iPad l'immagine è a scatti ma sul Mac no** → è la wifi: il video viaggia due volte. Chiudi
+gli altri telecomandi, oppure abbassa la qualità delle miniature.
+
 ## Limiti noti
 
 - Servono i permessi di debug ADB su ogni visore: preparazione da fare una volta, ma va fatta.
 - La visuale libera si muove dentro il fotogramma catturato, non oltre (vedi sopra).
 - Il tocco non sostituisce i controller nelle app immersive.
 - Niente audio: lo streaming è solo video, di proposito (serve banda per dieci flussi).
+- Il telecomando richiede che il Mac resti acceso: è lui a parlare con i visori.
 - Testato per dieci visori su una rete dedicata; su wifi molto affollate conviene una rete a parte.
 
 ## Licenze di terze parti

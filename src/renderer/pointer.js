@@ -59,15 +59,57 @@ export function attachPreviewInput(canvas, h) {
   let dragging = null; // 'pan' | 'touch'
   let activeButton = BUTTON_PRIMARY;
   let lastClient = null;
+  let pinch = null; // { distance, midX, midY }
+
+  /** Puntatori attivi: serve per riconoscere la pinch a due dita su iPad. */
+  const pointers = new Map();
+
+  const capture = (pointerId) => {
+    try {
+      canvas.setPointerCapture?.(pointerId);
+    } catch {
+      /* il puntatore non è più attivo: pazienza, il gesto funziona lo stesso */
+    }
+  };
+
+  const release = (pointerId) => {
+    try {
+      canvas.releasePointerCapture?.(pointerId);
+    } catch {
+      /* già rilasciato */
+    }
+  };
+
+  const pinchState = () => {
+    const [a, b] = [...pointers.values()];
+    return {
+      distance: Math.hypot(a.x - b.x, a.y - b.y),
+      midX: (a.x + b.x) / 2,
+      midY: (a.y + b.y) / 2,
+    };
+  };
 
   const onDown = (ev) => {
     if (ev.button === 2) return; // il destro è "indietro", non un trascinamento
     const { nx, ny, inside } = clientToNormalized(canvas, ev.clientX, ev.clientY);
     if (!inside) return;
     ev.preventDefault();
-    canvas.setPointerCapture?.(ev.pointerId);
-    lastClient = { x: ev.clientX, y: ev.clientY };
+    // Prima registriamo il dito, poi proviamo a catturarlo: se la cattura
+    // fallisce (capita con puntatori già rilasciati) il gesto deve comunque
+    // partire, non morire con un'eccezione a metà.
+    pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    capture(ev.pointerId);
 
+    // Secondo dito in modalità visuale: si passa da trascinamento a pinch.
+    if (pointers.size === 2 && h.getMode() === 'view') {
+      dragging = null;
+      canvas.classList.remove('grabbing');
+      pinch = pinchState();
+      return;
+    }
+    if (pointers.size > 1) return; // le dita in più non aprono un nuovo gesto
+
+    lastClient = { x: ev.clientX, y: ev.clientY };
     if (h.getMode() === 'touch') {
       dragging = 'touch';
       activeButton = domButtonToAndroid(ev.button);
@@ -79,6 +121,21 @@ export function attachPreviewInput(canvas, h) {
   };
 
   const onMove = (ev) => {
+    if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+
+    if (pinch && pointers.size === 2) {
+      ev.preventDefault();
+      const next = pinchState();
+      if (pinch.distance > 0 && next.distance > 0) {
+        const { nx, ny } = clientToNormalized(canvas, next.midX, next.midY);
+        h.onZoom(next.distance / pinch.distance, nx, ny);
+      }
+      // Muovendo le due dita insieme si sposta anche l'inquadratura.
+      h.onPan(next.midX - pinch.midX, next.midY - pinch.midY);
+      pinch = next;
+      return;
+    }
+
     if (!dragging) return;
     ev.preventDefault();
     if (dragging === 'pan') {
@@ -93,11 +150,20 @@ export function attachPreviewInput(canvas, h) {
   };
 
   const endDrag = (ev, type) => {
+    pointers.delete(ev.pointerId);
+    release(ev.pointerId);
+
+    if (pinch) {
+      // Finita la pinch non si torna a trascinare con il dito rimasto:
+      // aspettiamo che si stacchino tutte.
+      if (pointers.size < 2) pinch = null;
+      return;
+    }
     if (!dragging) return;
+
     const wasTouch = dragging === 'touch';
     dragging = null;
     canvas.classList.remove('grabbing');
-    canvas.releasePointerCapture?.(ev.pointerId);
     if (wasTouch) {
       const { nx, ny } = clientToNormalized(canvas, ev.clientX, ev.clientY);
       h.onTouch(type, nx, ny, activeButton);

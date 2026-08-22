@@ -2,7 +2,17 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-const EVENTS = ['devices', 'device-state', 'device-status', 'device-codec', 'frame', 'log', 'scan-progress'];
+const EVENTS = [
+  'devices',
+  'device-state',
+  'device-status',
+  'device-codec',
+  'frame',
+  'log',
+  'scan-progress',
+  'config',
+  'remote-status',
+];
 
 function invoke(channel, payload) {
   return ipcRenderer.invoke(channel, payload).then((res) => {
@@ -32,7 +42,7 @@ contextBridge.exposeInMainWorld('pico', {
     setMirror: (serial, mode) => invoke('device:mirror', { serial, mode }),
     setCrop: (serial, crop) => invoke('device:crop', { serial, crop }),
     setDisplay: (serial, displayId) => invoke('device:display', { serial, displayId }),
-    setQuality: (serial, profile) => invoke('device:quality', { serial, profile }),
+    preview: (serial) => invoke('device:preview', { serial }),
     packages: (serial, includeSystem = false) => invoke('device:packages', { serial, includeSystem }),
     displays: (serial) => invoke('device:displays', { serial }),
     status: (serial) => invoke('device:status', { serial }),
@@ -46,6 +56,13 @@ contextBridge.exposeInMainWorld('pico', {
     volume: (serials, steps) => invoke('action:volume', { serials, steps }),
     reboot: (serials) => invoke('action:reboot', { serials }),
   },
+  remote: {
+    status: () => invoke('remote:status'),
+    start: (port) => invoke('remote:start', { port }),
+    stop: () => invoke('remote:stop'),
+    newPin: () => invoke('remote:newPin'),
+  },
+  isRemote: false,
   pointer: (payload) => ipcRenderer.send('pointer', payload),
   scroll: (payload) => ipcRenderer.send('scroll', payload),
   on(event, handler) {
