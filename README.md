@@ -259,6 +259,7 @@ Si rigenera con `npm run guida` (la sorgente è `docs/guida.html`).
 ## Struttura del progetto
 
 ```
+CHANGELOG.md                   cosa è cambiato, versione per versione
 Pico Multiview.app/            avvio con doppio clic: icona, nome e nient'altro
 assets/brand/                  logo Brown Enterprises (bianco e nero)
 assets/icona/                  icona del visore VR (sorgente SVG + PNG)
@@ -326,6 +327,18 @@ gli altri telecomandi, oppure abbassa la qualità delle miniature.
 - Niente audio: lo streaming è solo video, di proposito (serve banda per dieci flussi).
 - Il telecomando richiede che il Mac resti acceso: è lui a parlare con i visori.
 - Testato per dieci visori su una rete dedicata; su wifi molto affollate conviene una rete a parte.
+
+## Versioni
+
+Il numero si vede in fondo alla finestra dell'app e sulla copertina della guida.
+Cambia così: il **primo** numero per le modifiche corpose (1.4 → 2.0), il
+**secondo** per quelle piccole (1.4 → 1.5).
+
+Sta scritto solo in `package.json`; app e guida PDF lo leggono da lì tramite
+`src/main/brand.js`, quindi per cambiarlo si tocca un file solo. La terza cifra
+del semver esiste perché npm la pretende e non viene mostrata.
+
+L'elenco delle versioni è in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Crediti e logo
 

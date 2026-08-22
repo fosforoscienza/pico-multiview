@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { CREDIT, brandLogoDataUri } from '../src/main/brand.js';
+import { CREDIT, VERSION, brandLogoDataUri } from '../src/main/brand.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(ROOT, 'docs', 'guida.html');
@@ -41,7 +41,7 @@ const footer = `
               color:#8a8a8a; padding:0 18mm; display:flex; align-items:center;
               justify-content:space-between;">
     <span style="display:flex; align-items:center; gap:2mm;">${logoImg}<span>${CREDIT}</span></span>
-    <span>Pico MultiView — Guida passo passo · <span class="pageNumber"></span></span>
+    <span>Pico MultiView v${VERSION} — Guida passo passo · <span class="pageNumber"></span></span>
   </div>`;
 
 const chromium = await loadChromium();
@@ -49,6 +49,20 @@ const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const page = await browser.newPage();
 
 await page.goto(pathToFileURL(SOURCE).href, { waitUntil: 'networkidle' });
+
+// La versione e la data non stanno nella sorgente: le mette qui il generatore,
+// così non c'è un numero da ricordarsi di aggiornare a mano.
+const mesi = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+  'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+const oggi = new Date();
+await page.evaluate(
+  (testo) => {
+    const el = document.getElementById('versione');
+    if (el) el.textContent = testo;
+  },
+  `Versione ${VERSION} — ${mesi[oggi.getMonth()]} ${oggi.getFullYear()}`,
+);
+
 await page.emulateMedia({ media: 'print' });
 await page.pdf({
   path: OUTPUT,
