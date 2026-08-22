@@ -12,7 +12,8 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "test": "node --test \"test/*.test.mjs\"",
-    "dist": "electron-builder --mac"
+    "dist": "electron-builder --mac",
+    "guida": "node scripts/build-guida.mjs"
   },
   "devDependencies": {
     "electron": "^43.0.0",

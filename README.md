@@ -129,7 +129,16 @@ npm run deps:adb     # scarica adb (salta se hai già le platform-tools di Andro
 npm start            # avvia l'app
 ```
 
-Le volte successive bastano le ultime due righe:
+### Le volte successive: doppio clic
+
+Nella cartella del progetto c'è **`Avvia Pico MultiView.command`**: doppio clic e il programma
+parte, senza Terminale. Controlla che ci sia tutto, scarica quello che manca e, se qualcosa non
+va, lo dice in italiano lasciando la finestra aperta.
+
+Per tenerlo a portata di mano, trascinalo sulla Scrivania con <kbd>⌥</kbd>+<kbd>⌘</kbd> premuti
+(crea un collegamento senza spostare l'originale), oppure tasto destro → *Crea alias*.
+
+Se preferisci il Terminale, restano valide le due righe di sempre:
 
 ```bash
 cd ~/Documents/pico-multiview
@@ -239,9 +248,18 @@ Qualità, intervallo delle istantanee e altre preferenze stanno nel file di conf
 `~/Library/Application Support/pico-multiview/config.json`. È anche il file da copiare per
 spostare postazioni, nomi e libreria app su un altro computer.
 
+## Guida per chi parte da zero
+
+In `docs/Guida-Pico-MultiView.pdf` c'è una guida illustrata di sedici pagine che parte da come si
+apre il Terminale e arriva alla checklist del giorno dell'evento. È pensata per chi non ha mai
+usato una riga di comando: se devi far preparare i visori a qualcun altro, dagli quella.
+
+Si rigenera con `npm run guida` (la sorgente è `docs/guida.html`).
+
 ## Struttura del progetto
 
 ```
+Avvia Pico MultiView.command   avvio con doppio clic, senza Terminale
 src/
   shared/protocol.js       codifica dei messaggi di controllo scrcpy (tocco, tasti, scroll)
   shared/stream-parser.js  parser del flusso video (header 12B + frame Annex-B)
