@@ -799,7 +799,8 @@ input[type="checkbox"] {
 }
 
 .credit img {
-  height: 14px;
+  /* Il marchio ha tre righe di testo: sotto i ~22px diventa una macchia. */
+  height: 24px;
   width: auto;
   display: block;
 }

@@ -33,7 +33,8 @@ async function loadChromium() {
 // La pagina è bianca, quindi qui serve il logo nero. Se non è ancora stato
 // caricato resta la sola scritta dei crediti.
 const logo = brandLogoDataUri('nero');
-const logoImg = logo ? `<img src="${logo}" style="height:3mm; width:auto; display:block;">` : '';
+// 6mm: il marchio sta su tre righe, più piccolo non si legge nemmeno stampato.
+const logoImg = logo ? `<img src="${logo}" style="height:6mm; width:auto; display:block;">` : '';
 
 const footer = `
   <div style="width:100%; font-family: Helvetica, Arial, sans-serif; font-size:8.5px;

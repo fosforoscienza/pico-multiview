@@ -13,7 +13,8 @@
     "dev": "electron . --dev",
     "test": "node --test \"test/*.test.mjs\"",
     "dist": "electron-builder --mac",
-    "guida": "node scripts/build-guida.mjs"
+    "guida": "node scripts/build-guida.mjs",
+    "icona": "node scripts/build-icona.mjs"
   },
   "devDependencies": {
     "electron": "^43.0.0",
@@ -26,7 +27,8 @@
       "src/**",
       "assets/**",
       "vendor/**",
-      "package.json"
+      "package.json",
+      "!Pico Multiview.app/**"
     ],
     "mac": {
       "category": "public.app-category.utilities",
