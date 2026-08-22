@@ -96,6 +96,72 @@ Sull'iPad apri Safari su quell'indirizzo (quello con `?k=` dentro entra diretto)
 Il Mac deve restare acceso e collegato alla rete: è lui a parlare con i visori. Sull'iPad un
 dito trascina la visuale, due dita zoomano.
 
+## 7. Usare un secondo computer (o cambiarlo del tutto)
+
+Domanda tipica: *ho fatto il giro col cavo su un Mac, se apro il software da un altro computer
+sulla stessa wifi devo rifare tutto?* No — ma una cosa va portata dietro.
+
+**Non serve rifare `adb tcpip`.** È un'impostazione del *visore*, non del computer: il visore è
+già in ascolto sulla rete e resta raggiungibile da qualunque macchina, finché non si riavvia
+(o per sempre, se hai impostato `persist.adb.tcp.port`).
+
+**Serve invece l'autorizzazione**, perché è legata alla **chiave del computer**, non al visore.
+Ogni installazione di adb ha una sua coppia di chiavi, e il visore tiene l'elenco di quelle che
+ha approvato. Un computer nuovo ha una chiave nuova, quindi i visori lo vedono come sconosciuto
+e lo segnano `unauthorized`.
+
+Due modi per risolverlo.
+
+### A. Copiare la chiave dal computer già autorizzato (consigliato)
+
+Un minuto, nessun cavo, vale per tutti e dieci i visori insieme. Dal Mac già autorizzato copia
+questi due file sul computer nuovo, nella stessa posizione:
+
+```
+~/.android/adbkey
+~/.android/adbkey.pub
+```
+
+Poi sul computer nuovo:
+
+```bash
+adb kill-server     # così riparte leggendo la chiave appena copiata
+```
+
+Il computer nuovo eredita l'identità del primo e tutti i visori lo riconoscono già. Tienili al
+sicuro come una password: chi ha quei file può comandare i tuoi visori.
+
+### B. Autorizzare dal visore, via wifi
+
+Sul computer nuovo:
+
+```bash
+adb connect 192.168.1.51:5555
+```
+
+Il visore mostra la richiesta **"Consenti debug USB da questo computer?"** dentro la VR: bisogna
+indossarlo, spuntare *"Consenti sempre da questo computer"* e confermare. Va fatto per ognuno dei
+dieci, ed è il motivo per cui la strada A conviene. Se la richiesta non compare, ricollega quel
+visore col cavo una volta sola e autorizza da lì.
+
+### Portarsi dietro postazioni, nomi e libreria app
+
+Sono in un solo file, sul computer:
+
+```
+~/Library/Application Support/pico-multiview/config.json
+```
+
+Copialo sul computer nuovo (ad app chiusa) e ritrovi la stessa disposizione, gli stessi nomi e la
+stessa libreria app. Senza copiarlo il software funziona lo stesso: ritrova i visori con **Cerca
+in rete**, ma le postazioni ripartono vuote.
+
+### La scorciatoia: non installare niente
+
+Se ti serve solo comandare i visori da un altro dispositivo, non installare l'app: lascia acceso
+il Mac di sempre, accendi il **Telecomando** e apri l'indirizzo nel browser dell'altro computer
+(o dell'iPad). Niente chiavi, niente configurazione da copiare.
+
 ## Checklist da fare il giorno dell'evento
 
 1. Visori carichi e accesi, tutti sulla rete giusta.

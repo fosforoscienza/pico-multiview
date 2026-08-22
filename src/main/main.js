@@ -33,6 +33,12 @@ const forceRemotePort = Number(remoteArg?.split('=')[1]) || 0;
 /** Identificativo della finestra sul Mac, per distinguerla dai telecomandi. */
 const LOCAL = { clientId: 'local' };
 
+// Cartella dei dati fissata a mano: senza questa riga l'app avviata da sorgente
+// (nome "pico-multiview") e quella impacchettata nel .dmg (nome "Pico MultiView")
+// userebbero due configurazioni diverse, e passando dall'una all'altra sembrerebbe
+// di aver perso postazioni, nomi e libreria app.
+app.setPath('userData', path.join(app.getPath('appData'), 'pico-multiview'));
+
 let mainWindow = null;
 let stopDemo = null;
 let demoList = null; // elenco finto usato solo con --demo
@@ -308,6 +314,7 @@ function wireRemote() {
 
 app.whenReady().then(async () => {
   config = new Config(path.join(app.getPath('userData'), 'config.json'));
+  console.log(`[config] ${config.filePath}`);
   manager = new DeviceManager(config);
 
   if (!config.data.remote.pin) config.patch({ remote: { ...config.data.remote, pin: generatePin() } });

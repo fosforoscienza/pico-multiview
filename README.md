@@ -236,7 +236,8 @@ guardare quando qualcosa non va.
   **Rimuovi visore** lo scollega del tutto.
 
 Qualità, intervallo delle istantanee e altre preferenze stanno nel file di configurazione:
-`~/Library/Application Support/pico-multiview/config.json`.
+`~/Library/Application Support/pico-multiview/config.json`. È anche il file da copiare per
+spostare postazioni, nomi e libreria app su un altro computer.
 
 ## Struttura del progetto
 
@@ -273,8 +274,10 @@ WebSocket, frame che arrivano interi) — le parti dove un errore si nota solo s
 rete del Mac, e la rete non deve isolare i client. Se la tua rete non è una /24 standard puoi
 indicare le sottoreti in `config.json` → `scan.subnets`.
 
-**Un visore risulta `unauthorized`** → va riautorizzato via USB: la spunta "Consenti sempre" non
-era stata messa, oppure il Mac è cambiato.
+**Un visore risulta `unauthorized`** → la spunta "Consenti sempre" non era stata messa, oppure
+stai usando un computer diverso. L'autorizzazione è legata alla chiave di *quel* computer
+(`~/.android/adbkey`): per usarne un altro senza rifare il giro col cavo, copia lì quella chiave —
+vedi *[Usare un secondo computer](docs/SETUP-PICO.md#7-usare-un-secondo-computer-o-cambiarlo-del-tutto)*.
 
 **Dopo un riavvio del visore non si collega più** → `adb tcpip` non sopravvive al riavvio.
 Ricollegalo via USB e ripremi **Adotta USB**, oppure imposta `persist.adb.tcp.port` (sopra).
