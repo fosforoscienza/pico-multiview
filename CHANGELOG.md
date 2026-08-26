@@ -9,6 +9,14 @@ della guida PDF.
 
 ---
 
+## 1.1 — agosto 2026
+
+- Spiegato, nel README e nella guida, perché l'installazione può sembrare
+  infinita: il progetto pesa 5 MB, ma `npm install` scarica Electron (221 MB)
+  dalle release di GitHub, che alcune reti strozzano. Con le tre vie d'uscita:
+  usare il Telecomando dal browser senza installare niente, copiare il `.dmg`
+  già costruito, o cambiare rete/mirror.
+
 ## 1.0 — agosto 2026
 
 Prima versione completa, in uso.
