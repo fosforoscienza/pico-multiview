@@ -104,6 +104,30 @@ visitatore sullo schermo del visore.
 
 ## Scaricare e installare su Mac
 
+### La via corta: l'app già pronta
+
+Nella scheda **Releases** del progetto c'è il `.dmg` già costruito: si scarica, si trascina
+l'app in *Applicazioni* e si parte. Niente Node, niente Terminale, niente `npm` — dentro c'è
+già tutto, compreso `adb`.
+
+Per crearne una nuova: **Actions** → *Costruisci l'app per Mac* → **Run workflow**. Ci mette una
+decina di minuti e pubblica da sola la release, con dentro anche la guida PDF.
+
+Due cose da sapere, visto che **il repository è privato**:
+
+- il link della release **funziona solo per chi ha accesso al repository**. Per gli altri, passa
+  il `.dmg` come un file qualsiasi (AirDrop, chiavetta, Drive);
+- i runner macOS di GitHub Actions consumano **dieci minuti di quota per ogni minuto reale**: una
+  build da ~10 minuti ne pesa ~100. Con la quota gratuita restano comunque una ventina di build
+  al mese, ma non è una cosa da lanciare a ogni commit.
+
+La prima volta l'app va aperta con **tasto destro → Apri**: non è firmata con un certificato
+Apple. Dalla seconda volta basta il doppio clic.
+
+### La via lunga: dai sorgenti
+
+Serve se vuoi modificare il programma, o se preferisci non passare dalle release.
+
 ### Cosa serve prima
 
 1. **Node.js 20 o superiore.** Scaricalo da [nodejs.org](https://nodejs.org) (pulsante LTS) e

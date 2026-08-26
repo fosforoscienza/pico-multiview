@@ -9,6 +9,18 @@ della guida PDF.
 
 ---
 
+## 1.2 — agosto 2026
+
+- **App pronta da scaricare.** Una catena di montaggio su GitHub (*Actions →
+  Costruisci l'app per Mac*) costruisce il `.dmg` e lo pubblica nelle Releases,
+  con dentro anche `adb` e la guida PDF: chi lo riceve non installa più niente.
+- **Corretto un difetto che avrebbe reso il `.dmg` inservibile:** nel pacchetto
+  i file finiscono dentro `app.asar`, un archivio da cui un binario non si può
+  eseguire e da cui `adb push` non può leggere il server scrcpy. Ora `vendor/`
+  viene estratto (`asarUnpack`) e i percorsi puntano alla copia vera su disco.
+- Nella guida, un riquadro a inizio installazione: chi riceve il `.dmg` salta
+  tutta la parte del Terminale.
+
 ## 1.1 — agosto 2026
 
 - Spiegato, nel README e nella guida, perché l'installazione può sembrare

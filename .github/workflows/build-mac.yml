@@ -1,0 +1,92 @@
+name: Costruisci l'app per Mac
+
+# Come si usa, senza toccare il Terminale:
+#   GitHub → scheda "Actions" → "Costruisci l'app per Mac" → "Run workflow".
+# Dopo una decina di minuti l'app compare nella scheda "Releases", pronta da
+# scaricare con un clic.
+#
+# Parte da sola anche quando si pubblica un tag che comincia per "v" (v1.2, …).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # serve per creare la release e allegarci i file
+
+jobs:
+  costruisci:
+    # Un'app per Mac si può costruire solo su un Mac.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # "npm ci" fa partire anche lo script che scarica scrcpy-server.
+      - name: Installa le dipendenze
+        run: npm ci
+
+      # adb finisce dentro l'app: chi la scarica non deve installare altro.
+      - name: Scarica adb da mettere nell'app
+        run: npm run deps:adb
+
+      - name: Controlla che i test passino
+        run: npm test
+
+      - name: Costruisci il .dmg
+        run: npm run dist
+        env:
+          # Niente firma Apple: l'app non è distribuita dall'App Store e non
+          # abbiamo un certificato. Chi la scarica la apre con tasto destro →
+          # Apri la prima volta (è spiegato nelle note della release).
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Leggi la versione dal package.json
+        id: versione
+        run: echo "numero=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")" >> "$GITHUB_OUTPUT"
+
+      - name: Prepara le note della release
+        run: |
+          cat > note-release.md <<'FINE'
+          ## Scarica e installa
+
+          1. Scarica il file `.dmg` qui sotto:
+             - **Mac con chip Apple** (M1, M2, M3, M4 e successivi) → quello con **arm64** nel nome
+             - **Mac con Intel** → quello con **x64** nel nome
+
+             Non sai quale hai? Menu  in alto a sinistra → *Informazioni su questo Mac*.
+          2. Apri il file scaricato e trascina **Pico Multiview** dentro *Applicazioni*.
+          3. La **prima volta** aprila con **tasto destro → Apri**, poi conferma. Serve perché
+             l'app non è firmata con un certificato Apple; dalla seconda volta basta il doppio clic.
+
+          Dentro c'è già tutto: non servono né Node, né il Terminale, né altro.
+
+          La guida passo passo è allegata qui sotto in PDF.
+
+          ---
+          _© 2026 Brown Enterprises Srls_
+          FINE
+
+      # Niente azioni di terze parti: la CLI di GitHub è già sui runner.
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.versione.outputs.numero }}
+          NOME: Pico MultiView ${{ steps.versione.outputs.numero }}
+        run: |
+          set -euo pipefail
+          ls -lh dist/*.dmg
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Rilanciato sulla stessa versione: sostituiamo i file allegati.
+            gh release upload "$TAG" dist/*.dmg docs/Guida-Pico-MultiView.pdf --clobber
+          else
+            gh release create "$TAG" --title "$NOME" --notes-file note-release.md \
+              dist/*.dmg docs/Guida-Pico-MultiView.pdf
+          fi

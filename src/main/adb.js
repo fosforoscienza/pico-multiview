@@ -10,10 +10,28 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
+/**
+ * Dentro l'app impacchettata i file stanno in "app.asar", che è un archivio:
+ * da lì un binario non si può eseguire, e adb non può leggere il server scrcpy
+ * per spingerlo sul visore. electron-builder li tira fuori in
+ * "app.asar.unpacked" (vedi "asarUnpack" nel package.json): qui riscriviamo il
+ * percorso perché punti alla copia vera su disco.
+ *
+ * Fuori dal pacchetto — cioè quando si lancia con "npm start" — non c'è nessun
+ * app.asar nel percorso e la funzione non tocca niente.
+ */
+export function unpackedPath(filePath) {
+  const dentro = `${path.sep}app.asar${path.sep}`;
+  const fuori = `${path.sep}app.asar.unpacked${path.sep}`;
+  return filePath.includes(dentro) ? filePath.replace(dentro, fuori) : filePath;
+}
+
+const VENDOR = unpackedPath(path.join(ROOT, 'vendor'));
+
 let cachedAdbPath = null;
 
 const CANDIDATE_ADB_PATHS = [
-  path.join(ROOT, 'vendor', 'platform-tools', 'adb'),
+  path.join(VENDOR, 'platform-tools', 'adb'),
   '/opt/homebrew/bin/adb',
   '/usr/local/bin/adb',
   path.join(os.homedir(), 'Library', 'Android', 'sdk', 'platform-tools', 'adb'),
@@ -38,7 +56,7 @@ export function adbPath() {
 }
 
 export function scrcpyServerPath() {
-  return path.join(ROOT, 'vendor', 'scrcpy-server');
+  return path.join(VENDOR, 'scrcpy-server');
 }
 
 /** Verifica che adb sia eseguibile e che il server scrcpy sia stato scaricato. */
