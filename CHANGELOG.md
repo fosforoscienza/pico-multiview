@@ -9,6 +9,21 @@ della guida PDF.
 
 ---
 
+## 1.3 — agosto 2026
+
+Tre difetti trovati leggendo il log della prima build vera.
+
+- **La build falliva alla fine**, dopo aver costruito correttamente i due
+  `.dmg`: in CI electron-builder cerca di pubblicare la release da solo e si
+  ferma perché non ha un token. Ora la costruzione usa `--publish never` e la
+  release resta compito del passo che la pubblica con `gh`.
+- **L'app nel `.dmg` aveva l'icona generica di Electron**: mancava
+  `mac.icon`. Ora `npm run icona` genera anche `assets/icona/pico-multiview.icns`
+  e il pacchetto usa quella, cioè il visore VR.
+- **L'archivio per Intel non aveva l'architettura nel nome**, quindi era
+  impossibile capire quale dei due scaricare. Ora si chiamano
+  `…-arm64.dmg` e `…-x64.dmg`.
+
 ## 1.2 — agosto 2026
 
 - **App pronta da scaricare.** Una catena di montaggio su GitHub (*Actions →

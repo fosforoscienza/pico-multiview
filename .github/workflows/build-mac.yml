@@ -58,8 +58,8 @@ jobs:
           ## Scarica e installa
 
           1. Scarica il file `.dmg` qui sotto:
-             - **Mac con chip Apple** (M1, M2, M3, M4 e successivi) → quello con **arm64** nel nome
-             - **Mac con Intel** → quello con **x64** nel nome
+             - **Mac con chip Apple** (M1, M2, M3, M4 e successivi) → il file **arm64**
+             - **Mac con Intel** → il file **x64**
 
              Non sai quale hai? Menu  in alto a sinistra → *Informazioni su questo Mac*.
           2. Apri il file scaricato e trascina **Pico Multiview** dentro *Applicazioni*.
