@@ -312,6 +312,20 @@ in `src/main/scrcpy-session.js` alla versione scaricata in `scripts/fetch-deps.m
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.
 
+**L'installazione dice che ci vogliono ore** → non è il progetto: pesa 5 MB. È `npm install`
+che scarica **Electron, 221 MB**, e lo prende dalle release di GitHub — su una rete che le
+strozza può rallentare fino a fermarsi. Tre vie d'uscita, dalla migliore:
+
+1. *Quel computer forse non deve installare niente.* Se ti serve solo per comandare i visori,
+   apri il **Telecomando** nel suo browser: zero download.
+2. *Copia l'app già costruita.* Sul Mac che funziona lancia `npm run dist` e trasferisci il
+   `.dmg` con AirDrop o una chiavetta. Un file solo, nessuna installazione.
+3. *Cambia rete*, anche l'hotspot del telefono. In alternativa, se è GitHub a essere strozzato,
+   usa un altro canale per Electron:
+   ```bash
+   ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/ npm install
+   ```
+
 **L'iPad non apre la pagina** → controlla che sia sulla stessa wifi del Mac e che il telecomando
 sia acceso (pannello **Telecomando…**). Se la porta 8788 è già occupata da un altro programma,
 cambiala in `config.json` → `remote.port`.

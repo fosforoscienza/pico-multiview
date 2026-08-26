@@ -769,6 +769,23 @@
       </div>
 
       <div class="callout warn">
+        <div class="callout-title">Se il download sembra non finire mai</div>
+        <p>
+          Il progetto in sé pesa 5 MB e arriva in pochi secondi. Quello lungo è
+          <code>npm install</code>, che scarica il motore del programma: <strong>221 MB</strong>.
+          Su una rete lenta può volerci parecchio, e su alcune reti (uffici, wifi degli ospiti)
+          può quasi fermarsi.
+        </p>
+        <p>
+          Se ti dice ore: prova con l'<strong>hotspot del telefono</strong>, oppure — se quel
+          computer ti serve solo per <em>comandare</em> i visori — non installare niente e usa il
+          <span class="ui">Telecomando</span> dal suo browser (Parte 5). Un'altra strada è
+          costruire l'app una volta sola sul Mac che funziona, con <code>npm run dist</code>, e
+          passare il file <code>.dmg</code> con AirDrop o una chiavetta.
+        </p>
+      </div>
+
+      <div class="callout warn">
         <div class="callout-title">Se al primo comando <code>git</code> compare una finestra</div>
         <p>
           Il Mac potrebbe proporti di installare gli "strumenti da riga di comando per
@@ -1287,6 +1304,14 @@
           <td>Tutto va a scatti con dieci visori</td>
           <td>La wifi non regge dieci flussi video</td>
           <td>Usa una rete dedicata; in alternativa abbassa la qualità delle miniature</td>
+        </tr>
+        <tr>
+          <td>Il download dice che ci vogliono ore</td>
+          <td>Non è il progetto (5 MB): è il motore del programma, 221 MB, su una rete lenta</td>
+          <td>
+            Hotspot del telefono; oppure usa il <span class="ui">Telecomando</span> dal browser
+            senza installare; oppure copia il <code>.dmg</code> costruito su un altro Mac
+          </td>
         </tr>
         <tr>
           <td>Il Terminale dice <code>command not found</code></td>
