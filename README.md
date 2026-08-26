@@ -121,8 +121,20 @@ Due cose da sapere, visto che **il repository è privato**:
   build da ~10 minuti ne pesa ~100. Con la quota gratuita restano comunque una ventina di build
   al mese, ma non è una cosa da lanciare a ogni commit.
 
-La prima volta l'app va aperta con **tasto destro → Apri**: non è firmata con un certificato
-Apple. Dalla seconda volta basta il doppio clic.
+**La prima volta va sbloccata.** L'app non è firmata con un certificato Apple: macOS la mette in
+quarantena e può dire che è *danneggiata* — non lo è, è solo il modo in cui rifiuta di eseguire
+software di cui non conosce l'autore. Una riga nel Terminale, una volta sola:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Pico Multiview.app"
+```
+
+Da lì in poi si apre con un doppio clic. In alternativa: tasto destro → *Apri*, oppure
+*Impostazioni di Sistema → Privacy e sicurezza → Apri comunque*.
+
+L'unico modo per non vedere nessun avviso è iscriversi all'Apple Developer Program (99 $/anno) e
+firmare l'app con un certificato: allora `npm run dist` la firmerebbe e la farebbe autenticare da
+Apple, e chi la scarica farebbe solo doppio clic.
 
 ### La via lunga: dai sorgenti
 
@@ -349,6 +361,11 @@ strozza può rallentare fino a fermarsi. Tre vie d'uscita, dalla migliore:
    ```bash
    ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/ npm install
    ```
+
+**"Pico MultiView.app è danneggiata e non può essere aperta"** → non è danneggiata: è la
+quarantena di macOS sulle app non firmate. La riga `xattr -dr com.apple.quarantine …` qui sopra
+la toglie. Se dopo averla eseguita il problema resta, allora il download si è davvero interrotto:
+riscarica il `.dmg`.
 
 **L'iPad non apre la pagina** → controlla che sia sulla stessa wifi del Mac e che il telecomando
 sia acceso (pannello **Telecomando…**). Se la porta 8788 è già occupata da un altro programma,

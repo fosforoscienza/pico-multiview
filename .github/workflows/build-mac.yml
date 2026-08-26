@@ -63,8 +63,19 @@ jobs:
 
              Non sai quale hai? Menu  in alto a sinistra → *Informazioni su questo Mac*.
           2. Apri il file scaricato e trascina **Pico Multiview** dentro *Applicazioni*.
-          3. La **prima volta** aprila con **tasto destro → Apri**, poi conferma. Serve perché
-             l'app non è firmata con un certificato Apple; dalla seconda volta basta il doppio clic.
+          3. **Sbloccala una volta sola.** L'app non è firmata con un certificato Apple, quindi
+             macOS la mette in quarantena e può dire che è *danneggiata*: non lo è. Apri il
+             **Terminale** (⌘ + barra spaziatrice, scrivi "terminale") e incolla questa riga:
+
+             ```
+             xattr -dr com.apple.quarantine "/Applications/Pico Multiview.app"
+             ```
+
+             Premi Invio: non risponde niente, ed è giusto così. Da quel momento l'app si apre
+             con un doppio clic, per sempre.
+
+             In alternativa: **tasto destro → Apri**, e se il Mac non lo permette,
+             *Impostazioni di Sistema → Privacy e sicurezza → Apri comunque*.
 
           Dentro c'è già tutto: non servono né Node, né il Terminale, né altro.
 
