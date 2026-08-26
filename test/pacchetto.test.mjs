@@ -32,3 +32,18 @@ test('il pacchetto dichiara di estrarre vendor dall\'archivio', () => {
   assert.ok(pkg.build.asarUnpack?.includes('vendor/**'), 'manca asarUnpack per vendor');
   assert.ok(pkg.build.files?.includes('vendor/**'), 'vendor non è fra i file impacchettati');
 });
+
+test('l\'app viene firmata, seppure in modo ad-hoc', () => {
+  // Senza nessuna firma i Mac con chip Apple non dicono "sviluppatore non
+  // identificato" (avviso che si supera): dicono "è danneggiata" e chiudono il
+  // discorso. "-" è l'identità ad-hoc: non certifica l'autore, ma rende l'app
+  // eseguibile.
+  assert.equal(pkg.build.mac.identity, '-', 'l\'app uscirebbe dal .dmg senza firma');
+});
+
+test('il runtime irrobustito resta spento, altrimenti l\'app non parte', () => {
+  // electron-builder lo accende da solo. Insieme a una firma ad-hoc attiva la
+  // "library validation", che impedisce a Electron di caricare i propri
+  // framework: l'app si firmerebbe correttamente e poi non si aprirebbe.
+  assert.equal(pkg.build.mac.hardenedRuntime, false);
+});

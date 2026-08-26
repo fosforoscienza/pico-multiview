@@ -41,14 +41,14 @@
           ]
         }
       ],
-      "identity": null,
+      "identity": "-",
+      "hardenedRuntime": false,
       "icon": "assets/icona/pico-multiview.icns",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "asarUnpack": [
       "vendor/**"
-    ],
-    "afterPack": "scripts/firma-adhoc.cjs"
+    ]
   },
   "dependencies": {
     "ws": "^8.21.3"
