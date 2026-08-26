@@ -9,6 +9,19 @@ della guida PDF.
 
 ---
 
+## 1.4 — agosto 2026
+
+- **«L'app è danneggiata e non può essere aperta».** Non lo era: il pacchetto usciva dalla
+  costruzione **senza nessuna firma**, e i Mac con chip Apple rifiutano un'app non firmata
+  con quelle parole, senza dare la via d'uscita del tasto destro. Ora la costruzione applica
+  una **firma ad-hoc** (`scripts/firma-adhoc.cjs`) e la verifica subito: se non regge, si
+  ferma la build invece di far scaricare mezzo giga inutile.
+- La firma ad-hoc rende l'app eseguibile, non ne certifica l'autore: resta la quarantena, che
+  si toglie una volta sola con `xattr -dr com.apple.quarantine "/Applications/Pico Multiview.app"`.
+  Il comando ora è nelle note della release, nel README e nella guida (Parte 2 e tabella dei
+  problemi), con le alternative e la nota che solo un certificato Apple (99 $/anno) toglie
+  l'avviso del tutto.
+
 ## 1.3 — agosto 2026
 
 Tre difetti trovati leggendo il log della prima build vera.
