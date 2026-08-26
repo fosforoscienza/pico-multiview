@@ -16,6 +16,13 @@ on:
 permissions:
   contents: write # serve per creare la release e allegarci i file
 
+# I Mac di GitHub sono pochi e contesi: due costruzioni identiche in coda si
+# rubano il posto a vicenda per produrre lo stesso file. Ne teniamo una sola,
+# la più recente.
+concurrency:
+  group: costruisci-mac
+  cancel-in-progress: true
+
 jobs:
   costruisci:
     # Un'app per Mac si può costruire solo su un Mac.

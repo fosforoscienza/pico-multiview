@@ -21,6 +21,9 @@ della guida PDF.
   Il comando ora è nelle note della release, nel README e nella guida (Parte 2 e tabella dei
   problemi), con le alternative e la nota che solo un certificato Apple (99 $/anno) toglie
   l'avviso del tutto.
+- La catena di montaggio ora tiene **una sola costruzione alla volta**. I Mac di GitHub sono
+  pochi e contesi: due esecuzioni identiche in coda si rubavano il posto a vicenda per
+  produrre lo stesso file.
 
 ## 1.3 — agosto 2026
 
