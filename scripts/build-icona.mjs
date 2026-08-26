@@ -13,7 +13,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SVG = path.join(ROOT, 'assets', 'icona', 'pico-multiview.svg');
 const PNG = path.join(ROOT, 'assets', 'icona', 'pico-multiview.png');
-const ICNS = path.join(ROOT, 'Pico Multiview.app', 'Contents', 'Resources', 'pico-multiview.icns');
+// Due copie, e servono entrambe: una la legge electron-builder per dare
+// l'icona all'app dentro il .dmg, l'altra sta dentro l'avviatore, che come
+// ogni pacchetto macOS deve bastare a se stesso.
+const ICNS = path.join(ROOT, 'assets', 'icona', 'pico-multiview.icns');
+const ICNS_AVVIATORE = path.join(ROOT, 'Pico Multiview.app', 'Contents', 'Resources', 'pico-multiview.icns');
 
 /**
  * Fette che macOS si aspetta in un .icns, con il codice di quattro lettere che
@@ -91,8 +95,12 @@ await browser.close();
 fs.mkdirSync(path.dirname(PNG), { recursive: true });
 fs.writeFileSync(PNG, perSize.get(1024));
 
-fs.mkdirSync(path.dirname(ICNS), { recursive: true });
-fs.writeFileSync(ICNS, buildIcns(SLICES.map(([type, size]) => [type, perSize.get(size)])));
+const icns = buildIcns(SLICES.map(([type, size]) => [type, perSize.get(size)]));
+for (const destinazione of [ICNS, ICNS_AVVIATORE]) {
+  fs.mkdirSync(path.dirname(destinazione), { recursive: true });
+  fs.writeFileSync(destinazione, icns);
+}
 
 console.log(`PNG:  ${path.relative(ROOT, PNG)} (${(perSize.get(1024).length / 1024).toFixed(0)} KB)`);
-console.log(`ICNS: ${path.relative(ROOT, ICNS)} (${(fs.statSync(ICNS).size / 1024).toFixed(0)} KB, ${SLICES.length} dimensioni)`);
+console.log(`ICNS: ${path.relative(ROOT, ICNS)} (${(icns.length / 1024).toFixed(0)} KB, ${SLICES.length} dimensioni)`);
+console.log(`      e la copia nell'avviatore: ${path.relative(ROOT, ICNS_AVVIATORE)}`);
