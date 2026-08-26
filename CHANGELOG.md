@@ -13,9 +13,10 @@ della guida PDF.
 
 - **«L'app è danneggiata e non può essere aperta».** Non lo era: il pacchetto usciva dalla
   costruzione **senza nessuna firma**, e i Mac con chip Apple rifiutano un'app non firmata
-  con quelle parole, senza dare la via d'uscita del tasto destro. Ora la costruzione applica
-  una **firma ad-hoc** (`scripts/firma-adhoc.cjs`) e la verifica subito: se non regge, si
-  ferma la build invece di far scaricare mezzo giga inutile.
+  con quelle parole, senza dare la via d'uscita del tasto destro. Ora l'app esce **firmata
+  in modo ad-hoc**, e con il *runtime irrobustito* spento — acceso, insieme a una firma
+  ad-hoc, impedirebbe a Electron di caricare i propri framework e l'app si aprirebbe solo
+  per chiudersi. Due test tengono ferme entrambe le impostazioni.
 - La firma ad-hoc rende l'app eseguibile, non ne certifica l'autore: resta la quarantena, che
   si toglie una volta sola con `xattr -dr com.apple.quarantine "/Applications/Pico Multiview.app"`.
   Il comando ora è nelle note della release, nel README e nella guida (Parte 2 e tabella dei

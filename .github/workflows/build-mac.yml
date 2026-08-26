@@ -47,12 +47,14 @@ jobs:
       - name: Controlla che i test passino
         run: npm test
 
+      # La firma è "ad-hoc" (identity "-" nel package.json): non abbiamo un
+      # certificato Apple. Non certifica l'autore, ma senza nessuna firma i Mac
+      # con chip Apple rifiutano l'app dicendo che è danneggiata.
+      # CSC_IDENTITY_AUTO_DISCOVERY spegne la ricerca di certificati veri nel
+      # portachiavi del runner, che qui non ci sono.
       - name: Costruisci il .dmg
         run: npm run dist
         env:
-          # Niente firma Apple: l'app non è distribuita dall'App Store e non
-          # abbiamo un certificato. Chi la scarica la apre con tasto destro →
-          # Apri la prima volta (è spiegato nelle note della release).
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Leggi la versione dal package.json
