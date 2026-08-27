@@ -25,6 +25,12 @@ della guida PDF.
 - La catena di montaggio ora tiene **una sola costruzione alla volta**. I Mac di GitHub sono
   pochi e contesi: due esecuzioni identiche in coda si rubavano il posto a vicenda per
   produrre lo stesso file.
+- **Costruire il `.dmg` sul proprio Mac è ora la strada principale**, in README e guida; GitHub
+  Actions è l'alternativa. Motivo: quando la quota mensile di Actions finisce, GitHub non lo
+  dice — accoda le esecuzioni per ore senza mai assegnare loro una macchina, e non si riescono
+  nemmeno ad annullare, perché non esiste ancora un job a cui mandare il segnale. Il segno per
+  riconoscerlo (un'esecuzione «Queued» con **nessun job**) e dove guardare sono ora scritti fra
+  i problemi frequenti. `npm run dist` fa la stessa cosa in due minuti, senza quota.
 
 ## 1.3 — agosto 2026
 
