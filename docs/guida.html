@@ -159,6 +159,12 @@
         break-after: avoid;
       }
 
+      /* Sezioni corte che non devono spezzarsi fra due pagine: senza, l'ultimo
+         capoverso resta orfano in cima alla pagina dopo. */
+      .insieme {
+        break-inside: avoid;
+      }
+
       /* --------------------------------------------------------------- passi */
       .step {
         display: grid;
@@ -899,14 +905,26 @@
         <div class="term-body"><span class="prompt">%</span> npm start -- --demo=10</div>
       </div>
 
-      <h3>Farne un'app da doppio clic (facoltativo)</h3>
-      <p>
-        Se non vuoi più vedere il Terminale, questo comando crea una vera applicazione Mac. Dentro
-        la cartella <code>dist</code> troverai <code>Pico MultiView.dmg</code>: aprilo e trascina
-        l'icona in <em>Applicazioni</em>. Da lì parte con un doppio clic.
-      </p>
-      <div class="term">
-        <div class="term-body"><span class="prompt">%</span> npm run dist</div>
+      <div class="insieme">
+        <h3>Farne un'app da doppio clic</h3>
+        <p>
+          Se non vuoi più vedere il Terminale, questi due comandi creano una vera applicazione
+          Mac. Ci mettono un paio di minuti.
+        </p>
+        <div class="term">
+          <div class="term-body"><span class="prompt">%</span> npm run deps:adb
+<span class="prompt">%</span> npm run dist</div>
+        </div>
+        <p>
+          Nella cartella <code>dist</code> trovi due file: prendi <code>arm64</code> se il Mac ha
+          un chip Apple (M1, M2, M3, M4…), <code>x64</code> se ha un Intel. Aprilo e trascina
+          l'icona in <em>Applicazioni</em>.
+        </p>
+        <p>
+          Costruita così si apre senza avvisi: la quarantena macOS riguarda i file
+          <em>scaricati</em>, e questo non è arrivato da nessuna parte. È anche il file da passare
+          agli altri — a loro l'avviso comparirà, e si toglie come nel riquadro a inizio parte.
+        </p>
       </div>
 
       <!-- ================================================== PARTE 3 -->

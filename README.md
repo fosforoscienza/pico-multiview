@@ -104,22 +104,55 @@ visitatore sullo schermo del visore.
 
 ## Scaricare e installare su Mac
 
-### La via corta: l'app già pronta
+### Se qualcuno ti ha già dato il `.dmg`
 
-Nella scheda **Releases** del progetto c'è il `.dmg` già costruito: si scarica, si trascina
-l'app in *Applicazioni* e si parte. Niente Node, niente Terminale, niente `npm` — dentro c'è
-già tutto, compreso `adb`.
+Aprilo, trascina l'app in *Applicazioni*, e vai al riquadro **La prima volta va sbloccata** qui
+sotto. Dentro c'è già tutto, compreso `adb`: niente Node, niente Terminale, niente `npm`.
 
-Per crearne una nuova: **Actions** → *Costruisci l'app per Mac* → **Run workflow**. Ci mette una
-decina di minuti e pubblica da sola la release, con dentro anche la guida PDF.
+Il `.dmg` di ogni versione sta anche nella scheda **Releases** del progetto — ma il repository è
+privato, quindi quel link funziona solo per chi ha accesso. Per tutti gli altri il `.dmg` va
+passato come un file qualsiasi: AirDrop, chiavetta, Drive.
 
-Due cose da sapere, visto che **il repository è privato**:
+### Costruire il `.dmg`: sul proprio Mac
 
-- il link della release **funziona solo per chi ha accesso al repository**. Per gli altri, passa
-  il `.dmg` come un file qualsiasi (AirDrop, chiavetta, Drive);
-- i runner macOS di GitHub Actions consumano **dieci minuti di quota per ogni minuto reale**: una
-  build da ~10 minuti ne pesa ~100. Con la quota gratuita restano comunque una ventina di build
-  al mese, ma non è una cosa da lanciare a ogni commit.
+<a id="costruire-il-dmg"></a>
+
+È la via **consigliata**, e la più veloce: circa due minuti.
+
+```bash
+cd ~/Documents/pico-multiview
+git pull
+npm install
+npm run deps:adb
+npm run dist
+```
+
+I file escono in `dist/`:
+
+- `Pico MultiView-<versione>-arm64.dmg` → Mac con chip Apple (M1, M2, M3, M4…)
+- `Pico MultiView-<versione>-x64.dmg` → Mac con Intel
+
+Per distribuirli, se ti serve un link: **Releases → Draft a new release**, tag `v<versione>`, e
+trascini dentro i due `.dmg` e `docs/Guida-Pico-MultiView.pdf`. Il risultato, per chi scarica, è
+identico a una release costruita automaticamente.
+
+Il primo `npm install` scarica Electron (221 MB) e può essere lento — vedi
+[Problemi frequenti](#problemi-frequenti). Dalla seconda volta in poi non si ripete.
+
+### Costruire il `.dmg`: con GitHub Actions
+
+**Actions** → *Costruisci l'app per Mac* → **Run workflow**. Costruisce entrambe le architetture
+e pubblica la release da sé, guida PDF compresa. Comodo, ma **dipende dalla quota**: i runner
+macOS consumano **dieci minuti di quota per ogni minuto reale**, e quando la quota mensile
+finisce GitHub non lo dice — lascia le esecuzioni in coda per ore, senza mai assegnare loro una
+macchina, e non si riescono nemmeno ad annullare.
+
+Come si riconosce: apri l'esecuzione e non c'è **nessun job**, solo la riga «Queued». Un'attesa
+per mancanza di macchine, quella normale, un job ce l'ha. Controlla allora in *Settings → Billing
+and licensing → Plans and usage → Actions*: si sblocca al rinnovo mensile, o alzando il limite di
+spesa (≈ 0,08 $ al minuto, cioè poco più di un euro a build).
+
+In quel caso non aspettare: [costruisci sul tuo Mac](#costruire-il-dmg), è la stessa cosa.
 
 **La prima volta va sbloccata.** L'app non è firmata con un certificato Apple: macOS la mette in
 quarantena e può dire che è *danneggiata* — non lo è, è solo il modo in cui rifiuta di eseguire
@@ -136,9 +169,9 @@ L'unico modo per non vedere nessun avviso è iscriversi all'Apple Developer Prog
 firmare l'app con un certificato: allora `npm run dist` la firmerebbe e la farebbe autenticare da
 Apple, e chi la scarica farebbe solo doppio clic.
 
-### La via lunga: dai sorgenti
+### Partire dai sorgenti
 
-Serve se vuoi modificare il programma, o se preferisci non passare dalle release.
+Serve per modificare il programma, e per poterselo costruire da sé come sopra.
 
 ### Cosa serve prima
 
@@ -185,14 +218,11 @@ Per aggiornare all'ultima versione: `git pull` e poi di nuovo `npm install`.
 
 ### Creare una vera app da doppio clic (opzionale)
 
-```bash
-npm run dist
-```
+`npm run dist` — vedi [Costruire il `.dmg`: sul proprio Mac](#costruire-il-dmg).
 
-Trovi `Pico MultiView.dmg` nella cartella `dist/`: aprilo e trascina l'app in *Applicazioni*.
-Da lì parte con un doppio clic, senza Terminale. L'app non è firmata con un certificato Apple:
-essendo compilata da te sul tuo Mac, macOS la lascia partire senza problemi; se un domani la
-copi su un altro Mac, la prima volta va aperta con tasto destro → *Apri*.
+Un `.dmg` che apri sullo stesso Mac su cui l'hai costruito parte senza avvisi: la quarantena la
+mette macOS sui file *scaricati*, e questo non è arrivato da nessuna parte. Su un altro Mac,
+invece, l'avviso c'è, e si toglie come descritto sopra.
 
 ### Vuoi solo vedere com'è fatta, senza visori?
 
@@ -286,7 +316,7 @@ spostare postazioni, nomi e libreria app su un altro computer.
 
 ## Guida per chi parte da zero
 
-In `docs/Guida-Pico-MultiView.pdf` c'è una guida illustrata di sedici pagine che parte da come si
+In `docs/Guida-Pico-MultiView.pdf` c'è una guida illustrata di diciotto pagine che parte da come si
 apre il Terminale e arriva alla checklist del giorno dell'evento. È pensata per chi non ha mai
 usato una riga di comando: se devi far preparare i visori a qualcun altro, dagli quella.
 
@@ -354,8 +384,8 @@ strozza può rallentare fino a fermarsi. Tre vie d'uscita, dalla migliore:
 
 1. *Quel computer forse non deve installare niente.* Se ti serve solo per comandare i visori,
    apri il **Telecomando** nel suo browser: zero download.
-2. *Copia l'app già costruita.* Sul Mac che funziona lancia `npm run dist` e trasferisci il
-   `.dmg` con AirDrop o una chiavetta. Un file solo, nessuna installazione.
+2. *Copia l'app già costruita.* Sul Mac che funziona lancia [`npm run dist`](#costruire-il-dmg) e
+   trasferisci il `.dmg` con AirDrop o una chiavetta. Un file solo, nessuna installazione.
 3. *Cambia rete*, anche l'hotspot del telefono. In alternativa, se è GitHub a essere strozzato,
    usa un altro canale per Electron:
    ```bash
@@ -366,6 +396,14 @@ strozza può rallentare fino a fermarsi. Tre vie d'uscita, dalla migliore:
 quarantena di macOS sulle app non firmate. La riga `xattr -dr com.apple.quarantine …` qui sopra
 la toglie. Se dopo averla eseguita il problema resta, allora il download si è davvero interrotto:
 riscarica il `.dmg`.
+
+**Su GitHub la costruzione resta "Queued" per ore, e non si riesce ad annullarla** → apri
+l'esecuzione: se non mostra **nessun job**, non è la fila per una macchina, è la quota mensile di
+Actions esaurita. GitHub in quel caso non avvisa, accoda e basta; e annullare fallisce perché non
+esiste ancora un job a cui mandare il segnale. Verifica in *Settings → Billing and licensing →
+Plans and usage → Actions*. Le esecuzioni bloccate le scarta GitHub da sé: non c'è modo di
+sbloccarle dall'esterno. Intanto [costruisci il `.dmg` sul tuo Mac](#costruire-il-dmg): due
+minuti, stesso risultato.
 
 **L'iPad non apre la pagina** → controlla che sia sulla stessa wifi del Mac e che il telecomando
 sia acceso (pannello **Telecomando…**). Se la porta 8788 è già occupata da un altro programma,
