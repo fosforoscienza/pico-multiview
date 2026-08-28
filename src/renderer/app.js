@@ -143,8 +143,28 @@ function renderPointerMode() {
   const pico = state.pointerMode === 'trackball';
   const button = $('btn-pointer-mode');
   button.classList.toggle('is-active', pico);
-  // Ha senso solo mentre si tocca: in Visuale non parte niente comunque.
-  button.classList.toggle('hidden', state.previewMode !== 'touch');
+  // Hanno senso solo mentre si tocca: in Visuale non parte niente comunque.
+  const inTocco = state.previewMode === 'touch';
+  button.classList.toggle('hidden', !inTocco);
+  $('btn-diagnose').classList.toggle('hidden', !inTocco);
+}
+
+/**
+ * Tocca il centro dell'anteprima provando tutte le strade, una ogni due
+ * secondi, scrivendo nel registro cosa sta per mandare. Serve a smettere di
+ * indovinare quale periferica finta accetta questo modello di visore: si
+ * guarda il visore e si vede a quale prova reagisce.
+ */
+async function diagnosePointer() {
+  const serial = state.previewSerial;
+  if (!serial) return;
+  const centro = state.viewport.viewToFrame(0.5, 0.5);
+  const button = $('btn-diagnose');
+  button.disabled = true;
+  if ($('log-panel').classList.contains('hidden')) $('btn-log').click();
+  setStatus('Diagnostica in corso: guarda il visore e segui il registro qui sotto.');
+  await run(window.pico.device.diagnosePointer(serial, centro.nx, centro.ny));
+  button.disabled = false;
 }
 
 function renderEyeMode() {
@@ -848,6 +868,7 @@ function wireUi() {
   $('btn-sync').addEventListener('click', () => run(window.pico.devices.sync(), 'Elenco aggiornato.'));
   $('btn-eye').addEventListener('click', toggleEyeMode);
   $('btn-pointer-mode').addEventListener('click', togglePointerMode);
+  $('btn-diagnose').addEventListener('click', diagnosePointer);
 
   $('add-scan').addEventListener('click', doScan);
   $('add-usb').addEventListener('click', doAdoptUsb);

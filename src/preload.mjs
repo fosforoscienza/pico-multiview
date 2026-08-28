@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('pico', {
     preview: (serial) => invoke('device:preview', { serial }),
     packages: (serial, includeSystem = false) => invoke('device:packages', { serial, includeSystem }),
     displays: (serial) => invoke('device:displays', { serial }),
+    diagnosePointer: (serial, nx, ny) => invoke('device:diagnosePointer', { serial, nx, ny }),
     status: (serial) => invoke('device:status', { serial }),
   },
   actions: {

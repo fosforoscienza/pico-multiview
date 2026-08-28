@@ -104,9 +104,24 @@ export async function changeVolume(serial, steps) {
  * visori PICO **ignorano** i tocchi che dicono di venire dal touchscreen — non
  * ne hanno uno — mentre accettano gli stessi eventi dichiarati come trackball.
  */
-export async function inputTap(serial, x, y, source = '') {
-  const da = source ? `${source} ` : '';
-  return shell(serial, `input ${da}tap ${Math.round(x)} ${Math.round(y)}`, { timeout: 8000 });
+export async function inputTap(serial, x, y, source = '', displayId = null) {
+  return shell(serial, tapCommand(x, y, source, displayId), { timeout: 8000 });
+}
+
+/**
+ * Il comando `input` per un tocco, costruito a parte perché va anche scritto
+ * nel registro: se il visore non reagisce, è la riga da riprovare a mano.
+ *
+ * `-d` sceglie lo schermo. Su un visore ce n'è più d'uno — quello stereo che
+ * si vede e quelli virtuali su cui girano i pannelli 2D — e un tocco mandato
+ * allo schermo sbagliato non raggiunge nessuna finestra.
+ */
+export function tapCommand(x, y, source = '', displayId = null) {
+  const parti = ['input'];
+  if (source) parti.push(source);
+  if (displayId != null) parti.push('-d', String(displayId));
+  parti.push('tap', String(Math.round(x)), String(Math.round(y)));
+  return parti.join(' ');
 }
 
 export async function inputSwipe(serial, x1, y1, x2, y2, durationMs = 120, source = '') {

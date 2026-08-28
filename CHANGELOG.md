@@ -9,6 +9,16 @@ della guida PDF.
 
 ---
 
+## 1.9 — agosto 2026
+
+- **«Diagnostica»**, accanto a *Modo PICO*. Tocca il centro dell'anteprima provando **tutte** le
+  strade possibili — touchscreen, trackball, touchpad, touchnavigation, mouse, e ogni altro
+  schermo del visore — una ogni due secondi, scrivendo nel registro cosa sta per mandare
+  **prima** di mandarlo. Si guarda il visore e si vede a quale prova reagisce, invece di
+  indovinare quale periferica finta accetta questo modello.
+- Il registro riporta anche la misura dello schermo, il ritaglio e l'elenco degli schermi visti
+  dal visore: sono i numeri con cui si verifica che il tocco stia andando dove deve.
+
 ## 1.8 — agosto 2026
 
 Il registro serve a capire perché una cosa non funziona: doveva essere leggibile, copiabile e
