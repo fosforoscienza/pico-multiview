@@ -19,6 +19,7 @@ const state = {
   eyeMode: 'full', // 'full' (due occhi affiancati) | 'left' (un occhio solo)
   pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
   lastTouch: null, // ultimo punto toccato: la diagnostica riprova lì
+  videos: [], // filmati trovati sui visori, raggruppati per nome
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -177,6 +178,94 @@ function renderEyeMode() {
   const button = $('btn-eye');
   button.classList.toggle('is-active', left);
   button.textContent = left ? 'Immagine intera' : 'Un occhio';
+}
+
+// ---------------------------------------------------------------------------
+// Video sui visori
+// ---------------------------------------------------------------------------
+
+function openVideoModal() {
+  $('video-modal').classList.remove('hidden');
+  $('video-search').value = '';
+  $('video-search').focus();
+  renderVideoList();
+  // Se non abbiamo ancora letto i file, li leggiamo ora: la ricerca su dieci
+  // visori richiede qualche secondo, e farla all'avvio dell'app sarebbe tempo
+  // sprecato per chi non usa i video.
+  if (!state.videos.length) loadVideos();
+}
+
+async function loadVideos() {
+  const serials = state.slots.filter(Boolean);
+  if (!serials.length) {
+    $('video-status').textContent = 'Nessun visore collegato.';
+    return;
+  }
+  $('video-refresh').disabled = true;
+  $('video-status').textContent = `Cerco nei file di ${serials.length} visore/i…`;
+  const elenco = await run(window.pico.devices.videos(serials));
+  $('video-refresh').disabled = false;
+  if (elenco === null) {
+    $('video-status').textContent = 'Ricerca non riuscita: guarda il registro.';
+    return;
+  }
+  state.videos = elenco;
+  renderVideoList();
+}
+
+function renderVideoList() {
+  const cerca = $('video-search').value.trim().toLowerCase();
+  const trovati = cerca
+    ? state.videos.filter((v) => v.name.toLowerCase().includes(cerca))
+    : state.videos;
+
+  const lista = $('video-list');
+  lista.replaceChildren();
+
+  if (!state.videos.length) {
+    $('video-status').textContent = $('video-refresh').disabled
+      ? $('video-status').textContent
+      : 'Nessun filmato trovato in Movies, Download, DCIM, Video o Pictures.';
+    return;
+  }
+
+  $('video-status').textContent = cerca
+    ? `${trovati.length} di ${state.videos.length} filmati`
+    : `${state.videos.length} filmati trovati`;
+
+  for (const video of trovati) {
+    const riga = document.createElement('button');
+    riga.className = 'video-row';
+    riga.type = 'button';
+
+    const nome = document.createElement('span');
+    nome.className = 'video-name';
+    nome.textContent = video.name;
+
+    const quanti = document.createElement('span');
+    quanti.className = `video-count${video.onAll ? ' tutti' : ''}`;
+    quanti.textContent = video.onAll
+      ? `su tutti (${video.count})`
+      : `su ${video.count} di ${video.total}`;
+
+    riga.append(nome, quanti);
+    riga.addEventListener('click', () => playVideo(video));
+    lista.append(riga);
+  }
+}
+
+/**
+ * Manda il filmato in riproduzione su tutti i visori che ce l'hanno.
+ *
+ * I comandi partono insieme, quindi i visori partono nello stesso momento —
+ * ma non fotogramma per fotogramma: per quella servirebbe un'app dentro il
+ * visore, e va detto invece di lasciarlo credere.
+ */
+async function playVideo(video) {
+  const results = await run(window.pico.devices.playVideo(video.on));
+  if (results === null) return;
+  reportBatch(results, `«${video.name}»`);
+  $('video-modal').classList.add('hidden');
 }
 
 function persistSlots() {
@@ -879,6 +968,11 @@ function wireUi() {
   $('btn-pointer-mode').addEventListener('click', togglePointerMode);
   $('btn-diagnose').addEventListener('click', diagnosePointer);
 
+  $('btn-video').addEventListener('click', openVideoModal);
+  $('video-close').addEventListener('click', () => $('video-modal').classList.add('hidden'));
+  $('video-refresh').addEventListener('click', loadVideos);
+  $('video-search').addEventListener('input', renderVideoList);
+
   $('add-scan').addEventListener('click', doScan);
   $('add-usb').addEventListener('click', doAdoptUsb);
   $('add-close').addEventListener('click', closeAddModal);
@@ -1046,7 +1140,7 @@ function wireUi() {
 function onKeyDown(ev) {
   if (ev.target.matches('input, select, textarea')) return;
 
-  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal'].find(
+  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal', 'video-modal'].find(
     (id) => !$(id).classList.contains('hidden'),
   );
   if (ev.key === 'Escape') {
@@ -1069,7 +1163,11 @@ function onKeyDown(ev) {
     }[ev.key];
     if (keycode != null) {
       ev.preventDefault();
-      window.pico.actions.key([state.previewSerial], keycode).catch(() => {});
+      // Anche i tasti vanno tracciati: sono l'altra metà del comando a
+      // distanza, e finora un tasto che non arrivava era indistinguibile da un
+      // tasto che il visore ignora.
+      log(`tasto ${ev.key} → keycode ${keycode}`, 'info', state.previewSerial);
+      run(window.pico.actions.key([state.previewSerial], keycode));
     }
     return;
   }

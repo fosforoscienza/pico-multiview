@@ -117,6 +117,8 @@ const pico = {
     commonPackages: (serials) => invoke('devices:commonPackages', { serials }),
     eye: (serials, mode) => invoke('devices:eye', { serials, mode }),
     pointerMode: (serials, mode) => invoke('devices:pointerMode', { serials, mode }),
+    videos: (serials) => invoke('devices:videos', { serials }),
+    playVideo: (entries) => invoke('devices:playVideo', { entries }),
   },
   device: {
     reconnect: (serial) => invoke('device:reconnect', { serial }),

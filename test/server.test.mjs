@@ -199,3 +199,48 @@ test('cambiare PIN stacca i telecomandi collegati', async () => {
     assert.doesNotMatch(page.body, /interfaccia/);
   });
 });
+
+// --- file serviti al telecomando ---
+//
+// La UI importa moduli che stanno fuori dalla sua cartella. Se il server non
+// li serve, il browser non carica l'interfaccia e il telecomando resta bianco:
+// sul Mac non si vede, perché lì i file si aprono dal disco.
+
+test('i moduli condivisi sono raggiungibili dal telecomando', () => {
+  const server = new RemoteServer({ staticRoot: '/app/renderer', sharedRoot: '/app/shared' });
+  const { filePath, root } = server.resolveStatic('/shared/protocol.js');
+  assert.equal(filePath, '/app/shared/protocol.js');
+  assert.equal(root, '/app/shared');
+  assert.ok(filePath.startsWith(root), 'sarebbe stato rifiutato');
+});
+
+test('gli altri file restano nella cartella della UI', () => {
+  const server = new RemoteServer({ staticRoot: '/app/renderer', sharedRoot: '/app/shared' });
+  const { filePath, root } = server.resolveStatic('/app.js');
+  assert.equal(filePath, '/app/renderer/app.js');
+  assert.equal(root, '/app/renderer');
+});
+
+test('non si esce dalle due radici con i puntini', () => {
+  // Quello che conta non è il nome che esce, ma che resti dentro una delle due
+  // radici: da lì in poi un file che non esiste è semplicemente un 404.
+  const server = new RemoteServer({ staticRoot: '/app/renderer', sharedRoot: '/app/shared' });
+  for (const richiesta of [
+    '/../main/config.js',
+    '/shared/../main/adb.js',
+    '/../../etc/passwd',
+    '/shared/../../main/server.js',
+  ]) {
+    const { filePath, root } = server.resolveStatic(richiesta);
+    assert.ok(
+      filePath.startsWith(`${root}/`),
+      `${richiesta} è finito fuori dalla radice: ${filePath}`,
+    );
+  }
+});
+
+test('senza sharedRoot il comportamento resta quello di prima', () => {
+  const server = new RemoteServer({ staticRoot: '/app/renderer' });
+  const { root } = server.resolveStatic('/shared/protocol.js');
+  assert.equal(root, '/app/renderer');
+});

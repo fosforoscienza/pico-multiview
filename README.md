@@ -268,7 +268,8 @@ La procedura completa, passo passo e con le schermate del visore, è in
    dedicata: la wifi degli ospiti è la causa numero uno dei problemi.
 
 2. **Modalità sviluppatore sul visore.** Impostazioni → Generale → Informazioni sul dispositivo →
-   tocca **Numero build** 7-8 volte. Poi Impostazioni → **Sviluppatore** → attiva **Debug USB**.
+   tocca **Versione software** 7-8 volte (su alcune versioni di PICO OS la riga si chiama
+   *Numero build*). Poi Impostazioni → **Sviluppatore** → attiva **Debug USB**.
 
 3. **Autorizza il Mac.** Collega il visore al Mac con un cavo USB-C **dati**. Nel visore compare
    *"Consenti debug USB da questo computer?"*: metti la spunta su **"Consenti sempre da questo

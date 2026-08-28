@@ -174,3 +174,69 @@ export async function listDisplays(serial) {
   for (const m of (res.out || '').matchAll(/mDisplayId=(\d+)/g)) ids.add(Number(m[1]));
   return [...ids].sort((a, b) => a - b);
 }
+
+// ---------------------------------------------------------------------------
+// Video sui visori
+// ---------------------------------------------------------------------------
+
+/** Estensioni che un visore sa riprodurre. Il resto non ha senso mostrarlo. */
+export const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', '3gp', 'insv'];
+
+/**
+ * Cartelle in cui cercare. Sono quelle dove finiscono i file copiati via USB o
+ * scaricati: cercare in tutta la memoria su un visore pieno significherebbe
+ * decine di secondi per visore, per dieci visori.
+ */
+export const VIDEO_DIRS = [
+  '/sdcard/Movies',
+  '/sdcard/Download',
+  '/sdcard/DCIM',
+  '/sdcard/Video',
+  '/sdcard/Videos',
+  '/sdcard/Pictures',
+];
+
+/**
+ * Costruisce il comando di ricerca. Sta a parte perché è la parte con la
+ * sintassi delicata — virgolette, `-iname`, `-o` — ed è quella che vale la
+ * pena provare senza un visore attaccato.
+ */
+export function findVideosCommand(dirs = VIDEO_DIRS, extensions = VIDEO_EXTENSIONS) {
+  const nomi = extensions.map((e) => `-iname '*.${e}'`).join(' -o ');
+  // 2>/dev/null: le cartelle che non esistono sono la norma, non un errore da
+  // mostrare all'operatore. -maxdepth tiene la ricerca rapida anche su una
+  // memoria piena.
+  return `find ${dirs.join(' ')} -maxdepth 4 -type f \\( ${nomi} \\) 2>/dev/null`;
+}
+
+/** Nome del file senza percorso. */
+export function fileName(percorso) {
+  return String(percorso ?? '').split('/').filter(Boolean).pop() ?? '';
+}
+
+/** Elenco dei video presenti sul visore, come percorsi assoluti. */
+export async function listVideos(serial) {
+  const res = await adbTry(['-s', serial, 'shell', findVideosCommand()], { timeout: 30000 });
+  if (!res.ok) return [];
+  return (res.out || '')
+    .split('\n')
+    .map((r) => r.trim())
+    .filter((r) => r.startsWith('/'))
+    .sort((a, b) => fileName(a).localeCompare(fileName(b), 'it'));
+}
+
+/**
+ * Manda un file in riproduzione.
+ *
+ * Nessun lettore indicato: si chiede ad Android di aprirlo con quello che c'è,
+ * che sul visore è il suo lettore video. Indicarne uno a mano vorrebbe dire
+ * indovinare il nome del pacchetto, che cambia da modello a modello.
+ */
+export async function playVideo(serial, percorso) {
+  const escaped = String(percorso).replace(/'/g, `'\\''`);
+  return shell(
+    serial,
+    `am start -a android.intent.action.VIEW -t video/* -d 'file://${escaped}'`,
+    { timeout: 20000 },
+  );
+}

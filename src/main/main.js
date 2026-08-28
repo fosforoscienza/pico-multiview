@@ -269,6 +269,8 @@ function registerHandlers() {
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
+  handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
+  handle('devices:playVideo', ({ entries }) => manager.playVideoEverywhere(entries ?? []));
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),
@@ -363,6 +365,7 @@ app.whenReady().then(async () => {
   if (!config.data.remote.pin) config.patch({ remote: { ...config.data.remote, pin: generatePin() } });
   remote = new RemoteServer({
     staticRoot: RENDERER_DIR,
+    sharedRoot: path.join(__dirname, '..', 'shared'),
     pin: config.data.remote.pin,
     port: forceRemotePort || config.data.remote.port,
   });

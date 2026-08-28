@@ -49,6 +49,7 @@
           <button id="btn-stop" class="btn">Chiudi questa</button>
           <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
           <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
+          <button id="btn-video" class="btn" title="Cerca un video nei file dei visori e mandalo in riproduzione su tutti quelli che ce l'hanno">Video…</button>
         </div>
 
         <div class="command-group">
@@ -156,6 +157,28 @@
         <span id="credit-text"></span>
       </span>
     </footer>
+
+    <div id="video-modal" class="modal hidden">
+      <div class="modal-card modal-wide">
+        <h3>Video sui visori</h3>
+        <p class="muted">
+          Cerca un filmato nei file dei visori. Cliccandolo parte su
+          <strong>tutti quelli che ce l'hanno</strong>, nello stesso momento.
+        </p>
+
+        <div class="video-bar">
+          <input id="video-search" type="search" placeholder="Scrivi parte del nome del file…" autocomplete="off" />
+          <button id="video-refresh" class="btn">Rileggi i file</button>
+        </div>
+
+        <p id="video-status" class="muted"></p>
+        <div id="video-list" class="video-list"></div>
+
+        <div class="modal-actions">
+          <button id="video-close" class="btn">Chiudi</button>
+        </div>
+      </div>
+    </div>
 
     <div id="log-panel" class="log-panel hidden">
       <div class="log-bar">

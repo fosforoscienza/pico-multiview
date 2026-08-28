@@ -98,9 +98,14 @@ export class RemoteServer extends EventEmitter {
    * @param opts.pin PIN di accesso (se manca ne genera uno)
    * @param opts.port porta TCP
    */
-  constructor({ staticRoot, pin = null, port = DEFAULT_PORT } = {}) {
+  constructor({ staticRoot, sharedRoot = null, pin = null, port = DEFAULT_PORT } = {}) {
     super();
     this.staticRoot = path.resolve(staticRoot);
+    // I moduli condivisi stanno fuori dalla cartella della UI, e la UI li
+    // importa: senza servirli, il browser non riesce a caricare l'interfaccia
+    // e il telecomando resta bianco. Sul Mac non si vedeva, perché lì i file
+    // si aprono direttamente dal disco.
+    this.sharedRoot = sharedRoot ? path.resolve(sharedRoot) : null;
     this.pin = pin || generatePin();
     this.port = port;
     this.http = null;
@@ -265,8 +270,8 @@ export class RemoteServer extends EventEmitter {
   }
 
   #sendStatic(pathname, res) {
-    const filePath = path.join(this.staticRoot, path.normalize(pathname));
-    if (!filePath.startsWith(this.staticRoot)) {
+    const { filePath, root } = this.resolveStatic(pathname);
+    if (!filePath.startsWith(root)) {
       res.writeHead(403).end('Vietato');
       return;
     }
@@ -281,6 +286,22 @@ export class RemoteServer extends EventEmitter {
       });
       res.end(data);
     });
+  }
+
+  /**
+   * Il file su disco che corrisponde a un percorso richiesto, e la radice
+   * entro cui deve restare. Esposto perché è la parte che decide cosa è
+   * raggiungibile dalla rete, e va provata.
+   */
+  resolveStatic(pathname) {
+    const pulito = path.normalize(pathname);
+    if (this.sharedRoot && (pulito === '/shared' || pulito.startsWith('/shared/'))) {
+      return {
+        filePath: path.join(this.sharedRoot, pulito.slice('/shared'.length)),
+        root: this.sharedRoot,
+      };
+    }
+    return { filePath: path.join(this.staticRoot, pulito), root: this.staticRoot };
   }
 
   #sendLogin(res, error = null) {
