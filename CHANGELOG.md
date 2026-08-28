@@ -9,6 +9,35 @@ della guida PDF.
 
 ---
 
+## 2.0 — agosto 2026
+
+**Video su tutti i visori insieme.** Nuovo pulsante *Video…* nella barra comandi: una barra di
+ricerca che guarda nei file di tutti i visori collegati, e cliccando un filmato parte su tutti
+quelli che ce l'hanno.
+
+- L'elenco raggruppa per **nome del file**, non per percorso: lo stesso filmato può stare in
+  `Movies` su un visore e in `Download` su un altro, e chi lo cerca lo cerca per nome. Accanto a
+  ogni riga c'è su quanti visori si trova — è l'informazione che dice se mandarlo in riproduzione
+  o se prima va copiato sugli altri.
+- I comandi partono **insieme**, non uno dopo l'altro. È un avvio simultaneo, non una sincronia
+  fotogramma per fotogramma: per quella servirebbe un'app dentro il visore.
+- La ricerca si fa in `Movies`, `Download`, `DCIM`, `Video`, `Videos` e `Pictures`, non su tutta
+  la memoria: su dieci visori pieni la differenza è fra qualche secondo e qualche minuto.
+
+**Il telecomando da iPad era rotto, e l'ho rotto io nella 1.10.** Spostando una costante in un
+modulo condiviso, l'interfaccia ha cominciato a importare un file fuori dalla cartella servita
+sulla rete: dal browser non caricava più niente. Sul Mac non si vedeva, perché lì i file si
+aprono dal disco. Ora il server serve anche i moduli condivisi, e quattro test coprono cosa è
+raggiungibile dalla rete e cosa no.
+
+**Anche i tasti finiscono nel registro.** Le frecce e Invio passavano da un `.catch(() => {})`,
+lo stesso difetto già corretto per il puntatore: un tasto che non parte era indistinguibile da un
+tasto che il visore ignora.
+
+**Guida:** la modalità sviluppatore si attiva toccando **Versione software**, non *Numero build*.
+Corretto in guida, README e SETUP-PICO, con la nota che su alcune versioni di PICO OS la riga ha
+l'altro nome.
+
 ## 1.11 — agosto 2026
 
 - **«Socket video chiuso dal dispositivo», ogni quindici secondi.** Il server viene copiato sul

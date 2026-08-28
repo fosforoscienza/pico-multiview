@@ -266,6 +266,56 @@ export class DeviceManager extends EventEmitter {
     return results;
   }
 
+  /**
+   * Video trovati sui visori, raggruppati per nome del file.
+   *
+   * Il raggruppamento è per **nome**, non per percorso: lo stesso filmato
+   * copiato in `/sdcard/Movies` su un visore e in `/sdcard/Download` su un
+   * altro è lo stesso filmato, e chi lo cerca lo cerca per nome.
+   */
+  async videoLibrary(serials) {
+    const perDevice = await this.each(serials, (d) => apps.listVideos(d.serial));
+    const perNome = new Map();
+    for (const r of perDevice) {
+      if (!r.ok) continue;
+      for (const percorso of r.value) {
+        const nome = apps.fileName(percorso);
+        if (!nome) continue;
+        if (!perNome.has(nome)) perNome.set(nome, { name: nome, on: [] });
+        perNome.get(nome).on.push({ serial: r.serial, path: percorso });
+      }
+    }
+    const totale = perDevice.filter((r) => r.ok).length;
+    return [...perNome.values()]
+      .map((v) => ({ ...v, count: v.on.length, total: totale, onAll: v.on.length === totale }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'it'));
+  }
+
+  /**
+   * Manda un filmato in riproduzione su tutti i visori che ce l'hanno.
+   *
+   * I comandi partono **insieme**, non uno dopo l'altro: partire in fila
+   * significherebbe un visore indietro di qualche secondo rispetto al primo.
+   * Resta comunque un avvio simultaneo, non una sincronia fotogramma per
+   * fotogramma: per quella servirebbe un'app dentro il visore.
+   */
+  async playVideoEverywhere(voci) {
+    const results = await Promise.all(
+      voci.map(async ({ serial, path }) => {
+        const device = this.devices.get(serial);
+        try {
+          await apps.playVideo(serial, path);
+          device?.log('info', `riproduco ${apps.fileName(path)}`);
+          return { serial, ok: true, value: path };
+        } catch (err) {
+          device?.log('error', `non riesco ad avviare ${apps.fileName(path)}: ${err.message}`);
+          return { serial, ok: false, error: err.message };
+        }
+      }),
+    );
+    return results;
+  }
+
   /** Pacchetti presenti su TUTTI i visori indicati (utile per la libreria app). */
   async commonPackages(serials) {
     const perDevice = await this.each(serials, (d) => d.listPackages());

@@ -17,8 +17,9 @@ password uguali per tutti i visori. La wifi dell'ospite è la causa numero uno d
 ## 1. Attiva la modalità sviluppatore sul visore
 
 1. Indossa il visore e vai in **Impostazioni → Generale → Informazioni sul dispositivo**.
-2. Tocca ripetutamente su **Numero build** (7-8 volte) finché non appare la conferma che la
-   modalità sviluppatore è attiva.
+2. Tocca ripetutamente su **Versione software** (7-8 volte) finché non appare la conferma che la
+   modalità sviluppatore è attiva. Su alcune versioni di PICO OS quella riga si chiama **Numero
+   build**: è comunque la riga con il numero della versione.
 3. Torna in **Impostazioni → Sviluppatore** e attiva:
    - **Debug USB**
    - se presente, **Debug wireless / ADB su rete**
