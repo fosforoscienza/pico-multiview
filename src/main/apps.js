@@ -76,14 +76,17 @@ export async function deviceInfo(serial) {
     '-s',
     serial,
     'shell',
-    'getprop ro.product.model; getprop ro.product.device; getprop ro.build.version.release; getprop persist.pico.device.name',
+    'getprop ro.product.model; getprop ro.product.device; getprop ro.build.version.release; getprop persist.pico.device.name; getprop ro.serialno',
   ]);
-  const [model, device, android, name] = (res.out || '').split('\n').map((s) => s.trim());
+  const [model, device, android, name, hardwareId] = (res.out || '').split('\n').map((s) => s.trim());
   return {
     model: model || null,
     device: device || null,
     android: android || null,
     name: name || null,
+    // Identità della macchina, uguale via cavo e via wifi: serve a non
+    // registrare due volte lo stesso visore.
+    hardwareId: hardwareId || null,
   };
 }
 

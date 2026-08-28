@@ -9,6 +9,25 @@ della guida PDF.
 
 ---
 
+## 1.5 — agosto 2026
+
+I due difetti visti al primo collegamento con un visore vero.
+
+- **L'anteprima restava per sempre su «In attesa dell'immagine…»**, pur dicendo «in
+  streaming». Il socket video viene messo in pausa durante l'handshake, per non perdere i byte
+  arrivati insieme al *dummy byte* di scrcpy; poi gli si attaccava il lettore — ma su uno
+  stream messo in pausa di proposito **attaccare un listener non lo rimette in moto**. Mancava
+  `resume()`, e non arrivava un solo fotogramma. Il collegamento riusciva in tutto il resto, ed
+  è per questo che l'app si diceva pronta.
+- **Un visore occupava due postazioni.** Lo stesso visore si presenta ad adb con due nomi — il
+  seriale del cavo e `indirizzo:porta` sul wifi — e «Adotta USB» aggiungeva il secondo senza
+  togliere il primo. Ora i due nomi vengono riconosciuti come la stessa macchina, confrontando
+  `ro.serialno`, e vince quello wifi: è l'unico che continua a funzionare staccando il cavo.
+  Vale anche riaprendo il programma con il cavo ancora attaccato.
+
+Otto test nuovi. Quello sul flusso video usa un socket vero, non finto: è il comportamento di
+Node sugli stream in pausa a essere in gioco, e un finto lo mancherebbe.
+
 ## 1.4 — agosto 2026
 
 - **«L'app è danneggiata e non può essere aperta».** Non lo era: il pacchetto usciva dalla
