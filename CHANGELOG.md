@@ -25,7 +25,13 @@ I due difetti visti al primo collegamento con un visore vero.
   `ro.serialno`, e vince quello wifi: è l'unico che continua a funzionare staccando il cavo.
   Vale anche riaprendo il programma con il cavo ancora attaccato.
 
-Otto test nuovi. Quello sul flusso video usa un socket vero, non finto: è il comportamento di
+- **`git pull` si rifiutava di aggiornare**, dicendo che sovrascriverebbe `package-lock.json`.
+  Colpa di un dettaglio trascurato a ogni cambio di versione: il numero stava in
+  `package.json` ma non nel lock, così `npm install` riscriveva quest'ultimo per allinearlo e
+  chi aggiornava si ritrovava modificato un file che non aveva toccato. Ora i due numeri sono
+  allineati, e un test controlla che restino tali.
+
+Nove test nuovi. Quello sul flusso video usa un socket vero, non finto: è il comportamento di
 Node sugli stream in pausa a essere in gioco, e un finto lo mancherebbe.
 
 ## 1.4 — agosto 2026
