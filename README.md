@@ -414,6 +414,12 @@ premuto, ripremilo — vale su quelli collegati in quel momento.
 4. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
    combacia più con quella dello schermo. Premi ⟳ sulla miniatura.
 
+**Diagnostica.** Se dopo Modo PICO il clic ancora non fa niente, premi **Diagnostica**, accanto
+a *Modo PICO*: tocca il centro dell'anteprima provando tutte le strade — touchscreen, trackball,
+touchpad, touchnavigation, mouse, e ogni altro schermo del visore — una ogni due secondi,
+annunciando nel registro cosa sta per mandare. Guarda il visore: se reagisce a una delle prove,
+il numero di quella prova dice quale strada funziona su quel modello.
+
 **Come leggere il Log.** Il pulsante **Log** in basso a sinistra apre il registro. Dentro ci sono
 **Svuota** e **Copia**: svuota, fai la prova, copia — ottieni le righe di quel gesto e basta.
 Ogni clic ne lascia una, anche quando non parte: dove è stato premuto, con quale strada, e il

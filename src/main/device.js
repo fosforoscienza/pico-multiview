@@ -275,6 +275,64 @@ export class Device extends EventEmitter {
     return crop;
   }
 
+  /**
+   * Prova a toccare lo stesso punto per tutte le strade possibili, una alla
+   * volta, annunciando ognuna **prima** di mandarla.
+   *
+   * Serve perché un visore non ha un touchscreen e ogni modello scarta o
+   * accetta cose diverse: invece di indovinare la periferica giusta, si guarda
+   * il visore mentre l'app le prova tutte e si vede a quale reagisce.
+   *
+   * Prova anche gli altri schermi: su un visore ce n'è più d'uno — quello
+   * stereo che si vede e quelli virtuali su cui girano i pannelli 2D — e un
+   * tocco mandato allo schermo sbagliato non raggiunge nessuna finestra.
+   */
+  async diagnosePointer(nx, ny) {
+    const screen = await this.screenSize();
+    const punto = framePointToScreen(nx, ny, screen, this.crop);
+    if (!punto) throw new Error('non riesco a leggere la dimensione dello schermo del visore');
+
+    const displays = await apps.listDisplays(this.serial).catch(() => []);
+    this.log(
+      'info',
+      `— diagnostica tocco — schermo ${screen.width}×${screen.height}, ritaglio ${this.crop ?? 'nessuno'}, ` +
+        `punto ${punto.x},${punto.y}, schermi visti: ${displays.join(', ') || 'nessuno'}`,
+    );
+    this.log('info', 'guarda il visore: ti dirò cosa sto per mandare, una prova ogni due secondi');
+
+    const prove = [
+      { source: '', displayId: null },
+      { source: TRACKBALL, displayId: null },
+      { source: 'touchpad', displayId: null },
+      { source: 'touchnavigation', displayId: null },
+      { source: 'mouse', displayId: null },
+      ...displays.filter((id) => id !== this.displayId).map((id) => ({ source: '', displayId: id })),
+    ];
+
+    const esiti = [];
+    for (const [i, prova] of prove.entries()) {
+      const comando = apps.tapCommand(punto.x, punto.y, prova.source, prova.displayId);
+      this.log('info', `prova ${i + 1}/${prove.length}: ${comando}`);
+      try {
+        await apps.inputTap(this.serial, punto.x, punto.y, prova.source, prova.displayId);
+        esiti.push({ comando, ok: true });
+      } catch (err) {
+        // Un comando rifiutato è un'informazione, non un guasto: si prosegue.
+        this.log('error', `prova ${i + 1}: ${err.message}`);
+        esiti.push({ comando, ok: false, error: err.message });
+      }
+      await delay(2000);
+    }
+
+    const passate = esiti.filter((e) => e.ok).length;
+    this.log(
+      'info',
+      `— fine diagnostica — ${passate}/${esiti.length} comandi accettati dal visore. ` +
+        'Se il visore ha reagito a una di queste, dimmi il numero della prova.',
+    );
+    return { screen, crop: this.crop, punto, displays, esiti };
+  }
+
   /** Come far arrivare il tocco: 'scrcpy' oppure 'trackball' (visori PICO). */
   setPointerMode(mode) {
     this.pointerMode = mode === 'trackball' ? 'trackball' : 'scrcpy';

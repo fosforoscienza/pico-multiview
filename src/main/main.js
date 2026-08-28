@@ -261,6 +261,11 @@ function registerHandlers() {
     config.patch({ pointerMode: mode === 'trackball' ? 'trackball' : 'scrcpy' });
     return results;
   });
+  handle('device:diagnosePointer', ({ serial, nx, ny }) => {
+    const d = manager.get(serial);
+    if (!d) throw new Error('visore sconosciuto');
+    return d.diagnosePointer(nx ?? 0.5, ny ?? 0.5);
+  });
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
