@@ -34,6 +34,20 @@ export const DEFAULT_VIDEO_OPTIONS = {
   crop: null, // "W:H:X:Y"
 };
 
+/**
+ * Attacca il lettore al socket video e lo rimette in moto.
+ *
+ * L'handshake mette il socket in pausa per non perdere i byte arrivati insieme
+ * al dummy byte. Da lì attaccare un listener 'data' **non basta**: uno stream
+ * messo in pausa di proposito resta fermo finché non gli si dice `resume()`.
+ * Senza, la sessione risulta avviata — dummy byte ricevuto, stato "in
+ * streaming" — e non arriva mai un fotogramma.
+ */
+export function attachVideoStream(socket, onChunk) {
+  socket.on('data', onChunk);
+  socket.resume();
+}
+
 export class ScrcpySession extends EventEmitter {
   constructor(serial, options = {}) {
     super();
@@ -122,7 +136,7 @@ export class ScrcpySession extends EventEmitter {
     });
 
     this.videoSocket = await this.#connectWithDummyByte();
-    this.videoSocket.on('data', (chunk) => this.#onVideoData(chunk));
+    attachVideoStream(this.videoSocket, (chunk) => this.#onVideoData(chunk));
     this.videoSocket.on('error', (err) => this.#fail(err));
     this.videoSocket.on('close', () => {
       if (!this.stopped) this.#fail(new Error('socket video chiuso dal dispositivo'));

@@ -4,16 +4,64 @@
 import { EventEmitter } from 'node:events';
 
 import * as adb from './adb.js';
+import * as apps from './apps.js';
 import { Device, STATE } from './device.js';
 
 const STATUS_POLL_MS = 12000;
+
+const isWifi = (serial) => serial.includes(':');
+
+/**
+ * Lo stesso visore si presenta ad adb con due nomi: il seriale del cavo
+ * (`PA7B10…`) e `indirizzo:porta` quando passa al wifi. Senza confrontarli
+ * finisce in due postazioni, con lo stesso nome, e ognuna gli apre una
+ * sessione di mirroring per conto suo.
+ *
+ * Il confronto si fa su `ro.serialno`, che è la macchina e non il modo in cui
+ * ci si è collegati.
+ *
+ * @param candidate   {serial, hardwareId} appena visto da adb
+ * @param registered  [{serial, hardwareId}] già nel registro
+ * @returns {{action: 'add'|'skip'|'replace', twin?: string}}
+ */
+export function decideAdd(candidate, registered) {
+  if (registered.some((d) => d.serial === candidate.serial)) return { action: 'skip' };
+  if (!candidate.hardwareId) return { action: 'add' };
+
+  const twin = registered.find((d) => d.hardwareId === candidate.hardwareId);
+  if (!twin) return { action: 'add' };
+
+  // Fra i due nomi vince il wifi: è quello che continua a funzionare quando si
+  // stacca il cavo, ed è il senso di "Adotta USB".
+  if (isWifi(candidate.serial) && !isWifi(twin.serial)) {
+    return { action: 'replace', twin: twin.serial };
+  }
+  return { action: 'skip', twin: twin.serial };
+}
 
 export class DeviceManager extends EventEmitter {
   constructor(config) {
     super();
     this.config = config;
     this.devices = new Map(); // serial -> Device
+    this.hardwareIds = new Map(); // serial -> ro.serialno, per riconoscere i doppioni
     this.statusTimer = null;
+  }
+
+  /** `ro.serialno` del visore, chiesto una volta sola e poi tenuto in cache. */
+  async #hardwareId(serial) {
+    if (this.hardwareIds.has(serial)) return this.hardwareIds.get(serial);
+    const registrato = this.devices.get(serial)?.info?.hardwareId;
+    const id = registrato ?? (await apps.deviceInfo(serial).catch(() => ({}))).hardwareId ?? null;
+    this.hardwareIds.set(serial, id);
+    return id;
+  }
+
+  #registered() {
+    return [...this.devices.keys()].map((serial) => ({
+      serial,
+      hardwareId: this.hardwareIds.get(serial) ?? this.devices.get(serial)?.info?.hardwareId ?? null,
+    }));
   }
 
   list() {
@@ -94,7 +142,30 @@ export class DeviceManager extends EventEmitter {
     }
 
     for (const serial of online) {
-      if (!this.devices.has(serial)) this.add(serial, { connect: autoConnect });
+      if (this.devices.has(serial)) continue;
+      const decision = decideAdd(
+        { serial, hardwareId: await this.#hardwareId(serial) },
+        this.#registered(),
+      );
+      if (decision.action === 'skip') {
+        if (decision.twin) {
+          this.emit('log', {
+            serial: decision.twin,
+            level: 'info',
+            message: `${serial} è lo stesso visore, già in elenco: non lo aggiungo una seconda volta`,
+          });
+        }
+        continue;
+      }
+      if (decision.action === 'replace') {
+        this.emit('log', {
+          serial,
+          level: 'info',
+          message: `passato al wifi: prende il posto di ${decision.twin}`,
+        });
+        await this.remove(decision.twin, { forget: true });
+      }
+      this.add(serial, { connect: autoConnect });
     }
 
     // Aggiorna gli stati "non autorizzato / offline" per dare un feedback utile.
@@ -118,7 +189,8 @@ export class DeviceManager extends EventEmitter {
       timeout,
       onProgress: (p) => this.emit('scan-progress', p),
     });
-    for (const serial of result.connected) this.add(serial);
+    // Non li aggiungiamo qui: "adb connect" li ha già resi visibili a
+    // "adb devices", e sync() li prende passando dal controllo dei doppioni.
     await this.sync();
     return result;
   }
@@ -130,7 +202,14 @@ export class DeviceManager extends EventEmitter {
     const results = [];
     for (const d of usb) {
       try {
+        // L'identità va letta ora, finché il cavo c'è: serve a riconoscere
+        // questo stesso visore quando si ripresenterà come "indirizzo:porta".
+        const hardwareId = await this.#hardwareId(d.serial);
         const serial = await adb.enableWifiAdb(d.serial);
+        if (hardwareId) this.hardwareIds.set(serial, hardwareId);
+        // Il nome del cavo non serve più, e lasciarlo significherebbe due
+        // postazioni per lo stesso visore.
+        if (this.devices.has(d.serial)) await this.remove(d.serial, { forget: true });
         this.add(serial);
         results.push({ usb: d.serial, wifi: serial, ok: true });
       } catch (err) {
