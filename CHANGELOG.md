@@ -9,6 +9,22 @@ della guida PDF.
 
 ---
 
+## 1.10 — agosto 2026
+
+Correzioni trovate leggendo il registro di una diagnostica vera su un Pico Neo 3.
+
+- **Le prove sugli altri schermi non toccavano niente, per colpa mia.** Mandavano le coordinate
+  dello schermo stereo (`3240,1080` su 4320×2160) anche a pannelli molto più piccoli, dove
+  cadono fuori. Ora ogni schermo riceve il punto calcolato **sulla sua misura**, e la misura di
+  ciascuno finisce nel registro. Il visore ne dichiara dieci: senza questa correzione nove prove
+  su quattordici erano sprecate.
+- **La diagnostica riprova sull'ultimo punto cliccato**, non al centro dell'inquadratura. Con la
+  visuale spostata sull'altro occhio provava nell'occhio destro — cioè da tutt'altra parte
+  rispetto a quello che l'operatore stava cercando di premere.
+- **Un indirizzo salvato che non risponde più** (tipico dopo un cambio di rete) veniva ritentato
+  a ogni aggiornamento, riempiendo il registro di errori identici. Ora lo dice una volta, con
+  cosa fare.
+
 ## 1.9 — agosto 2026
 
 - **«Diagnostica»**, accanto a *Modo PICO*. Tocca il centro dell'anteprima provando **tutte** le

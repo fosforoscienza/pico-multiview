@@ -77,6 +77,31 @@ export function leftEyeCrop(size) {
   return `${width}:${size.height}:0:0`;
 }
 
+// Oltre questo rapporto larghezza/altezza la cattura è stereoscopica: due
+// immagini affiancate, una per occhio. Sotto, è una cattura piatta (16:9 fa
+// 1.78). La soglia sta in mezzo.
+export const STEREO_ASPECT_THRESHOLD = 1.9;
+
+/**
+ * Il punto, riportato a 0..1 sulla **porzione che l'operatore vede davvero**.
+ *
+ * Serve per mandare un tocco a uno schermo diverso da quello catturato: lì le
+ * coordinate dello schermo stereo non hanno senso, e usarle così com'è
+ * significa cadere fuori dal pannello senza che nessuno se ne accorga.
+ *
+ * Se c'è un ritaglio, il fotogramma È già la porzione visibile. Se non c'è e
+ * la cattura è stereoscopica, la porzione visibile è la metà sinistra.
+ */
+export function visiblePoint(nx, ny, screen, crop = null) {
+  const x = Math.max(0, Math.min(1, nx));
+  const y = Math.max(0, Math.min(1, ny));
+  if (parseCrop(crop)) return { nx: x, ny: y };
+  if (screen?.width && screen?.height && screen.width / screen.height >= STEREO_ASPECT_THRESHOLD) {
+    return { nx: Math.min(1, x * 2), ny: y };
+  }
+  return { nx: x, ny: y };
+}
+
 /** Da "W:H:X:Y" a numeri, o null se la stringa non è un ritaglio valido. */
 export function parseCrop(crop) {
   const m = /^(\d+):(\d+):(\d+):(\d+)$/.exec(String(crop ?? '').trim());

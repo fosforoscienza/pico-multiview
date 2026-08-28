@@ -10,10 +10,10 @@
 // Cosa NON può fare: girarsi a guardare dietro le spalle del visitatore. Quello
 // richiederebbe una seconda telecamera dentro l'app VR (vedi README).
 
-// Oltre questo rapporto larghezza/altezza consideriamo la cattura stereoscopica.
-// Un PICO 4 rende 2160×2160 per occhio, quindi affiancati fanno esattamente 2:1;
-// una cattura piatta invece sta sul 16:9 (1.78) o meno. La soglia sta in mezzo.
-export const STEREO_ASPECT_THRESHOLD = 1.9;
+// La soglia sta in un punto solo, insieme all'altra funzione che ne ha bisogno
+// (l'invio di un tocco a uno schermo diverso da quello catturato).
+export { STEREO_ASPECT_THRESHOLD } from '../shared/protocol.js';
+import { STEREO_ASPECT_THRESHOLD } from '../shared/protocol.js';
 
 /**
  * Porzione di fotogramma che corrisponde a "quello che vede chi indossa il visore".
