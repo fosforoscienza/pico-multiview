@@ -5,6 +5,7 @@ import test from 'node:test';
 import { unpackedPath } from '../src/main/adb.js';
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const lock = JSON.parse(fs.readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'));
 
 test('i binari vengono cercati fuori dall\'archivio app.asar', () => {
   // Dentro il .dmg i file finiscono in app.asar, che è un archivio: da lì adb
@@ -39,6 +40,14 @@ test('l\'app viene firmata, seppure in modo ad-hoc', () => {
   // discorso. "-" è l'identità ad-hoc: non certifica l'autore, ma rende l'app
   // eseguibile.
   assert.equal(pkg.build.mac.identity, '-', 'l\'app uscirebbe dal .dmg senza firma');
+});
+
+test('package-lock.json porta lo stesso numero di versione', () => {
+  // Se restano diversi, "npm install" riscrive il lock per allinearlo: chi
+  // aggiorna si ritrova un file modificato che non ha toccato, e il "git pull"
+  // successivo si rifiuta di procedere. È già successo.
+  assert.equal(lock.version, pkg.version, 'lock.version diverso da package.json');
+  assert.equal(lock.packages[''].version, pkg.version, 'lock.packages[""].version diverso');
 });
 
 test('il runtime irrobustito resta spento, altrimenti l\'app non parte', () => {

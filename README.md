@@ -403,13 +403,13 @@ quarantena di macOS sulle app non firmate. La riga `xattr -dr com.apple.quaranti
 la toglie. Se dopo averla eseguita il problema resta, allora il download si è davvero interrotto:
 riscarica il `.dmg`.
 
-**`git pull` dice «divergent branches» e si rifiuta di procedere** → la copia locale si è
-scostata da quella su GitHub: succede se ti trovi su un ramo di lavoro invece che su `main`,
-o se quel ramo è stato riscritto. Rimettiti in pari:
+**`git pull` dice «divergent branches», oppure `git checkout` si rifiuta perché sovrascriverebbe
+`package-lock.json`** → la copia locale si è scostata da quella su GitHub. Rimettiti in pari con
+tre comandi che funzionano da qualsiasi stato:
 
 ```bash
-git checkout main
 git fetch origin
+git checkout -f main
 git reset --hard origin/main
 ```
 
