@@ -45,6 +45,7 @@ export class DeviceManager extends EventEmitter {
     this.config = config;
     this.devices = new Map(); // serial -> Device
     this.hardwareIds = new Map(); // serial -> ro.serialno, per riconoscere i doppioni
+    this.unreachable = new Set(); // indirizzi salvati che non rispondono: lo diciamo una volta sola
     this.statusTimer = null;
   }
 
@@ -137,7 +138,22 @@ export class DeviceManager extends EventEmitter {
         if (!online.has(entry.serial) && entry.serial.includes(':')) {
           const [host, port] = entry.serial.split(':');
           const res = await adb.connect(host, Number(port) || 5555);
-          if (res.ok) online.add(entry.serial);
+          if (res.ok) {
+            online.add(entry.serial);
+            this.unreachable.delete(entry.serial);
+          } else if (!this.unreachable.has(entry.serial)) {
+            // Un indirizzo salvato che non risponde più — tipico dopo un
+            // cambio di rete — verrebbe ritentato a ogni aggiornamento. Lo si
+            // dice una volta, con cosa fare, invece di riempire il registro.
+            this.unreachable.add(entry.serial);
+            this.emit('log', {
+              serial: entry.serial,
+              level: 'error',
+              message:
+                `${entry.serial} non risponde: è un visore salvato su un indirizzo che non esiste più ` +
+                '(succede cambiando rete). Toglilo dalla sua postazione, oppure riaggiungilo con l\'indirizzo nuovo.',
+            });
+          }
         }
       }
     }

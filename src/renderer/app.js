@@ -18,6 +18,7 @@ const state = {
   previewMode: 'view', // 'view' (guarda) | 'touch' (tocca)
   eyeMode: 'full', // 'full' (due occhi affiancati) | 'left' (un occhio solo)
   pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
+  lastTouch: null, // ultimo punto toccato: la diagnostica riprova lì
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -158,12 +159,16 @@ function renderPointerMode() {
 async function diagnosePointer() {
   const serial = state.previewSerial;
   if (!serial) return;
-  const centro = state.viewport.viewToFrame(0.5, 0.5);
+  const punto = state.lastTouch ?? state.viewport.viewToFrame(0.5, 0.5);
   const button = $('btn-diagnose');
   button.disabled = true;
   if ($('log-panel').classList.contains('hidden')) $('btn-log').click();
-  setStatus('Diagnostica in corso: guarda il visore e segui il registro qui sotto.');
-  await run(window.pico.device.diagnosePointer(serial, centro.nx, centro.ny));
+  setStatus(
+    state.lastTouch
+      ? 'Diagnostica sull\'ultimo punto che hai cliccato: guarda il visore e segui il registro.'
+      : 'Clicca prima il punto da provare, poi ripremi Diagnostica. Intanto provo il centro.',
+  );
+  await run(window.pico.device.diagnosePointer(serial, punto.nx, punto.ny));
   button.disabled = false;
 }
 
@@ -414,6 +419,7 @@ function selectForPreview(serial) {
 
   state.previewSerial = serial;
   state.previewMode = 'view'; // si riparte sempre dalla modalità sicura
+  state.lastTouch = null;
   state.viewport = new Viewport();
   card.renderer.onPaint = drawPreview;
   card.el.classList.add('previewing');
@@ -554,6 +560,9 @@ function wirePreview() {
     onTouch: (type, nx, ny, button) => {
       if (!state.previewSerial) return;
       const point = state.viewport.viewToFrame(nx, ny);
+      // La diagnostica riprova su quest'ultimo punto: è quello che l'operatore
+      // stava cercando di premere, non il centro di un'inquadratura spostata.
+      if (type === 'down') state.lastTouch = point;
       window.pico.pointer({ serial: state.previewSerial, type, nx: point.nx, ny: point.ny, button });
     },
     onScroll: (nx, ny, hscroll, vscroll) => {

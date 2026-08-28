@@ -16,6 +16,7 @@ import {
   encodeTouch,
   framePointToScreen,
   leftEyeCrop,
+  visiblePoint,
 } from '../shared/protocol.js';
 
 // La periferica finta da cui dichiariamo di far arrivare i tocchi sui PICO.
@@ -298,23 +299,42 @@ export class Device extends EventEmitter {
       `— diagnostica tocco — schermo ${screen.width}×${screen.height}, ritaglio ${this.crop ?? 'nessuno'}, ` +
         `punto ${punto.x},${punto.y}, schermi visti: ${displays.join(', ') || 'nessuno'}`,
     );
-    this.log('info', 'guarda il visore: ti dirò cosa sto per mandare, una prova ogni due secondi');
 
+    // Le prove sullo schermo catturato usano il punto già calcolato. Quelle su
+    // un ALTRO schermo no: lì le coordinate dello schermo stereo non hanno
+    // senso, e riusarle vorrebbe dire cadere fuori dal pannello senza che
+    // nessuno se ne accorga — la prova sembrerebbe fallita per la periferica.
     const prove = [
-      { source: '', displayId: null },
-      { source: TRACKBALL, displayId: null },
-      { source: 'touchpad', displayId: null },
-      { source: 'touchnavigation', displayId: null },
-      { source: 'mouse', displayId: null },
-      ...displays.filter((id) => id !== this.displayId).map((id) => ({ source: '', displayId: id })),
+      { source: '', displayId: null, punto },
+      { source: TRACKBALL, displayId: null, punto },
+      { source: 'touchpad', displayId: null, punto },
+      { source: 'touchnavigation', displayId: null, punto },
+      { source: 'mouse', displayId: null, punto },
     ];
+
+    const visibile = visiblePoint(nx, ny, screen, this.crop);
+    for (const id of displays.filter((d) => d !== this.displayId)) {
+      const misura = await apps.displaySize(this.serial, id);
+      if (!misura) {
+        this.log('info', `schermo ${id}: non riesco a leggerne la misura, lo salto`);
+        continue;
+      }
+      this.log('info', `schermo ${id}: ${misura.width}×${misura.height}`);
+      prove.push({
+        source: '',
+        displayId: id,
+        punto: framePointToScreen(visibile.nx, visibile.ny, misura),
+      });
+    }
+
+    this.log('info', 'guarda il visore: ti dirò cosa sto per mandare, una prova ogni due secondi');
 
     const esiti = [];
     for (const [i, prova] of prove.entries()) {
-      const comando = apps.tapCommand(punto.x, punto.y, prova.source, prova.displayId);
+      const comando = apps.tapCommand(prova.punto.x, prova.punto.y, prova.source, prova.displayId);
       this.log('info', `prova ${i + 1}/${prove.length}: ${comando}`);
       try {
-        await apps.inputTap(this.serial, punto.x, punto.y, prova.source, prova.displayId);
+        await apps.inputTap(this.serial, prova.punto.x, prova.punto.y, prova.source, prova.displayId);
         esiti.push({ comando, ok: true });
       } catch (err) {
         // Un comando rifiutato è un'informazione, non un guasto: si prosegue.
