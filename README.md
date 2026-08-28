@@ -148,11 +148,17 @@ finisce GitHub non lo dice — lascia le esecuzioni in coda per ore, senza mai a
 macchina, e non si riescono nemmeno ad annullare.
 
 Come si riconosce: apri l'esecuzione e non c'è **nessun job**, solo la riga «Queued». Un'attesa
-per mancanza di macchine, quella normale, un job ce l'ha. Controlla allora in *Settings → Billing
-and licensing → Plans and usage → Actions*: si sblocca al rinnovo mensile, o alzando il limite di
-spesa (≈ 0,08 $ al minuto, cioè poco più di un euro a build).
+normale, per mancanza di macchine, un job ce l'ha. Senza, l'esecuzione è rimasta impigliata prima
+ancora di diventare un lavoro: resta lì per giorni, e annullarla fallisce perché non c'è niente a
+cui mandare il segnale.
 
-In quel caso non aspettare: [costruisci sul tuo Mac](#costruire-il-dmg), è la stessa cosa.
+Due cause, in ordine di quanto sono verificabili: la **quota mensile** esaurita (*Settings →
+Billing and licensing → Plans and usage → Actions*; si sblocca al rinnovo, o alzando il limite di
+spesa — ≈ 0,08 $ al minuto, poco più di un euro a build), oppure un **inceppamento di GitHub**.
+Il secondo si riconosce così: lancia una nuova esecuzione. Se quella parte e finisce mentre le
+vecchie restano ferme, non era la quota — erano loro, e non si recuperano.
+
+In entrambi i casi non aspettare: [costruisci sul tuo Mac](#costruire-il-dmg), è la stessa cosa.
 
 **La prima volta va sbloccata.** L'app non è firmata con un certificato Apple: macOS la mette in
 quarantena e può dire che è *danneggiata* — non lo è, è solo il modo in cui rifiuta di eseguire
@@ -397,13 +403,28 @@ quarantena di macOS sulle app non firmate. La riga `xattr -dr com.apple.quaranti
 la toglie. Se dopo averla eseguita il problema resta, allora il download si è davvero interrotto:
 riscarica il `.dmg`.
 
+**`git pull` dice «divergent branches» e si rifiuta di procedere** → la copia locale si è
+scostata da quella su GitHub: succede se ti trovi su un ramo di lavoro invece che su `main`,
+o se quel ramo è stato riscritto. Rimettiti in pari:
+
+```bash
+git checkout main
+git fetch origin
+git reset --hard origin/main
+```
+
+`reset --hard` butta via le modifiche ai file **tracciati**, che qui non ne hai. Non tocca
+`node_modules/`, `vendor/`, `dist/` (ignorati) né la configurazione, che sta fuori dalla
+cartella, in *Libreria → Application Support → pico-multiview*: nomi delle postazioni e
+disposizione della sala restano dove sono.
+
 **Su GitHub la costruzione resta "Queued" per ore, e non si riesce ad annullarla** → apri
-l'esecuzione: se non mostra **nessun job**, non è la fila per una macchina, è la quota mensile di
-Actions esaurita. GitHub in quel caso non avvisa, accoda e basta; e annullare fallisce perché non
-esiste ancora un job a cui mandare il segnale. Verifica in *Settings → Billing and licensing →
-Plans and usage → Actions*. Le esecuzioni bloccate le scarta GitHub da sé: non c'è modo di
-sbloccarle dall'esterno. Intanto [costruisci il `.dmg` sul tuo Mac](#costruire-il-dmg): due
-minuti, stesso risultato.
+l'esecuzione: se non mostra **nessun job**, non è la fila per una macchina — è rimasta impigliata
+prima di diventare un lavoro, e annullarla fallisce perché non c'è niente a cui mandare il
+segnale. Lancia una nuova esecuzione: se parte, il problema erano solo quelle vecchie, che restano
+lì finché GitHub non le scarta. Se non parte nemmeno la nuova, guarda la quota in *Settings →
+Billing and licensing → Plans and usage → Actions*. In ogni caso
+[costruisci il `.dmg` sul tuo Mac](#costruire-il-dmg): due minuti, stesso risultato.
 
 **L'iPad non apre la pagina** → controlla che sia sulla stessa wifi del Mac e che il telecomando
 sia acceso (pannello **Telecomando…**). Se la porta 8788 è già occupata da un altro programma,
