@@ -14,8 +14,12 @@ import {
   encodeKeyPress,
   encodeScroll,
   encodeTouch,
+  framePointToScreen,
   leftEyeCrop,
 } from '../shared/protocol.js';
+
+// La periferica finta da cui dichiariamo di far arrivare i tocchi sui PICO.
+const TRACKBALL = 'trackball';
 
 /**
  * Traduce i messaggi di scrcpy che l'operatore può incontrare davvero, perché
@@ -64,7 +68,20 @@ export class Device extends EventEmitter {
     this.screencapTimer = null;
     this.screencapIntervalMs = config.screencapIntervalMs ?? 700;
     this.pointerDown = false;
+    // Come far arrivare il tocco: 'scrcpy' (canale di controllo) oppure
+    // 'trackball' (comando `input`, dichiarando un'altra periferica). Serve
+    // perché i visori PICO non hanno un touchscreen e scartano gli eventi che
+    // dicono di venirne.
+    this.pointerMode = config.pointerMode ?? 'scrcpy';
+    this.screen = null; // dimensione vera dello schermo, letta alla bisogna
     this.disposed = false;
+  }
+
+  /** Dimensione dello schermo del visore, chiesta una volta e tenuta da parte. */
+  async screenSize() {
+    if (this.screen) return this.screen;
+    this.screen = await apps.displaySize(this.serial, this.displayId);
+    return this.screen;
   }
 
   get displayName() {
@@ -85,6 +102,7 @@ export class Device extends EventEmitter {
       crop: this.crop,
       displayId: this.displayId,
       quality: this.quality,
+      pointerMode: this.pointerMode,
     };
   }
 
@@ -257,8 +275,19 @@ export class Device extends EventEmitter {
     return crop;
   }
 
+  /** Come far arrivare il tocco: 'scrcpy' oppure 'trackball' (visori PICO). */
+  setPointerMode(mode) {
+    this.pointerMode = mode === 'trackball' ? 'trackball' : 'scrcpy';
+    this.pointerDown = false;
+    this.emit('state', this.toJSON());
+    return this.pointerMode;
+  }
+
   async setDisplayId(displayId) {
     this.displayId = displayId;
+    // Cambiando display cambia anche la dimensione dello schermo: la misura
+    // tenuta da parte non vale più.
+    this.screen = null;
     if (this.mirror === 'scrcpy') await this.connect();
   }
 
@@ -278,6 +307,54 @@ export class Device extends EventEmitter {
   }
 
   /**
+   * Tocco per i visori PICO, che non hanno un touchscreen e scartano gli eventi
+   * che dicono di venirne. Lo stesso gesto, dichiarato come **trackball**,
+   * viene invece accettato.
+   *
+   * Qui le coordinate vanno in pixel dello schermo, non del video: il comando
+   * `input` non sa niente né del rimpicciolimento né del ritaglio, quindi la
+   * conversione la facciamo noi.
+   */
+  async #pointerViaInput(nx, ny, type) {
+    const screen = await this.screenSize();
+    const punto = framePointToScreen(nx, ny, screen, this.crop);
+    if (!punto) {
+      this.log('error', 'non riesco a leggere la dimensione dello schermo: tocco non inviato');
+      return;
+    }
+
+    if (type === 'down') {
+      this.pointerDown = true;
+      this._dragStart = { ...punto, at: Date.now() };
+      return;
+    }
+    if (type !== 'up' || !this.pointerDown) return;
+    this.pointerDown = false;
+
+    const start = this._dragStart ?? { ...punto, at: Date.now() };
+    const dist = Math.hypot(punto.x - start.x, punto.y - start.y);
+    // Sotto una decina di pixel è un clic, non un trascinamento: distinguerli
+    // evita che un tremolio del mouse diventi uno swipe involontario.
+    if (dist < 12) {
+      await apps.inputTap(this.serial, punto.x, punto.y, TRACKBALL);
+      // Il comando esatto va nel log: se il visore non reagisce, è la prima
+      // cosa da riprovare a mano con adb per capire dove si perde.
+      this.log('info', `input ${TRACKBALL} tap ${punto.x} ${punto.y}`);
+      return;
+    }
+    await apps.inputSwipe(
+      this.serial,
+      start.x,
+      start.y,
+      punto.x,
+      punto.y,
+      Math.max(80, Date.now() - start.at),
+      TRACKBALL,
+    );
+    this.log('info', `input ${TRACKBALL} swipe ${start.x} ${start.y} ${punto.x} ${punto.y}`);
+  }
+
+  /**
    * Evento di puntatore con coordinate normalizzate 0..1 rispetto all'immagine.
    * type: 'down' | 'move' | 'up' | 'cancel'
    */
@@ -285,6 +362,8 @@ export class Device extends EventEmitter {
     const { width, height } = this.#frameSize();
     const x = Math.max(0, Math.min(1, nx)) * width;
     const y = Math.max(0, Math.min(1, ny)) * height;
+
+    if (this.pointerMode === 'trackball') return this.#pointerViaInput(nx, ny, type);
 
     if (this.session && this.mirror === 'scrcpy') {
       const action =
@@ -326,7 +405,7 @@ export class Device extends EventEmitter {
     const { width, height } = this.#frameSize();
     const x = Math.max(0, Math.min(1, nx)) * width;
     const y = Math.max(0, Math.min(1, ny)) * height;
-    if (this.session && this.mirror === 'scrcpy') {
+    if (this.pointerMode !== 'trackball' && this.session && this.mirror === 'scrcpy') {
       this.session.sendControl(encodeScroll({ x, y, width, height, hscroll, vscroll }));
       return;
     }

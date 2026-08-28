@@ -28,6 +28,12 @@ export const DEFAULT_CONFIG = {
   // Il ritaglio vero sta poi in ogni visore (devices[].crop): questo serve solo
   // a ricordare come sta il pulsante.
   eyeMode: 'full',
+  // Come far arrivare il tocco al visore:
+  // 'scrcpy'    = canale di controllo, quello normale di Android
+  // 'trackball' = comando `input`, dichiarando un'altra periferica. Sui visori
+  //               PICO serve questo: non hanno un touchscreen e scartano gli
+  //               eventi che dicono di venirne.
+  pointerMode: 'scrcpy',
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('pico', {
     remove: (serial, forget) => invoke('devices:remove', { serial, forget }),
     commonPackages: (serials) => invoke('devices:commonPackages', { serials }),
     eye: (serials, mode) => invoke('devices:eye', { serials, mode }),
+    pointerMode: (serials, mode) => invoke('devices:pointerMode', { serials, mode }),
   },
   device: {
     reconnect: (serial) => invoke('device:reconnect', { serial }),

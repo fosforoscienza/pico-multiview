@@ -31,6 +31,10 @@ senza disturbarlo.
 chi indossa il visore. Si accende da solo quando ti sei spostato, così sai sempre se stai
 guardando la visuale del visitatore o una tua. Scorciatoia da tastiera: `0`.
 
+**Modo PICO.** Accanto a `Tocco` compare un pulsante `Modo PICO`. Serve perché un visore PICO non
+ha un touchscreen e scarta i tocchi normali: acceso, il tocco viene inviato in un modo che i
+visori accettano. Resta memorizzato.
+
 **Modalità Tocco.** Il segmento `Tocco` nella barra dell'anteprima trasforma il mouse in un dito:
 clic e trascinamenti diventano tocchi veri sullo schermo del visore, la rotellina scorre, il
 tasto destro fa "indietro". Si riparte sempre da `Visuale` quando cambi visore: durante un evento
@@ -400,11 +404,18 @@ premuto, ripremilo — vale su quelli collegati in quel momento.
 
 1. sei in modalità **Visuale**, quella sicura, da cui si riparte a ogni cambio di visore. Il clic
    lì non viene inviato di proposito, e l'app te lo dice con un avviso: passa a **Tocco**;
-2. l'app sul visore è **immersiva**: ascolta i controller, non il touchscreen, quindi il tocco
-   arriva e non produce niente. Restano i comandi di sistema (Home, Indietro, Chiudi app attiva,
-   volume). Sui pannelli 2D — home di PICO, menu, browser — il puntatore funziona bene;
-3. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
+2. accendi **Modo PICO**, il pulsante accanto a *Tocco*. Un visore PICO **non ha un touchscreen**
+   e scarta i tocchi che dicono di venirne — ed è esattamente il motivo per cui Home, Indietro e
+   volume funzionano lo stesso: quelli sono tasti, li gestisce il sistema. Con Modo PICO acceso
+   il tocco viene inviato dichiarandolo di un'altra periferica, che i PICO accettano;
+3. l'app sul visore è **immersiva**: ascolta i controller, e nessun tocco la raggiunge comunque.
+   Restano i comandi di sistema. Sui pannelli 2D — home di PICO, menu, browser — il puntatore
+   funziona;
+4. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
    combacia più con quella dello schermo. Premi ⟳ sulla miniatura.
+
+Il Log mostra sempre il comando esatto inviato al visore: se non reagisce, è la prima cosa da
+riprovare a mano.
 
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.

@@ -9,6 +9,19 @@ della guida PDF.
 
 ---
 
+## 1.7 — agosto 2026
+
+- **«Modo PICO»**, nuovo pulsante accanto a *Tocco*. Un visore PICO **non ha un touchscreen**, e
+  scarta gli eventi di tocco che dicono di venirne: è il motivo per cui Home, Indietro e volume
+  funzionavano — sono tasti, li gestisce il sistema — mentre il clic sullo schermo no. Acceso, il
+  tocco viene inviato dichiarandolo di un'altra periferica, che i PICO accettano.
+- Le coordinate vengono convertite in pixel veri dello schermo: il canale normale lo fa da sé,
+  questa strada no, e con l'immagine rimpicciolita e ritagliata a un occhio il clic sarebbe
+  finito da un'altra parte. Sette test sulla conversione.
+- **Gli errori del puntatore non vengono più ingoiati.** Il codice li scartava in silenzio
+  (`.catch(() => {})`): è il motivo per cui questo guasto è rimasto invisibile così a lungo. Ora
+  finiscono nel Log, insieme al comando esatto che è stato inviato al visore.
+
 ## 1.6 — agosto 2026
 
 - **«Un occhio»**, nuovo pulsante in alto. Un visore disegna due immagini
