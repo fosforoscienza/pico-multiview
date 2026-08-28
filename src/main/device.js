@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 
 import * as apps from './apps.js';
 import { adbTry, delay, shellBinary } from './adb.js';
-import { ScrcpySession } from './scrcpy-session.js';
+import { ScrcpySession, dimenticaJar } from './scrcpy-session.js';
 import {
   ACTION,
   BUTTON,
@@ -371,6 +371,9 @@ export class Device extends EventEmitter {
 
   async dispose() {
     this.disposed = true;
+    // Togliendo un visore dall'elenco dimentichiamo anche di avergli copiato il
+    // server: se torna, meglio ricopiarlo che dare per buona una copia vecchia.
+    dimenticaJar(this.serial);
     this.#clearReconnect();
     await this.#stopMirror();
     this.#setState(STATE.OFFLINE);
