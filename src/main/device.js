@@ -380,7 +380,18 @@ export class Device extends EventEmitter {
         actionButton: button,
         buttons: action === ACTION.UP || action === ACTION.CANCEL ? 0 : button,
       });
-      this.session.sendControl(msg);
+      const inviato = this.session.sendControl(msg);
+      // Solo l'inizio e la fine del gesto: i movimenti intermedi sono decine al
+      // secondo e sommergerebbero il registro proprio quando serve leggerlo.
+      if (action === ACTION.DOWN || action === ACTION.UP) {
+        const verso = action === ACTION.DOWN ? 'premuto' : 'rilasciato';
+        this.log(
+          inviato === false ? 'error' : 'info',
+          inviato === false
+            ? `${verso} in ${Math.round(x)},${Math.round(y)} ma il canale di controllo non lo ha accettato`
+            : `${verso} in ${Math.round(x)},${Math.round(y)} su ${width}×${height} (via scrcpy)`,
+        );
+      }
       if (action === ACTION.DOWN) this.pointerDown = true;
       if (action === ACTION.UP || action === ACTION.CANCEL) this.pointerDown = false;
       return;

@@ -9,6 +9,18 @@ della guida PDF.
 
 ---
 
+## 1.8 — agosto 2026
+
+Il registro serve a capire perché una cosa non funziona: doveva essere leggibile, copiabile e
+soprattutto **completo**.
+
+- **Copia** e **Svuota** nel pannello Log. Svuotare, fare la prova, copiare: si ottengono le
+  righe di quel gesto e basta, senza doverle pescare a mano da un pannello che scorre.
+- **Ogni clic lascia una traccia**, anche quando parte per la via normale: dove è stato premuto,
+  su che misura, e con quale strada. Prima l'unico caso che scriveva qualcosa era il Modo PICO.
+- **Anche il clic che non parte.** Se il visore non è nel registro, il clic spariva senza dire
+  niente — indistinguibile, da fuori, da un clic che non funziona. Ora lo dice.
+
 ## 1.7 — agosto 2026
 
 - **«Modo PICO»**, nuovo pulsante accanto a *Tocco*. Un visore PICO **non ha un touchscreen**, e
