@@ -62,6 +62,21 @@ export const KEY_ACTION = { DOWN: 0, UP: 1 };
 export const POINTER_ID_MOUSE = 0xffffffffffffffffn;
 export const POINTER_ID_GENERIC_FINGER = 0xfffffffffffffffen;
 
+/**
+ * Ritaglio scrcpy ("W:H:X:Y") per la sola metà sinistra dello schermo, cioè
+ * l'occhio sinistro di una cattura stereoscopica.
+ *
+ * Le misure sono in pixel dello **schermo**, non del video: scrcpy ritaglia
+ * prima di rimpicciolire. La larghezza si arrotonda a un numero pari, perché
+ * un encoder H.264 lavora su blocchi e una larghezza dispari viene rifiutata.
+ */
+export function leftEyeCrop(size) {
+  if (!size?.width || !size?.height) return null;
+  const width = Math.floor(size.width / 2 / 2) * 2;
+  if (width <= 0) return null;
+  return `${width}:${size.height}:0:0`;
+}
+
 function clampInt(v, min, max) {
   v = Math.round(v);
   if (Number.isNaN(v)) return min;

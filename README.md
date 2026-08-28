@@ -46,11 +46,22 @@ per guardarti intorno, due dita per zoomare. Vedi *[Comandare tutto dall'iPad](#
 ### Fin dove arriva la visuale libera — e dove no
 
 Lo stream contiene **solo quello che il visore sta disegnando**, cioè il campo visivo di chi lo
-indossa. La visuale libera si muove dentro quel fotogramma: siccome la cattura di un PICO 4 è
-stereoscopica (i due occhi affiancati, 2:1), l'app mostra di default **l'occhio sinistro** — la
-visuale del visitatore — e trascinando puoi arrivare fino all'altro occhio o zoomare sui
+indossa. La visuale libera si muove dentro quel fotogramma, e trascinando puoi zoomare sui
 dettagli. Non puoi però girarti a guardare dietro le spalle del visitatore: quei pixel non
 esistono nello stream.
+
+**I due occhi.** Un visore disegna due immagini affiancate, una per occhio, e viste insieme non
+si capisce niente. Il pulsante **Un occhio**, in alto, chiede ai visori la sola metà sinistra:
+da quel momento si vede una immagine sola dappertutto, **miniature comprese**, e sulla wifi
+viaggia metà dei dati — con dieci visori è la differenza fra scorrevole e a scatti. Il ritaglio
+lo fa il visore, non la finestra, quindi i clic continuano ad arrivare nel punto giusto.
+
+Vale per i visori collegati in quel momento e resta memorizzato: aggiungendone altri più tardi,
+ripremi il pulsante. Il secondo clic (**Immagine intera**) torna indietro.
+
+Anche senza premerlo, l'**anteprima grande** prova a inquadrare da sola l'occhio sinistro,
+quando riconosce una cattura stereoscopica dal rapporto fra larghezza e altezza. È una
+supposizione, e con alcune risoluzioni sbaglia: il pulsante è il modo sicuro.
 
 Per un vero sguardo indipendente a 360° servirebbe una seconda telecamera **dentro** l'app VR
 (un piccolo componente Unity/Unreal che pubblica una view di regia). Se l'esperienza dell'evento
@@ -381,6 +392,20 @@ Ricollegalo via USB e ripremi **Adotta USB**, oppure imposta `persist.adb.tcp.po
 quel visore; se il log dice *"versione del server scrcpy incompatibile"*, allinea `SCRCPY_VERSION`
 in `src/main/scrcpy-session.js` alla versione scaricata in `scripts/fetch-deps.mjs`.
 
+**Vedo l'immagine sdoppiata sui due occhi** → premi **Un occhio** in alto: il visore manda solo
+la metà sinistra, e la vedi così anche nelle miniature. Se hai aggiunto altri visori dopo averlo
+premuto, ripremilo — vale su quelli collegati in quel momento.
+
+**Il clic sullo schermo non fa niente, ma i pulsanti funzionano** → nell'ordine in cui capita:
+
+1. sei in modalità **Visuale**, quella sicura, da cui si riparte a ogni cambio di visore. Il clic
+   lì non viene inviato di proposito, e l'app te lo dice con un avviso: passa a **Tocco**;
+2. l'app sul visore è **immersiva**: ascolta i controller, non il touchscreen, quindi il tocco
+   arriva e non produce niente. Restano i comandi di sistema (Home, Indietro, Chiudi app attiva,
+   volume). Sui pannelli 2D — home di PICO, menu, browser — il puntatore funziona bene;
+3. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
+   combacia più con quella dello schermo. Premi ⟳ sulla miniatura.
+
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.
 
@@ -446,7 +471,9 @@ gli altri telecomandi, oppure abbassa la qualità delle miniature.
 
 Il numero si vede in fondo alla finestra dell'app e sulla copertina della guida.
 Cambia così: il **primo** numero per le modifiche corpose (1.4 → 2.0), il
-**secondo** per quelle piccole (1.4 → 1.5).
+**secondo** per quelle piccole (1.4 → 1.5). Si cambia con `npm run versione 1.7`, che lo scrive
+in tutti i punti che lo contengono — a mano se ne dimentica sempre uno, e da lì `git pull` si
+inceppa.
 
 Sta scritto solo in `package.json`; app e guida PDF lo leggono da lì tramite
 `src/main/brand.js`, quindi per cambiarlo si tocca un file solo. La terza cifra

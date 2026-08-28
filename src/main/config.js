@@ -23,6 +23,11 @@ export const DEFAULT_CONFIG = {
     grid: { maxSize: 800, bitRate: 2_000_000, maxFps: 20 },
     focus: { maxSize: 1280, bitRate: 6_000_000, maxFps: 30 },
   },
+  // 'left'  = ai visori si chiede solo la metà sinistra, cioè un occhio
+  // 'full'  = immagine intera, con i due occhi affiancati
+  // Il ritaglio vero sta poi in ogni visore (devices[].crop): questo serve solo
+  // a ricordare come sta il pulsante.
+  eyeMode: 'full',
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

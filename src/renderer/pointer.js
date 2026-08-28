@@ -53,6 +53,7 @@ function domButtonToAndroid(button) {
  * @param h.onTouch  (type, nx, ny, button) => void   // nx,ny sull'inquadratura
  * @param h.onScroll (nx, ny, hscroll, vscroll) => void
  * @param h.onBack   () => void
+ * @param h.onIgnoredClick () => void  // premuto in 'view': niente va al visore
  * @returns funzione per staccare i listener
  */
 export function attachPreviewInput(canvas, h) {
@@ -117,6 +118,9 @@ export function attachPreviewInput(canvas, h) {
     } else {
       dragging = 'pan';
       canvas.classList.add('grabbing');
+      // In modalità Visuale il clic non arriva al visore. Farlo sparire in
+      // silenzio sembra un guasto: meglio dirlo.
+      h.onIgnoredClick?.();
     }
   };
 

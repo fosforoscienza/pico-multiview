@@ -119,6 +119,31 @@ export async function reboot(serial) {
 }
 
 /** Elenco dei display disponibili (utile sui visori: schermo VR vs display di cast). */
+/**
+ * Dimensione in pixel dello schermo del visore, quella vera: serve a costruire
+ * il ritaglio, che scrcpy vuole in pixel dello schermo e non del video (che è
+ * già rimpicciolito da `max_size`).
+ *
+ * "Override size" vince su "Physical size": se qualcuno ha forzato una
+ * risoluzione diversa, è quella che scrcpy vede.
+ */
+export function parseDisplaySize(text) {
+  const misure = [...(text || '').matchAll(/(Physical|Override) size:\s*(\d+)x(\d+)/g)];
+  if (!misure.length) return null;
+  // "Override size" vince: se qualcuno ha forzato una risoluzione diversa, è
+  // quella che il visore usa davvero, ed è quella che scrcpy vede.
+  const scelta = misure.find((m) => m[1] === 'Override') ?? misure[0];
+  const width = Number(scelta[2]);
+  const height = Number(scelta[3]);
+  return width > 0 && height > 0 ? { width, height } : null;
+}
+
+export async function displaySize(serial, displayId = 0) {
+  const args = displayId ? `wm size -d ${displayId}` : 'wm size';
+  const res = await adbTry(['-s', serial, 'shell', args]);
+  return res.ok ? parseDisplaySize(res.out) : null;
+}
+
 export async function listDisplays(serial) {
   const res = await adbTry(['-s', serial, 'shell', 'dumpsys display | grep -E "mDisplayId=|uniqueId"']);
   if (!res.ok) return [];

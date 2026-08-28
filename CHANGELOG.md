@@ -9,6 +9,24 @@ della guida PDF.
 
 ---
 
+## 1.6 — agosto 2026
+
+- **«Un occhio»**, nuovo pulsante in alto. Un visore disegna due immagini
+  affiancate, una per occhio, e guardarle insieme non serve a niente. Ora si può chiedere ai
+  visori la sola metà sinistra: si vede quello che vede il visitatore, **anche nelle
+  miniature**, e sulla wifi viaggia **metà dei dati** — con dieci visori è la differenza fra
+  scorrevole e a scatti. Il ritaglio lo fa il visore, non la finestra, quindi i clic
+  continuano ad arrivare nel punto giusto: è scrcpy stesso a riportare le coordinate dentro
+  la porzione ritagliata. Resta memorizzato per ogni visore.
+- **Il clic in modalità Visuale non spariva più in silenzio.** In quella modalità nessun
+  tocco viene inviato al visore — è la modalità sicura, e si riparte sempre da lì — ma senza
+  nessun segnale sembrava che il programma fosse rotto. Ora un avviso lo dice, e si toglie da
+  solo o appena si passa a Tocco.
+- Se il visore rifiuta un tocco, scrcpy lo scrive in inglese in mezzo al resto: ora nel Log
+  compare la spiegazione in italiano, con cosa fare, e il messaggio originale in coda.
+- **`npm run versione 1.7`** cambia il numero in tutti i punti che lo contengono. È il
+  passaggio manuale che aveva già bloccato un `git pull`.
+
 ## 1.5 — agosto 2026
 
 I due difetti visti al primo collegamento con un visore vero.
