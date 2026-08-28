@@ -256,6 +256,11 @@ function registerHandlers() {
     config.patch({ eyeMode: mode === 'left' ? 'left' : 'full' });
     return results;
   });
+  handle('devices:pointerMode', async ({ serials, mode }) => {
+    const results = await manager.each(serials, async (d) => d.setPointerMode(mode));
+    config.patch({ pointerMode: mode === 'trackball' ? 'trackball' : 'scrcpy' });
+    return results;
+  });
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
@@ -290,11 +295,22 @@ function registerHandlers() {
   });
 
   // Eventi ad alta frequenza: nessuna risposta, si buttano e via.
+  // Gli errori qui NON vanno ingoiati: un tocco che non parte è esattamente il
+  // guasto che si fatica a diagnosticare, perché dall'esterno sembra che il
+  // programma stia funzionando.
   signal('pointer', ({ serial, type, nx, ny, button }) => {
-    manager.get(serial)?.pointer({ type, nx, ny, button }).catch(() => {});
+    const device = manager.get(serial);
+    if (!device) return;
+    device.pointer({ type, nx, ny, button }).catch((err) => {
+      device.log('error', `tocco non inviato: ${err.message}`);
+    });
   });
   signal('scroll', ({ serial, nx, ny, hscroll, vscroll }) => {
-    manager.get(serial)?.scroll({ nx, ny, hscroll, vscroll }).catch(() => {});
+    const device = manager.get(serial);
+    if (!device) return;
+    device.scroll({ nx, ny, hscroll, vscroll }).catch((err) => {
+      device.log('error', `scorrimento non inviato: ${err.message}`);
+    });
   });
 }
 

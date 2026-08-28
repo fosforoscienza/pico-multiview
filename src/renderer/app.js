@@ -17,6 +17,7 @@ const state = {
   previewSerial: null,
   previewMode: 'view', // 'view' (guarda) | 'touch' (tocca)
   eyeMode: 'full', // 'full' (due occhi affiancati) | 'left' (un occhio solo)
+  pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -110,6 +111,40 @@ async function toggleEyeMode() {
   if (!results.some((r) => r.ok)) return;
   state.eyeMode = mode;
   renderEyeMode();
+}
+
+/**
+ * "Modo PICO": i visori PICO non hanno un touchscreen e scartano i tocchi che
+ * dicono di venirne. Questo li manda dichiarandoli di un'altra periferica, che
+ * loro accettano. Vale su tutte le postazioni piene.
+ */
+async function togglePointerMode() {
+  const serials = state.slots.filter(Boolean);
+  if (!serials.length) {
+    log('Nessun visore collegato.', 'error');
+    return;
+  }
+  const mode = state.pointerMode === 'trackball' ? 'scrcpy' : 'trackball';
+  const button = $('btn-pointer-mode');
+  button.disabled = true;
+  const results = await run(window.pico.devices.pointerMode(serials, mode));
+  button.disabled = false;
+  if (results === null) return;
+  state.pointerMode = mode;
+  renderPointerMode();
+  setStatus(
+    mode === 'trackball'
+      ? 'Modo PICO acceso: i tocchi vengono inviati in modo compatibile con i visori.'
+      : 'Modo PICO spento: tocchi inviati per la via normale.',
+  );
+}
+
+function renderPointerMode() {
+  const pico = state.pointerMode === 'trackball';
+  const button = $('btn-pointer-mode');
+  button.classList.toggle('is-active', pico);
+  // Ha senso solo mentre si tocca: in Visuale non parte niente comunque.
+  button.classList.toggle('hidden', state.previewMode !== 'touch');
 }
 
 function renderEyeMode() {
@@ -431,6 +466,7 @@ function updatePreviewChrome() {
   $('mode-view').classList.toggle('is-active', !touch);
   $('mode-touch').classList.toggle('is-active', touch);
   $('touch-warning').classList.toggle('hidden', !touch);
+  renderPointerMode();
   $('preview').classList.toggle('mode-touch', touch);
   $('preview-hint').textContent = touch
     ? 'Il clic tocca lo schermo del visore · tasto destro = Indietro · rotellina = scorrimento'
@@ -811,6 +847,7 @@ function wireUi() {
   $('btn-usb').addEventListener('click', doAdoptUsb);
   $('btn-sync').addEventListener('click', () => run(window.pico.devices.sync(), 'Elenco aggiornato.'));
   $('btn-eye').addEventListener('click', toggleEyeMode);
+  $('btn-pointer-mode').addEventListener('click', togglePointerMode);
 
   $('add-scan').addEventListener('click', doScan);
   $('add-usb').addEventListener('click', doAdoptUsb);
@@ -1091,6 +1128,7 @@ async function boot() {
   state.slots = Array.isArray(info.config.slots) ? [...info.config.slots] : [];
   state.unassigned = new Set(info.config.unassigned ?? []);
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
+  state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
   renderEyeMode();
   renderAppSelect();

@@ -77,6 +77,34 @@ export function leftEyeCrop(size) {
   return `${width}:${size.height}:0:0`;
 }
 
+/** Da "W:H:X:Y" a numeri, o null se la stringa non è un ritaglio valido. */
+export function parseCrop(crop) {
+  const m = /^(\d+):(\d+):(\d+):(\d+)$/.exec(String(crop ?? '').trim());
+  if (!m) return null;
+  const [width, height, x, y] = m.slice(1, 5).map(Number);
+  return width > 0 && height > 0 ? { width, height, x, y } : null;
+}
+
+/**
+ * Da un punto dell'immagine (0..1) al pixel corrispondente dello **schermo** del
+ * visore.
+ *
+ * Non sono la stessa cosa: il video è rimpicciolito da `max_size` e, con
+ * l'occhio singolo, è anche ritagliato. Il canale di controllo di scrcpy fa
+ * questa conversione da sé; il comando `input`, che usiamo sui visori PICO,
+ * no — vuole i pixel veri, e sbagliarli significa cliccare da un'altra parte.
+ */
+export function framePointToScreen(nx, ny, screen, crop = null) {
+  if (!screen?.width || !screen?.height) return null;
+  const fx = Math.max(0, Math.min(1, nx));
+  const fy = Math.max(0, Math.min(1, ny));
+  const area = parseCrop(crop) ?? { width: screen.width, height: screen.height, x: 0, y: 0 };
+  return {
+    x: Math.round(area.x + fx * area.width),
+    y: Math.round(area.y + fy * area.height),
+  };
+}
+
 function clampInt(v, min, max) {
   v = Math.round(v);
   if (Number.isNaN(v)) return min;

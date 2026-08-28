@@ -97,15 +97,23 @@ export async function changeVolume(serial, steps) {
   return shell(serial, Array.from({ length: n }, () => `input keyevent ${key}`).join('; '));
 }
 
-/** Tap/swipe di riserva quando non usiamo il canale di controllo scrcpy. */
-export async function inputTap(serial, x, y) {
-  return shell(serial, `input tap ${Math.round(x)} ${Math.round(y)}`, { timeout: 8000 });
+/**
+ * Tap/swipe di riserva quando non passiamo dal canale di controllo scrcpy.
+ *
+ * `source` sceglie da quale periferica finta arriva l'evento. Serve perché i
+ * visori PICO **ignorano** i tocchi che dicono di venire dal touchscreen — non
+ * ne hanno uno — mentre accettano gli stessi eventi dichiarati come trackball.
+ */
+export async function inputTap(serial, x, y, source = '') {
+  const da = source ? `${source} ` : '';
+  return shell(serial, `input ${da}tap ${Math.round(x)} ${Math.round(y)}`, { timeout: 8000 });
 }
 
-export async function inputSwipe(serial, x1, y1, x2, y2, durationMs = 120) {
+export async function inputSwipe(serial, x1, y1, x2, y2, durationMs = 120, source = '') {
+  const da = source ? `${source} ` : '';
   return shell(
     serial,
-    `input swipe ${Math.round(x1)} ${Math.round(y1)} ${Math.round(x2)} ${Math.round(y2)} ${Math.round(durationMs)}`,
+    `input ${da}swipe ${Math.round(x1)} ${Math.round(y1)} ${Math.round(x2)} ${Math.round(y2)} ${Math.round(durationMs)}`,
     { timeout: 8000 },
   );
 }
@@ -118,7 +126,6 @@ export async function reboot(serial) {
   return adbTry(['-s', serial, 'reboot']);
 }
 
-/** Elenco dei display disponibili (utile sui visori: schermo VR vs display di cast). */
 /**
  * Dimensione in pixel dello schermo del visore, quella vera: serve a costruire
  * il ritaglio, che scrcpy vuole in pixel dello schermo e non del video (che è
@@ -144,6 +151,7 @@ export async function displaySize(serial, displayId = 0) {
   return res.ok ? parseDisplaySize(res.out) : null;
 }
 
+/** Elenco dei display disponibili (schermo VR vs display di cast). */
 export async function listDisplays(serial) {
   const res = await adbTry(['-s', serial, 'shell', 'dumpsys display | grep -E "mDisplayId=|uniqueId"']);
   if (!res.ok) return [];

@@ -91,6 +91,7 @@ export class DeviceManager extends EventEmitter {
         mirror: entry.mirror ?? 'scrcpy',
         crop: entry.crop ?? null,
         displayId: entry.displayId ?? 0,
+        pointerMode: entry.pointerMode ?? this.config.data.pointerMode ?? 'scrcpy',
         quality: this.config.data.quality.grid,
         autoReconnect: this.config.data.autoReconnect,
         screencapIntervalMs: this.config.data.screencapIntervalMs,
