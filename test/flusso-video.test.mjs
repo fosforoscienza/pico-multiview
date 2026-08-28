@@ -37,10 +37,13 @@ test('il flusso video riparte dopo la pausa dell\'handshake', async () => {
   const server = await serverFinto();
   const socket = await socketDopoHandshake(server);
   try {
-    let ricevuti = 0;
-    attachVideoStream(socket, (chunk) => { ricevuti += chunk.length; });
-    await attesa(150);
-    assert.ok(ricevuti > 0, 'nessun byte dopo l\'handshake: il socket è rimasto in pausa');
+    // Si aspetta l'evento, non un tempo: sotto carico un'attesa fissa
+    // fallirebbe per lentezza invece che per il difetto che sorveglia.
+    // Se il socket resta in pausa non arriva mai niente e il test scade.
+    const primoPezzo = new Promise((resolve) => {
+      attachVideoStream(socket, (chunk) => resolve(chunk.length));
+    });
+    assert.ok(await primoPezzo, 'byte ricevuti dopo il risveglio del socket');
   } finally {
     socket.destroy();
     server.close();

@@ -247,6 +247,15 @@ function registerHandlers() {
     return serial ?? null;
   });
   handle('device:packages', ({ serial, includeSystem }) => manager.get(serial)?.listPackages(includeSystem));
+  handle('devices:eye', async ({ serials, mode }) => {
+    const results = await manager.each(serials, async (d) => {
+      const crop = await d.setEyeMode(mode);
+      config.upsertDevice({ serial: d.serial, crop });
+      return crop;
+    });
+    config.patch({ eyeMode: mode === 'left' ? 'left' : 'full' });
+    return results;
+  });
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));

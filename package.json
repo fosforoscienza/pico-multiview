@@ -1,6 +1,6 @@
 {
   "name": "pico-multiview",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Regia multi-visore per PICO 4: mosaico dei 10 schermi, avvio/chiusura app e puntatore mouse su ogni visore.",
   "type": "module",
@@ -14,7 +14,8 @@
     "test": "node --test \"test/*.test.mjs\"",
     "dist": "electron-builder --mac --publish never",
     "guida": "node scripts/build-guida.mjs",
-    "icona": "node scripts/build-icona.mjs"
+    "icona": "node scripts/build-icona.mjs",
+    "versione": "node scripts/versione.mjs"
   },
   "devDependencies": {
     "electron": "^43.0.0",

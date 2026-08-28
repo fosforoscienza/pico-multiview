@@ -16,6 +16,7 @@ const state = {
   selected: new Set(), // selezione per i comandi di gruppo
   previewSerial: null,
   previewMode: 'view', // 'view' (guarda) | 'touch' (tocca)
+  eyeMode: 'full', // 'full' (due occhi affiancati) | 'left' (un occhio solo)
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -81,6 +82,41 @@ function reportBatch(results, verb) {
   } else {
     setStatus(`${verb} su ${results.length} visore/i.`);
   }
+}
+
+/**
+ * "Un occhio" ⇄ "Immagine intera", su tutte le postazioni piene.
+ *
+ * Il ritaglio lo fa il visore, non la finestra: così l'occhio singolo si vede
+ * anche nelle miniature e sulla wifi viaggia metà dei dati. Ogni visore si
+ * riavvia lo streaming, quindi ci mette un paio di secondi.
+ */
+async function toggleEyeMode() {
+  const serials = state.slots.filter(Boolean);
+  if (!serials.length) {
+    log('Nessun visore collegato.', 'error');
+    return;
+  }
+  const mode = state.eyeMode === 'left' ? 'full' : 'left';
+  const button = $('btn-eye');
+  button.disabled = true;
+  setStatus(mode === 'left' ? 'Passo a un occhio solo…' : 'Torno all\'immagine intera…');
+  const results = await run(window.pico.devices.eye(serials, mode));
+  button.disabled = false;
+  if (results === null) return;
+  reportBatch(results, mode === 'left' ? 'Un occhio' : 'Immagine intera');
+  // Se non ce l'ha fatta nessuno il pulsante deve restare com'era: mostrarlo
+  // acceso su un ritaglio mai applicato sarebbe una bugia.
+  if (!results.some((r) => r.ok)) return;
+  state.eyeMode = mode;
+  renderEyeMode();
+}
+
+function renderEyeMode() {
+  const left = state.eyeMode === 'left';
+  const button = $('btn-eye');
+  button.classList.toggle('is-active', left);
+  button.textContent = left ? 'Immagine intera' : 'Un occhio';
 }
 
 function persistSlots() {
@@ -403,8 +439,36 @@ function updatePreviewChrome() {
   const home = state.viewport.isHome;
   $('btn-recenter').classList.toggle('is-active', !home);
   const badge = $('view-badge');
+  // Mentre è esposto l'avviso "il clic non arriva al visore" non lo copriamo:
+  // trascinando, questa funzione viene richiamata di continuo.
+  if (badge.classList.contains('avviso')) return;
   badge.classList.toggle('hidden', home);
   badge.textContent = `Visuale spostata · ${state.viewport.zoomLabel}`;
+}
+
+let clicIgnoratoTimer = null;
+
+/**
+ * Il clic in modalità Visuale non arriva al visore: è voluto, perché quella è
+ * la modalità sicura mentre c'è qualcuno che indossa il visore. Ma se nessuno
+ * lo dice, sembra che il programma sia rotto.
+ */
+function segnalaClicIgnorato() {
+  const badge = $('view-badge');
+  badge.classList.remove('hidden');
+  badge.textContent = 'Sei in Visuale: il clic non arriva al visore — passa a Tocco';
+  badge.classList.add('avviso');
+  clearTimeout(clicIgnoratoTimer);
+  clicIgnoratoTimer = setTimeout(scartaClicIgnorato, 2600);
+}
+
+function scartaClicIgnorato() {
+  clearTimeout(clicIgnoratoTimer);
+  clicIgnoratoTimer = null;
+  const badge = $('view-badge');
+  if (!badge.classList.contains('avviso')) return;
+  badge.classList.remove('avviso');
+  updatePreviewChrome();
 }
 
 function panPreview(dxClient, dyClient) {
@@ -444,14 +508,19 @@ function wirePreview() {
     onBack: () => {
       if (state.previewSerial) run(window.pico.actions.key([state.previewSerial], state.keycodes.BACK));
     },
+    onIgnoredClick: segnalaClicIgnorato,
   });
 
   $('mode-view').addEventListener('click', () => {
     state.previewMode = 'view';
+    scartaClicIgnorato();
     updatePreviewChrome();
   });
   $('mode-touch').addEventListener('click', () => {
     state.previewMode = 'touch';
+    // L'avviso "sei in Visuale" non deve sopravvivere al passaggio a Tocco:
+    // resterebbe a contraddire la modalità appena scelta.
+    scartaClicIgnorato();
     updatePreviewChrome();
   });
   $('btn-recenter').addEventListener('click', recenterPreview);
@@ -741,6 +810,7 @@ function wireUi() {
   $('btn-scan').addEventListener('click', doScan);
   $('btn-usb').addEventListener('click', doAdoptUsb);
   $('btn-sync').addEventListener('click', () => run(window.pico.devices.sync(), 'Elenco aggiornato.'));
+  $('btn-eye').addEventListener('click', toggleEyeMode);
 
   $('add-scan').addEventListener('click', doScan);
   $('add-usb').addEventListener('click', doAdoptUsb);
@@ -1020,7 +1090,9 @@ async function boot() {
   state.slotCount = info.config.slotCount ?? 10;
   state.slots = Array.isArray(info.config.slots) ? [...info.config.slots] : [];
   state.unassigned = new Set(info.config.unassigned ?? []);
+  state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
 
+  renderEyeMode();
   renderAppSelect();
   renderBrand(info.brand);
   renderRemoteStatus(info.remote);

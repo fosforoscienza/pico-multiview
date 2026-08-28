@@ -14,7 +14,25 @@ import {
   encodeKeyPress,
   encodeScroll,
   encodeTouch,
+  leftEyeCrop,
 } from '../shared/protocol.js';
+
+/**
+ * Traduce i messaggi di scrcpy che l'operatore può incontrare davvero, perché
+ * arrivano nel pannello Log in mezzo al resto e in inglese non dicono niente a
+ * chi sta gestendo una sala.
+ */
+export function spiegaLogScrcpy(message) {
+  const testo = String(message ?? '');
+  if (testo.includes('it was generated for a different device size')) {
+    return (
+      'il visore ha rifiutato il tocco: la misura dell\'immagine non combacia con quella ' +
+      'del suo schermo. Succede se la risoluzione è appena cambiata — premi ⟳ sulla ' +
+      `miniatura per riavviare lo streaming. (${testo})`
+    );
+  }
+  return testo;
+}
 
 export const STATE = {
   OFFLINE: 'offline',
@@ -128,7 +146,7 @@ export class Device extends EventEmitter {
         keyFrame: frame.keyFrame,
       });
     });
-    session.on('log', ({ level, message }) => this.log(level, message));
+    session.on('log', ({ level, message }) => this.log(level, spiegaLogScrcpy(message)));
     session.on('error', (err) => {
       this.#setState(STATE.ERROR, err);
       this.log('error', err.message);
@@ -212,6 +230,31 @@ export class Device extends EventEmitter {
   async setCrop(crop) {
     this.crop = crop || null;
     if (this.mirror === 'scrcpy') await this.connect();
+  }
+
+  /**
+   * "Un occhio solo" o immagine intera.
+   *
+   * Un visore disegna due immagini affiancate, una per occhio, e a guardarle
+   * insieme non si capisce niente. Il ritaglio si fa **sul visore**, non qui:
+   * così l'occhio singolo si vede anche nelle miniature, e sulla wifi viaggia
+   * metà dei dati — con dieci visori è la differenza fra scorrevole e a scatti.
+   *
+   * I clic continuano a funzionare: scrcpy riporta da sé le coordinate del
+   * video dentro la porzione ritagliata dello schermo.
+   *
+   * @returns il ritaglio applicato, o null se si è tornati all'immagine intera
+   */
+  async setEyeMode(mode) {
+    if (mode !== 'left') {
+      await this.setCrop(null);
+      return null;
+    }
+    const size = await apps.displaySize(this.serial, this.displayId);
+    const crop = leftEyeCrop(size);
+    if (!crop) throw new Error('non riesco a leggere la dimensione dello schermo del visore');
+    await this.setCrop(crop);
+    return crop;
   }
 
   async setDisplayId(displayId) {

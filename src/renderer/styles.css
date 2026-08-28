@@ -436,6 +436,20 @@ input[type="checkbox"] {
   pointer-events: none;
 }
 
+/* Il clic in modalità Visuale non arriva al visore: qui lo si dice, per non
+   lasciar credere a un guasto. Sparisce da solo dopo un paio di secondi. */
+.view-badge.avviso {
+  background: rgba(120, 76, 12, 0.92);
+  border-color: #b8801f;
+  color: #ffe9c2;
+}
+
+/* Il pulsante "Un occhio" resta acceso finché il ritaglio è attivo. */
+.btn.is-active {
+  border-color: var(--accent);
+  color: #eaf2ff;
+}
+
 /* -------------------------------------------------------------- postazioni */
 
 .wall {
