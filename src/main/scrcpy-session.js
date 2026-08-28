@@ -25,6 +25,27 @@ import { StreamParser } from '../shared/stream-parser.js';
 export const SCRCPY_VERSION = '2.7';
 const REMOTE_JAR = '/data/local/tmp/pico-multiview-server.jar';
 
+/**
+ * Visori su cui il server è già stato copiato in questa sessione del
+ * programma.
+ *
+ * Perché tenerne conto: il file viene caricato da un `app_process` che resta
+ * in esecuzione sul visore. Riscrivergli sotto il file mentre lo sta usando —
+ * cosa che succedeva a ogni riconnessione, e ce ne sono molte — è un ottimo
+ * modo per farlo morire, e la morte si vede come "socket video chiuso dal
+ * dispositivo": un sintomo che non punta affatto alla sua causa.
+ *
+ * Il file lo mettiamo noi e non cambia mai durante l'esecuzione, quindi una
+ * copia sola basta. Se il visore viene riavviato, /data/local/tmp si svuota e
+ * la copia rifallisce: per questo l'insieme si azzera quando la copia fallisce.
+ */
+const jarCopiato = new Set();
+
+export function dimenticaJar(serial = null) {
+  if (serial) jarCopiato.delete(serial);
+  else jarCopiato.clear();
+}
+
 export const DEFAULT_VIDEO_OPTIONS = {
   maxSize: 800,
   bitRate: 2_000_000,
@@ -107,7 +128,15 @@ export class ScrcpySession extends EventEmitter {
   async start() {
     this.stopped = false;
 
-    await push(this.serial, scrcpyServerPath(), REMOTE_JAR);
+    if (!jarCopiato.has(this.serial)) {
+      try {
+        await push(this.serial, scrcpyServerPath(), REMOTE_JAR);
+        jarCopiato.add(this.serial);
+      } catch (err) {
+        jarCopiato.delete(this.serial);
+        throw err;
+      }
+    }
 
     this.port = await findFreePort(27183);
     await forward(this.serial, this.port, `localabstract:${this.socketName}`);

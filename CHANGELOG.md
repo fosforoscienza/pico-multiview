@@ -9,6 +9,15 @@ della guida PDF.
 
 ---
 
+## 1.11 — agosto 2026
+
+- **«Socket video chiuso dal dispositivo», ogni quindici secondi.** Il server viene copiato sul
+  visore in `/data/local/tmp` e caricato da un processo che resta in esecuzione. Lo ricopiavamo
+  **a ogni riavvio della sessione** — e ce ne sono molti: cambio di qualità, riconnessione,
+  ritaglio — riscrivendo il file sotto il processo che lo stava usando. Ora la copia si fa una
+  volta per visore. Il sintomo non puntava affatto alla causa, ed è per questo che è rimasto
+  in mezzo ai piedi mentre cercavamo il tocco.
+
 ## 1.10 — agosto 2026
 
 Correzioni trovate leggendo il registro di una diagnostica vera su un Pico Neo 3.
