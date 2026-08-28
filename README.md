@@ -414,8 +414,10 @@ premuto, ripremilo — vale su quelli collegati in quel momento.
 4. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
    combacia più con quella dello schermo. Premi ⟳ sulla miniatura.
 
-Il Log mostra sempre il comando esatto inviato al visore: se non reagisce, è la prima cosa da
-riprovare a mano.
+**Come leggere il Log.** Il pulsante **Log** in basso a sinistra apre il registro. Dentro ci sono
+**Svuota** e **Copia**: svuota, fai la prova, copia — ottieni le righe di quel gesto e basta.
+Ogni clic ne lascia una, anche quando non parte: dove è stato premuto, con quale strada, e il
+comando esatto inviato al visore, che è la prima cosa da riprovare a mano se non reagisce.
 
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.

@@ -981,6 +981,35 @@ function wireUi() {
     }
   });
 
+  // Copiare a mano da un pannello che scorre è un supplizio, e questo registro
+  // serve proprio a essere mandato a qualcuno.
+  $('log-copy').addEventListener('click', async () => {
+    const testo = state.logs.join('\n');
+    if (!testo) {
+      setStatus('Il registro è vuoto.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(testo);
+      setStatus(`Registro copiato (${state.logs.length} righe): incollalo dove ti serve.`);
+    } catch {
+      // Senza permesso per gli appunti (capita nel browser via http) si
+      // seleziona tutto, così basta ⌘C.
+      const range = document.createRange();
+      range.selectNodeContents($('log-text'));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      setStatus('Registro selezionato: premi ⌘C per copiarlo.');
+    }
+  });
+
+  $('log-clear').addEventListener('click', () => {
+    state.logs.length = 0;
+    $('log-text').textContent = '';
+    setStatus('Registro svuotato: quello che fai adesso resta da solo.');
+  });
+
   document.addEventListener('keydown', onKeyDown);
 }
 

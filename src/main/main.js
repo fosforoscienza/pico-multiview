@@ -300,7 +300,18 @@ function registerHandlers() {
   // programma stia funzionando.
   signal('pointer', ({ serial, type, nx, ny, button }) => {
     const device = manager.get(serial);
-    if (!device) return;
+    if (!device) {
+      // Anche questo va detto: un clic che sparisce perché il visore non è nel
+      // registro è indistinguibile, da fuori, da un clic che non funziona.
+      if (type === 'down') {
+        broadcast('log', {
+          serial,
+          level: 'error',
+          message: `visore non in elenco: il clic non è stato inviato${demoList ? ' (sei in modalità dimostrativa: i visori sono finti)' : ''}`,
+        });
+      }
+      return;
+    }
     device.pointer({ type, nx, ny, button }).catch((err) => {
       device.log('error', `tocco non inviato: ${err.message}`);
     });
