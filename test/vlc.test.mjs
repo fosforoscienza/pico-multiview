@@ -67,7 +67,7 @@ test('scegliendo VLC non si chiude più niente sul visore', async () => {
   // Col lettore di sistema bisogna chiuderlo prima, per non farlo riprendere
   // da dov'era. Con VLC la posizione sta nel comando: chiudere non serve, e
   // non chiudere significa partire prima.
-  const visore = visoreFinto();
+  const visore = visoreFinto({ pacchetti: 'package:org.videolan.vlc\n' });
   try {
     await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { lettore: 'vlc' });
     const comandi = visore.comandi();
@@ -106,5 +106,19 @@ test('si riconosce dove VLC c\'è e dove manca', async () => {
     assert.equal(await isInstalled('finto:5555', VLC.package), false);
   } finally {
     senzaVlc.pulisci();
+  }
+});
+
+test('con VLC si guarda prima se c\'è, e solo dopo si lancia', async () => {
+  // Il controllo non è una formalità: senza, il comando parte verso un'app che
+  // non esiste, il visore non apre niente e non lo dice a nessuno.
+  const visore = visoreFinto({ pacchetti: 'package:org.videolan.vlc\n' });
+  try {
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { lettore: 'vlc' });
+    const righe = visore.comandi().split('\n').filter(Boolean);
+    assert.match(righe[0], /pm list packages/, 'prima si guarda');
+    assert.match(righe[1], /am start -n org\.videolan\.vlc/, 'poi si lancia');
+  } finally {
+    visore.pulisci();
   }
 });
