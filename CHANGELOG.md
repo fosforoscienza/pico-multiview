@@ -9,6 +9,24 @@ della guida PDF.
 
 ---
 
+## 2.8 — agosto 2026
+
+Tre difetti della barra del filmato, tutti trovati usandola davvero.
+
+- **«Dall'inizio» non ripartiva dall'inizio.** Per chiudere il lettore prima di lanciare bisogna
+  sapere quale sia, e lo si chiedeva al visore **senza dirgli quale file**: così la domanda
+  tornava a mani vuote, nessuno veniva chiuso, e il lettore riprendeva da dov'era. Ora il file si
+  passa, il lettore che si è aperto davvero viene ricordato per la volta dopo, e la schermata
+  viene rifatta da capo (`--activity-clear-task`) invece di essere riusata.
+- **I tasti del lettore ora si scelgono, e si provano.** I tasti «media» sono gli unici standard
+  di Android e su molti visori non fanno niente: il sistema li consegna alla sessione
+  multimediale, e un lettore che non ne apre una non li riceve mai. Nella barra c'è un menù —
+  tasti media, OK/Invio, centro del pad, barra spaziatrice — con un pulsante **Prova**: si manda
+  il tasto e si guarda il visore. La scelta resta, e vale anche per il salto (col pad, avanti e
+  indietro sono le frecce).
+- **Un clic su un filmato non lo lancia più in sala.** Ora chiede conferma, dicendo su quanti
+  visori sta per partire: la riga dell'elenco serve a scegliere, la conferma a lanciare.
+
 ## 2.7 — agosto 2026
 
 - **La barra del filmato c'è sempre**, finché c'è un visore in postazione. Prima compariva solo

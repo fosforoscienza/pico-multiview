@@ -34,6 +34,11 @@ export const DEFAULT_CONFIG = {
   //               PICO serve questo: non hanno un touchscreen e scartano gli
   //               eventi che dicono di venirne.
   pointerMode: 'scrcpy',
+  // Con quali tasti si comanda il lettore video del visore. Non è una
+  // preferenza di gusto: i lettori dei visori rispondono a tasti diversi, e
+  // quelli «media» — gli unici standard — su molti non fanno proprio niente.
+  // Si sceglie dalla barra del filmato, provandoli.
+  playerKeys: 'media',
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

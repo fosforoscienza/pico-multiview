@@ -66,6 +66,10 @@ export class Device extends EventEmitter {
     // Il filmato che gli abbiamo mandato noi: il visore non sa dire quale file
     // stia guardando, ma noi sì, ed è l'unico modo di conoscerne la durata.
     this.playing = null;
+    // Il lettore visto in azione l'ultima volta: è il dato che permette di
+    // chiuderlo prima del prossimo avvio, e quindi di ripartire dall'inizio.
+    this.playerPackage = null;
+    this.homePackage = null;
     this.videoSize = null;
     this.session = null;
     this.mirror = config.mirror ?? 'scrcpy';
@@ -605,12 +609,21 @@ export class Device extends EventEmitter {
     };
   }
 
-  async mediaKey(azione) {
-    return apps.mediaKey(this.serial, azione);
+  async mediaKey(azione, profilo = 'media') {
+    return apps.mediaKey(this.serial, azione, profilo);
   }
 
-  async seekTo(ms) {
-    return apps.seekTo(this.serial, ms);
+  async seekTo(ms, profilo = 'media') {
+    return apps.seekTo(this.serial, ms, { profilo });
+  }
+
+  /** Guarda cosa si è aperto e se lo ricorda: sarà il lettore da chiudere. */
+  async imparaLettore() {
+    if (!this.homePackage) this.homePackage = await apps.resolveHomePackage(this.serial).catch(() => null);
+    const fg = await apps.foregroundPackage(this.serial).catch(() => null);
+    const lettore = apps.riconosciLettore(fg, this.homePackage);
+    if (lettore) this.playerPackage = lettore;
+    return lettore;
   }
 
   async refreshStatus(afterMs = 0) {

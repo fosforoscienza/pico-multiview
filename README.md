@@ -312,7 +312,7 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | far uscire uno dall'app | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
-| mandare un filmato a tutti | **Video…** → scegli il file → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
+| mandare un filmato a tutti | **Video…** → scegli il file → **conferma** → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
 | fermare tutti insieme | **Pausa a tutti** sulla barra del filmato |
 | portare tutti a un punto | clicca quel punto sulla barra del filmato |
 | far ripartire da capo | **Da capo** sulla barra del filmato |
@@ -335,6 +335,13 @@ in sala. Se si allarga, un clic sulla barra li rimette tutti sullo stesso punto.
 avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app dà un colpo, misura
 quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
 punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
+
+**Con quali tasti si comanda il lettore.** I tasti «media» (play, pausa) sono gli unici standard
+di Android, e su molti visori non fanno **niente**: il sistema li consegna alla sessione
+multimediale, e un lettore che non ne apre una non li riceve mai. I lettori dei visori si
+comandano invece come si comandano col telecomando in mano — **OK** per fermare, **frecce** per
+saltare. Nel menù a destra della barra scegli il modo, premi **Prova** e guarda il visore: se il
+filmato si ferma, è quello giusto. La scelta resta.
 
 **Se la barra dice «il lettore non dice a che punto è»**, quel lettore non pubblica il proprio
 stato: da fuori nessuno può sapere dove sia arrivato. **Pausa** e **Da capo** funzionano lo

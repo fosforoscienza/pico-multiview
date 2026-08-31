@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  PROFILI_LETTORE,
   colpiPerSalto,
+  profiloLettore,
+  riconosciLettore,
   parseDurata,
   parsePlaybackState,
   parseResolvedActivity,
@@ -98,4 +101,32 @@ test('i colpi di salto si contano sul passo misurato, non su uno indovinato', ()
   assert.equal(colpiPerSalto(60000, 0), 0);
   // E non si resta a martellare tasti per un salto di un'ora.
   assert.equal(colpiPerSalto(3600000, 10000), 40);
+});
+
+test('il lettore da chiudere non è mai la schermata iniziale', () => {
+  // Ricordarsi la home come «lettore» vorrebbe dire chiuderla al prossimo
+  // avvio: succede proprio quando il filmato non è partito, cioè quando meno
+  // ci si può permettere di peggiorare le cose.
+  assert.equal(riconosciLettore('com.pvr.shortcut', 'com.pvr.shortcut'), null);
+  assert.equal(riconosciLettore('android', 'com.pvr.shortcut'), null, 'né il selettore «apri con»');
+  assert.equal(riconosciLettore(null, 'com.pvr.shortcut'), null);
+  assert.equal(riconosciLettore('com.pvr.filemanager', 'com.pvr.shortcut'), 'com.pvr.filemanager');
+});
+
+test('ogni modo di comandare il lettore ha i suoi tasti, anche per il salto', () => {
+  // I tasti «media» sono gli unici standard e su molti visori non fanno
+  // niente: Android li consegna alla sessione multimediale, e un lettore che
+  // non ne apre una non li riceve mai. Con il pad si comanda come col
+  // telecomando in mano — ed è così che lo usa chi ha il visore in testa.
+  for (const [nome, profilo] of Object.entries(PROFILI_LETTORE)) {
+    assert.ok(profilo.etichetta, `${nome} deve avere un nome leggibile`);
+    for (const tasto of ['play', 'pause', 'avanti', 'indietro']) {
+      assert.equal(typeof profilo[tasto], 'number', `${nome}: manca ${tasto}`);
+    }
+  }
+  // Col pad, avanti e indietro sono le frecce: i tasti media non arriverebbero.
+  assert.equal(PROFILI_LETTORE.ok.avanti, 22);
+  assert.equal(PROFILI_LETTORE.media.avanti, 90);
+  // Un profilo sconosciuto non deve far saltare niente: si torna allo standard.
+  assert.equal(profiloLettore('inventato'), PROFILI_LETTORE.media);
 });

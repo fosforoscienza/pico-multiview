@@ -426,7 +426,7 @@ export class DeviceManager extends EventEmitter {
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
         try {
-          await apps.playVideo(serial, path, { fromStart });
+          await apps.playVideo(serial, path, { fromStart, player: device?.playerPackage ?? null });
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);
@@ -459,6 +459,9 @@ export class DeviceManager extends EventEmitter {
    */
   async #verificaPartenza(device, { attesaMs = 2500, sogliaMs = 5000 } = {}) {
     await adb.delay(attesaMs);
+    // Chi si è aperto davvero: è il lettore da chiudere al prossimo avvio, ed è
+    // più affidabile di qualunque domanda al sistema su «chi apre i video».
+    await device.imparaLettore().catch(() => null);
     const stato = await device.playerState().catch(() => null);
     if (!stato) {
       if (this.lettoriMuti.has(device.serial)) return;
@@ -493,9 +496,9 @@ export class DeviceManager extends EventEmitter {
    * Insieme, non in fila: fermarsi è la cosa che più si nota se avviene a
    * scaglioni, ed è il motivo per cui esiste questo pulsante.
    */
-  async mediaEverywhere(serials, azione) {
+  async mediaEverywhere(serials, azione, profilo = this.config.data.playerKeys) {
     return this.each(serials, async (d) => {
-      await d.mediaKey(azione);
+      await d.mediaKey(azione, profilo);
       return azione;
     });
   }
@@ -503,7 +506,7 @@ export class DeviceManager extends EventEmitter {
   /** Porta tutti i visori allo stesso punto del filmato. */
   async seekEverywhere(serials, ms) {
     return this.each(serials, async (d) => {
-      const stato = await d.seekTo(ms);
+      const stato = await d.seekTo(ms, this.config.data.playerKeys);
       return stato?.positionMs ?? null;
     });
   }

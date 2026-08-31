@@ -296,13 +296,17 @@ export async function listVideos(serial) {
  * che sul visore è il suo lettore video. Indicarne uno a mano vorrebbe dire
  * indovinare il nome del pacchetto, che cambia da modello a modello.
  */
-export async function playVideo(serial, percorso, { fromStart = true } = {}) {
+export async function playVideo(serial, percorso, { fromStart = true, player = null } = {}) {
   // Il lettore lasciato aperto riprenderebbe da dov'era: chi manda un filmato
   // da qui lo sta mostrando a una sala, e vuole l'inizio. Chiuderlo prima è il
   // modo che non dipende da quali extra questo lettore capisce.
+  //
+  // `player` è il lettore già visto in azione la volta scorsa: è il dato più
+  // affidabile che abbiamo — meglio di qualunque domanda al sistema, perché è
+  // il pacchetto che si è davvero aperto su questo visore.
   if (fromStart) {
-    const lettore = await resolveVideoPlayer(serial);
-    if (lettore) await stopApp(serial, lettore.package).catch(() => {});
+    const lettore = player ?? (await resolveVideoPlayer(serial, percorso))?.package ?? null;
+    if (lettore && !NON_LETTORI.has(lettore)) await stopApp(serial, lettore).catch(() => {});
   }
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
   // stringa del comando: va protetto qui, dopo.
@@ -310,10 +314,15 @@ export async function playVideo(serial, percorso, { fromStart = true } = {}) {
   // 'video/*' fra virgolette: nudo, la shell del visore lo tratterebbe come un
   // glob da espandere. `--ei position 0` lo capiscono solo certi lettori: per
   // gli altri è innocuo, e la chiusura di sopra ha già fatto il lavoro.
-  const posizione = fromStart ? ' --ei position 0' : '';
+  //
+  // I flag contano quanto la chiusura: senza, un lettore già aperto sullo
+  // stesso filmato riceve il nuovo comando **dentro** la schermata di prima e
+  // riprende da dov'era, invece di ricominciare. Con `clear-task` la schermata
+  // viene rifatta da capo.
+  const daCapo = fromStart ? ' --activity-clear-task --activity-new-task --ei position 0' : '';
   return shell(
     serial,
-    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'${posizione}`,
+    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'${daCapo}`,
     { timeout: 20000 },
   );
 }
@@ -339,6 +348,31 @@ export const MEDIA_KEYS = {
   rewind: 89,
   fastForward: 90,
 };
+
+/**
+ * I modi in cui un lettore si lascia comandare.
+ *
+ * I tasti «media» sono gli unici standard, e sono anche quelli che su molti
+ * visori non fanno **niente**: Android li consegna alla sessione multimediale,
+ * e un lettore che non ne apre una non li riceve mai. I lettori dei visori si
+ * comandano invece come si comandano col telecomando in mano — OK per fermare,
+ * frecce per saltare — perché è così che li usa chi ha il visore in testa.
+ *
+ * Quale sia quello giusto non si può indovinare da qui: si prova, e la scelta
+ * resta. `toggle` dice se il tasto è un interruttore (lo stesso per fermare e
+ * riprendere) o se ci sono due tasti distinti.
+ */
+export const PROFILI_LETTORE = {
+  media: { etichetta: 'Tasti media', play: 126, pause: 127, toggle: false, avanti: 90, indietro: 89 },
+  mediaToggle: { etichetta: 'Media play/pausa (unico)', play: 85, pause: 85, toggle: true, avanti: 90, indietro: 89 },
+  ok: { etichetta: 'OK / Invio', play: 66, pause: 66, toggle: true, avanti: 22, indietro: 21 },
+  dpad: { etichetta: 'Centro del pad', play: 23, pause: 23, toggle: true, avanti: 22, indietro: 21 },
+  spazio: { etichetta: 'Barra spaziatrice', play: 62, pause: 62, toggle: true, avanti: 22, indietro: 21 },
+};
+
+export function profiloLettore(nome) {
+  return PROFILI_LETTORE[nome] ?? PROFILI_LETTORE.media;
+}
 
 /**
  * Comando che chiede al visore lo stato del lettore.
@@ -436,8 +470,9 @@ export async function playerState(serial) {
   return { ...playback, positionMs: posizioneOra(playback, parseUptimeMs(res.out)) };
 }
 
-export async function mediaKey(serial, azione) {
-  const keycode = MEDIA_KEYS[azione];
+export async function mediaKey(serial, azione, profilo = 'media') {
+  const tasti = profiloLettore(profilo);
+  const keycode = tasti[azione] ?? MEDIA_KEYS[azione];
   if (!keycode) throw new Error(`comando lettore sconosciuto: ${azione}`);
   return inputKeyevent(serial, keycode);
 }
@@ -473,14 +508,56 @@ export function parseResolvedActivity(text) {
   return riga ? { package: riga.split('/')[0], activity: riga } : null;
 }
 
-export async function resolveVideoPlayer(serial) {
+/**
+ * Pacchetti che non sono un lettore, per quanto il visore li nomini.
+ *
+ * `android` è il selettore «apri con»: chiuderlo non ha senso, e chiederlo
+ * significherebbe fermare un pezzo del sistema.
+ */
+const NON_LETTORI = new Set(['android', 'com.android.systemui']);
+
+/**
+ * Il pacchetto che aprirà questo filmato.
+ *
+ * Il file **va passato**: la stessa domanda senza il file, su molti visori,
+ * torna a mani vuote — e a mani vuote il lettore non veniva chiuso, quindi
+ * riprendeva da dove era rimasto. Era questa la ragione per cui «riparte
+ * dall'inizio» non ripartiva dall'inizio.
+ */
+export async function resolveVideoPlayer(serial, percorso = null) {
+  const conFile = percorso ? ` -d '${fileUri(percorso).replace(/'/g, `'\\''`)}'` : '';
   const res = await adbTry([
     '-s',
     serial,
     'shell',
-    "cmd package resolve-activity --brief -a android.intent.action.VIEW -t 'video/*'",
+    `cmd package resolve-activity --brief -a android.intent.action.VIEW -t 'video/*'${conFile}`,
   ]);
-  return res.ok ? parseResolvedActivity(res.out) : null;
+  const trovato = res.ok ? parseResolvedActivity(res.out) : null;
+  if (!trovato || NON_LETTORI.has(trovato.package)) return null;
+  return trovato;
+}
+
+/** Il pacchetto della schermata iniziale del visore. */
+export async function resolveHomePackage(serial) {
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    'cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME',
+  ]);
+  return res.ok ? parseResolvedActivity(res.out)?.package ?? null : null;
+}
+
+/**
+ * Il lettore che si è davvero aperto, viste le app in primo piano.
+ *
+ * Serve a non prendere per lettore la schermata iniziale: se il filmato non è
+ * partito, in primo piano c'è la home, e ricordarsela come «lettore» vorrebbe
+ * dire chiuderla al prossimo avvio.
+ */
+export function riconosciLettore(foreground, homePackage) {
+  if (!foreground || foreground === homePackage) return null;
+  return NON_LETTORI.has(foreground) ? null : foreground;
 }
 
 /**
@@ -509,13 +586,14 @@ export function colpiPerSalto(deltaMs, passoMs, { massimo = 40 } = {}) {
  * verifica. E se il lettore ai colpi non risponde, lo si dice invece di far
  * finta.
  */
-export async function seekTo(serial, targetMs, { tolleranzaMs = 2000, giri = 3 } = {}) {
+export async function seekTo(serial, targetMs, { tolleranzaMs = 2000, giri = 3, profilo = 'media' } = {}) {
+  const tasti = profiloLettore(profilo);
   let stato = await playerState(serial);
   if (!stato) throw new Error('il lettore non dice a che punto è il filmato: da qui non si può saltare');
 
   const suonava = stato.state === 'in riproduzione';
   if (suonava) {
-    await mediaKey(serial, 'pause');
+    await mediaKey(serial, 'pause', profilo);
     await delay(400);
     stato = (await playerState(serial)) ?? stato;
   }
@@ -526,25 +604,25 @@ export async function seekTo(serial, targetMs, { tolleranzaMs = 2000, giri = 3 }
     if (Math.abs(delta) <= tolleranzaMs) break;
     if (passo === null) {
       // Un colpo solo, da fermo: è la misura del passo di questo lettore.
-      await mediaKey(serial, delta > 0 ? 'fastForward' : 'rewind');
+      await mediaKey(serial, delta > 0 ? 'avanti' : 'indietro', profilo);
       await delay(500);
       const dopo = (await playerState(serial)) ?? stato;
       passo = Math.abs(dopo.positionMs - stato.positionMs);
       stato = dopo;
       if (passo < 500) {
-        if (suonava) await mediaKey(serial, 'play');
+        if (suonava) await mediaKey(serial, 'play', profilo);
         throw new Error('questo lettore non risponde ai tasti avanti/indietro: il salto non è possibile');
       }
       continue;
     }
     const colpi = colpiPerSalto(delta, passo);
     if (!colpi) break;
-    const tasto = colpi > 0 ? MEDIA_KEYS.fastForward : MEDIA_KEYS.rewind;
+    const tasto = colpi > 0 ? tasti.avanti : tasti.indietro;
     await inputKeyevents(serial, Array.from({ length: Math.abs(colpi) }, () => tasto));
     await delay(600);
     stato = (await playerState(serial)) ?? stato;
   }
 
-  if (suonava) await mediaKey(serial, 'play');
+  if (suonava) await mediaKey(serial, 'play', profilo);
   return stato;
 }

@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as adb from './adb.js';
+import * as apps from './apps.js';
 import { Config } from './config.js';
 import { brandForUi } from './brand.js';
 import { DeviceManager } from './device-manager.js';
@@ -181,6 +182,7 @@ function registerHandlers() {
     subnets: adb.localSubnets(),
     config: config.data,
     keycodes: KEYCODE,
+    playerProfiles: apps.PROFILI_LETTORE,
     remote: remote?.status ?? null,
     brand: brandForUi(),
   }));
@@ -272,7 +274,9 @@ function registerHandlers() {
   handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
   handle('devices:playVideo', ({ entries }) => manager.playVideoEverywhere(entries ?? []));
   handle('devices:playerState', ({ serials }) => manager.playersState(serials));
-  handle('devices:media', ({ serials, action }) => manager.mediaEverywhere(serials, action));
+  handle('devices:media', ({ serials, action, profile }) =>
+    manager.mediaEverywhere(serials, action, profile ?? config.data.playerKeys),
+  );
   handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
   handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
 

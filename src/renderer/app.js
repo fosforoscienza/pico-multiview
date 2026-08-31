@@ -23,6 +23,8 @@ const state = {
   videos: [], // filmati trovati sui visori, raggruppati per nome
   players: new Map(), // serial -> ultima lettura del lettore, con l'ora in cui è arrivata
   playerTimer: null,
+  playerKeys: 'media', // con quali tasti si comanda il lettore del visore
+  profiliLettore: {},
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -265,6 +267,15 @@ function renderVideoList() {
  * visore, e va detto invece di lasciarlo credere.
  */
 async function playVideo(video) {
+  // Un clic su un nome non è un ordine di far partire il filmato in sala: la
+  // riga dell'elenco serve a scegliere, la conferma a lanciare. Senza, basta
+  // sfiorare la voce sbagliata davanti al pubblico.
+  const quanti = video.on.length;
+  const ok = window.confirm(
+    `Avviare «${video.name}» su ${quanti} visore${quanti > 1 ? 'i' : ''}?\n\n` +
+      'Parte dall\'inizio su tutti, nello stesso momento.',
+  );
+  if (!ok) return;
   const results = await run(window.pico.devices.playVideo(video.on));
   if (results === null) return;
   reportBatch(results, `«${video.name}»`);
@@ -1290,6 +1301,8 @@ async function boot() {
   state.slotCount = info.config.slotCount ?? 10;
   state.slots = Array.isArray(info.config.slots) ? [...info.config.slots] : [];
   state.unassigned = new Set(info.config.unassigned ?? []);
+  state.playerKeys = info.config.playerKeys ?? 'media';
+  state.profiliLettore = info.playerProfiles ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
@@ -1446,7 +1459,7 @@ function wirePlaybar() {
     // Play e pausa espliciti, mai l'interruttore: se un visore fosse rimasto
     // indietro, il tasto unico lo farebbe ripartire mentre ferma gli altri.
     const azione = sintesi?.inRiproduzione ? 'pause' : 'play';
-    const results = await run(window.pico.devices.media(targetSerials(), azione));
+    const results = await run(window.pico.devices.media(targetSerials(), azione, state.playerKeys));
     reportBatch(results, azione === 'pause' ? 'pausa' : 'ripresa');
     setTimeout(pollPlayers, 400);
   });
@@ -1468,6 +1481,30 @@ function wirePlaybar() {
     const results = await run(window.pico.devices.seek(targetSerials(), ms));
     reportBatch(results, `salto a ${formattaTempo(ms)}`);
     setTimeout(pollPlayers, 600);
+  });
+
+  const menu = $('player-keys');
+  for (const [id, profilo] of Object.entries(state.profiliLettore ?? {})) {
+    const opzione = document.createElement('option');
+    opzione.value = id;
+    opzione.textContent = profilo.etichetta;
+    menu.append(opzione);
+  }
+  menu.value = state.playerKeys;
+  menu.addEventListener('change', async () => {
+    state.playerKeys = menu.value;
+    await window.pico.config.patch({ playerKeys: menu.value }).catch((err) => log(err.message, 'error'));
+    log(`comando del lettore: ${menu.options[menu.selectedIndex].textContent}`);
+  });
+
+  // La prova manda il tasto e basta: se il filmato si ferma, è quello giusto.
+  // Nessuno può dirlo dal computer — il lettore non risponde — ma chi guarda
+  // il visore lo vede in un istante.
+  $('btn-try-keys').addEventListener('click', async () => {
+    const results = await run(window.pico.devices.media(targetSerials(), 'pause', menu.value));
+    reportBatch(results, 'prova del tasto');
+    setStatus('Tasto mandato: se il filmato si è fermato, è quello giusto. Altrimenti prova il prossimo.');
+    setTimeout(pollPlayers, 500);
   });
 
   // Due orologi: uno chiede al visore, l'altro fa scorrere la barra fra una
