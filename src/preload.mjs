@@ -38,6 +38,10 @@ contextBridge.exposeInMainWorld('pico', {
     eye: (serials, mode) => invoke('devices:eye', { serials, mode }),
     pointerMode: (serials, mode) => invoke('devices:pointerMode', { serials, mode }),
     videos: (serials) => invoke('devices:videos', { serials }),
+    playerState: (serials) => invoke('devices:playerState', { serials }),
+    media: (serials, action) => invoke('devices:media', { serials, action }),
+    seek: (serials, ms) => invoke('devices:seek', { serials, ms }),
+    replay: (serials) => invoke('devices:replay', { serials }),
     playVideo: (entries) => invoke('devices:playVideo', { entries }),
   },
   device: {

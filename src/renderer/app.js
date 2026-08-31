@@ -1,6 +1,7 @@
 // UI: postazioni (slot) nella schermata principale, anteprima grande a metà
 // schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
+import { formattaTempo, riepilogo, stimaPosizione } from '../shared/playback.js';
 import { TileRenderer } from './decoder.js';
 import { Viewport } from './viewport.js';
 import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
@@ -20,6 +21,8 @@ const state = {
   pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
   lastTouch: null, // ultimo punto toccato: la diagnostica riprova lì
   videos: [], // filmati trovati sui visori, raggruppati per nome
+  players: new Map(), // serial -> ultima lettura del lettore, con l'ora in cui è arrivata
+  playerTimer: null,
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -266,6 +269,9 @@ async function playVideo(video) {
   if (results === null) return;
   reportBatch(results, `«${video.name}»`);
   $('video-modal').classList.add('hidden');
+  // La barra deve comparire adesso, non al prossimo giro: il lettore ci mette
+  // un momento ad aprirsi, e questa è l'attesa che serve.
+  setTimeout(pollPlayers, 1500);
 }
 
 function persistSlots() {
@@ -1299,6 +1305,7 @@ async function boot() {
   }
 
   renderDevices(await window.pico.devices.list());
+  wirePlaybar();
   setStatus('Pronto.');
 }
 
@@ -1306,3 +1313,154 @@ boot().catch((err) => {
   console.error(err);
   setStatus(`Errore di avvio: ${err.message}`);
 });
+
+// ---------------------------------------------------------------------------
+// Barra del filmato
+// ---------------------------------------------------------------------------
+
+/**
+ * Chiede a ogni visore a che punto è il filmato.
+ *
+ * Ogni due secondi, non dieci volte al secondo: ogni lettura è un comando adb
+ * per visore, e con dieci postazioni sarebbe un martellamento. Fra una lettura
+ * e l'altra la barra si muove da sola, contando il tempo che passa.
+ */
+let tickLettore = 0;
+
+/** Un filmato c'è se gliel'abbiamo mandato noi, o se ne stiamo già leggendo uno. */
+function filmatoInGiro() {
+  if (state.players.size) return true;
+  return state.slots.filter(Boolean).some((s) => state.devices.get(s)?.playing);
+}
+
+async function pollPlayers() {
+  const serials = state.slots.filter(Boolean);
+  if (!serials.length) return;
+  // Ogni lettura è un comando adb per visore. Quando non c'è nessun filmato in
+  // giro si guarda molto più di rado: serve solo ad accorgersi di un filmato
+  // avviato dal visore stesso, non a seguirlo secondo per secondo.
+  tickLettore += 1;
+  if (!filmatoInGiro() && tickLettore % 5 !== 0) return;
+  const results = await window.pico.devices.playerState(serials).catch(() => null);
+  if (!Array.isArray(results)) return;
+  const adesso = Date.now();
+  for (const r of results) {
+    if (r.ok && r.value) state.players.set(r.serial, { ...r.value, letto: adesso });
+    else state.players.delete(r.serial);
+  }
+  // I visori spariti dalle postazioni non devono restare nella media.
+  for (const serial of [...state.players.keys()]) {
+    if (!serials.includes(serial)) state.players.delete(serial);
+  }
+  drawPlaybar();
+}
+
+/** Le letture dei soli visori ancora in postazione. */
+function lettureCorrenti() {
+  return state.slots.filter(Boolean).map((s) => state.players.get(s)).filter(Boolean);
+}
+
+function drawPlaybar() {
+  const barra = $('playbar');
+  const sintesi = riepilogo(lettureCorrenti());
+  if (!sintesi) {
+    barra.classList.add('hidden');
+    return;
+  }
+  barra.classList.remove('hidden');
+
+  $('playbar-name').textContent = sintesi.name ?? 'Filmato in corso';
+  $('btn-play-pause').textContent = sintesi.inRiproduzione ? 'Pausa a tutti' : 'Riprendi tutti';
+
+  const durata = sintesi.durationMs;
+  $('playbar-time').textContent = durata
+    ? `${formattaTempo(sintesi.positionMs)} / ${formattaTempo(durata)}`
+    : formattaTempo(sintesi.positionMs);
+
+  const quota = (ms) => (durata ? Math.max(0, Math.min(100, (ms / durata) * 100)) : 0);
+  $('playbar-fill').style.width = `${quota(sintesi.positionMs)}%`;
+
+  // La fascia rossa è la distanza fra il visore più avanti e quello più
+  // indietro: mezzo secondo non si vede, mezzo minuto sì, ed è quello che
+  // conta sapere prima di entrare in sala.
+  const spread = $('playbar-spread');
+  const distanti = durata && sintesi.spreadMs > 1500 && sintesi.quanti > 1;
+  spread.classList.toggle('hidden', !distanti);
+  if (distanti) {
+    spread.style.left = `${quota(sintesi.minMs)}%`;
+    spread.style.width = `${Math.max(1, quota(sintesi.maxMs) - quota(sintesi.minMs))}%`;
+  }
+
+  $('playbar-note').textContent = durata
+    ? distanti
+      ? `${sintesi.quanti} visori, ${formattaTempo(sintesi.spreadMs)} di scarto`
+      : `${sintesi.quanti} visori allineati`
+    : 'durata sconosciuta: il filmato non è ancora nell\'indice del visore';
+
+  for (const serial of state.slots.filter(Boolean)) aggiornaRigaLettore(serial);
+}
+
+/** La posizione del singolo visore, sotto la sua miniatura. */
+function aggiornaRigaLettore(serial) {
+  const card = state.cards.get(serial);
+  if (!card) return;
+  let riga = card.el.querySelector('.card-player');
+  const lettura = state.players.get(serial);
+  if (!lettura) {
+    riga?.remove();
+    return;
+  }
+  if (!riga) {
+    riga = document.createElement('div');
+    riga.className = 'card-player';
+    card.el.append(riga);
+  }
+  const posizione = formattaTempo(stimaPosizione(lettura));
+  riga.textContent = lettura.durationMs
+    ? `${posizione} / ${formattaTempo(lettura.durationMs)} · ${lettura.state}`
+    : `${posizione} · ${lettura.state}`;
+}
+
+/** Il punto del filmato su cui si è cliccato, in millisecondi. */
+function puntoCliccato(evento, elemento, durationMs) {
+  const rect = elemento.getBoundingClientRect();
+  const quota = Math.max(0, Math.min(1, (evento.clientX - rect.left) / rect.width));
+  return Math.round(quota * durationMs);
+}
+
+function wirePlaybar() {
+  $('btn-play-pause').addEventListener('click', async () => {
+    const sintesi = riepilogo(lettureCorrenti());
+    // Play e pausa espliciti, mai l'interruttore: se un visore fosse rimasto
+    // indietro, il tasto unico lo farebbe ripartire mentre ferma gli altri.
+    const azione = sintesi?.inRiproduzione ? 'pause' : 'play';
+    const results = await run(window.pico.devices.media(targetSerials(), azione));
+    reportBatch(results, azione === 'pause' ? 'pausa' : 'ripresa');
+    setTimeout(pollPlayers, 400);
+  });
+
+  $('btn-replay').addEventListener('click', async () => {
+    const results = await run(window.pico.devices.replay(targetSerials()));
+    reportBatch(results, 'da capo');
+    setTimeout(pollPlayers, 1500);
+  });
+
+  $('playbar-track').addEventListener('click', async (evento) => {
+    const sintesi = riepilogo(lettureCorrenti());
+    if (!sintesi?.durationMs) {
+      log('Senza la durata non so dove sia il punto che hai indicato.', 'error');
+      return;
+    }
+    const ms = puntoCliccato(evento, $('playbar-track'), sintesi.durationMs);
+    setStatus(`Porto i visori a ${formattaTempo(ms)}…`);
+    const results = await run(window.pico.devices.seek(targetSerials(), ms));
+    reportBatch(results, `salto a ${formattaTempo(ms)}`);
+    setTimeout(pollPlayers, 600);
+  });
+
+  // Due orologi: uno chiede al visore, l'altro fa scorrere la barra fra una
+  // domanda e l'altra. Senza il secondo la barra andrebbe a scatti di due
+  // secondi; senza il primo si allontanerebbe dal vero.
+  setInterval(pollPlayers, 2000);
+  setInterval(drawPlaybar, 250);
+}

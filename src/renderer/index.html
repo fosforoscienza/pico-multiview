@@ -60,6 +60,23 @@
           <button id="btn-reboot" class="btn btn-danger">Riavvia</button>
         </div>
       </div>
+
+      <!--
+        Barra del filmato: compare solo quando un filmato è in corso. Da chiusa
+        non ruberebbe spazio, e da aperta è l'unico posto in cui si vede se i
+        visori sono davvero allo stesso punto.
+      -->
+      <div id="playbar" class="playbar hidden">
+        <span id="playbar-name" class="playbar-name"></span>
+        <button id="btn-play-pause" class="btn btn-primary" title="Ferma o riprende su tutti i visori">Pausa a tutti</button>
+        <button id="btn-replay" class="btn" title="Rimanda dall'inizio il filmato in corso">Da capo</button>
+        <div class="playbar-track" id="playbar-track" title="Clicca un punto per portarci tutti i visori">
+          <div id="playbar-fill" class="playbar-fill"></div>
+          <div id="playbar-spread" class="playbar-spread hidden" title="Quanto sono distanti fra loro i visori"></div>
+        </div>
+        <span id="playbar-time" class="playbar-time mono">–</span>
+        <span id="playbar-note" class="muted"></span>
+      </div>
     </header>
 
     <main id="stage" class="stage">

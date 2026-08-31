@@ -1,7 +1,7 @@
 // Gestione applicazioni sul visore: elenco pacchetti, avvio, chiusura,
 // app in primo piano, batteria. Tutto via "adb shell".
 
-import { shell, adbTry } from './adb.js';
+import { shell, adbTry, delay } from './adb.js';
 
 /** Pacchetti che non ha senso mostrare nella libreria app. */
 const SYSTEM_PREFIXES = [
@@ -135,6 +135,13 @@ export async function inputSwipe(serial, x1, y1, x2, y2, durationMs = 120, sourc
 
 export async function inputKeyevent(serial, keycode) {
   return shell(serial, `input keyevent ${keycode}`, { timeout: 8000 });
+}
+
+/** Più tasti in una volta sola: `input` li accetta in fila, ed è molto più
+ * svelto di un comando per ciascuno — conta quando ne servono venti. */
+export async function inputKeyevents(serial, keycodes) {
+  if (!keycodes.length) return null;
+  return shell(serial, `input keyevent ${keycodes.join(' ')}`, { timeout: 15000 });
 }
 
 export async function reboot(serial) {
@@ -289,15 +296,255 @@ export async function listVideos(serial) {
  * che sul visore è il suo lettore video. Indicarne uno a mano vorrebbe dire
  * indovinare il nome del pacchetto, che cambia da modello a modello.
  */
-export async function playVideo(serial, percorso) {
+export async function playVideo(serial, percorso, { fromStart = true } = {}) {
+  // Il lettore lasciato aperto riprenderebbe da dov'era: chi manda un filmato
+  // da qui lo sta mostrando a una sala, e vuole l'inizio. Chiuderlo prima è il
+  // modo che non dipende da quali extra questo lettore capisce.
+  if (fromStart) {
+    const lettore = await resolveVideoPlayer(serial);
+    if (lettore) await stopApp(serial, lettore.package).catch(() => {});
+  }
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
   // stringa del comando: va protetto qui, dopo.
   const escaped = fileUri(percorso).replace(/'/g, `'\\''`);
   // 'video/*' fra virgolette: nudo, la shell del visore lo tratterebbe come un
-  // glob da espandere.
+  // glob da espandere. `--ei position 0` lo capiscono solo certi lettori: per
+  // gli altri è innocuo, e la chiusura di sopra ha già fatto il lavoro.
+  const posizione = fromStart ? ' --ei position 0' : '';
   return shell(
     serial,
-    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'`,
+    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'${posizione}`,
     { timeout: 20000 },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Stato e comandi del lettore video
+// ---------------------------------------------------------------------------
+
+/**
+ * Tasti "media" di Android.
+ *
+ * Play e pausa sono **separati** apposta: il tasto unico (PLAY_PAUSE) è un
+ * interruttore, e mandarlo a dieci visori di cui uno era già fermo li lascia
+ * metà in moto e metà fermi. Con due tasti distinti il comando è un'istruzione
+ * ("fermatevi"), non un'inversione, e i visori restano allineati.
+ */
+export const MEDIA_KEYS = {
+  play: 126,
+  pause: 127,
+  stop: 86,
+  next: 87,
+  previous: 88,
+  rewind: 89,
+  fastForward: 90,
+};
+
+/**
+ * Comando che chiede al visore lo stato del lettore.
+ *
+ * Le due cose vanno chieste **insieme**: `dumpsys` dice a che punto era il
+ * filmato a un certo istante dell'orologio interno, e senza leggere quello
+ * stesso orologio nello stesso momento non si può sapere quanto tempo è
+ * passato da allora — cioè dove si trova il filmato adesso.
+ */
+export const PLAYER_STATE_COMMAND = 'dumpsys media_session; echo ---orologio---; cat /proc/uptime';
+
+/** Gli stati di PlaybackState che ci servono, tradotti in parole. */
+const PLAYBACK_STATES = {
+  0: 'nessuno',
+  1: 'fermo',
+  2: 'in pausa',
+  3: 'in riproduzione',
+  6: 'in caricamento',
+  8: 'in caricamento',
+};
+
+/**
+ * Legge il dump delle sessioni multimediali.
+ *
+ * Un lettore che si comporta bene pubblica una "MediaSession": è il modo in cui
+ * Android sa cosa mostrare sulla schermata di blocco, ed è l'unico punto da cui
+ * si può sapere da fuori a che punto è un filmato. Se il lettore non ne
+ * pubblica nessuna qui non esce niente — e questo, per chi guarda, è un dato
+ * quanto la posizione: vuol dire che quel lettore non si lascia seguire.
+ *
+ * @returns {{package: string|null, state: string, positionMs: number, updatedMs: number, speed: number}|null}
+ */
+export function parsePlaybackState(text) {
+  const dump = String(text ?? '').split('---orologio---')[0];
+  const sessioni = [];
+  // Ogni sessione comincia con la sua riga "package=…"; quello che segue fino
+  // al prossimo "package=" appartiene a lei.
+  const blocchi = dump.split(/^\s*package=/m).slice(1);
+  for (const blocco of blocchi) {
+    const pkg = /^([A-Za-z0-9_.]+)/.exec(blocco)?.[1] ?? null;
+    const stato = /PlaybackState\s*\{([^}]*)\}/.exec(blocco)?.[1];
+    if (!stato) continue;
+    const numero = (chiave) => {
+      const m = new RegExp(`${chiave}=(-?[\\d.]+)`).exec(stato);
+      return m ? Number(m[1]) : null;
+    };
+    const codice = numero('state');
+    sessioni.push({
+      package: pkg,
+      code: codice,
+      state: PLAYBACK_STATES[codice] ?? 'sconosciuto',
+      positionMs: Math.max(0, numero('position') ?? 0),
+      updatedMs: numero('updated') ?? 0,
+      speed: numero('speed') ?? 1,
+    });
+  }
+  if (!sessioni.length) return null;
+  // Fra più sessioni vince quella che sta suonando: le altre sono lettori
+  // aperti e fermi, che non è quello che l'operatore sta guardando.
+  const scelta = sessioni.find((s) => s.code === 3) ?? sessioni.find((s) => s.code === 2) ?? sessioni[0];
+  const { code, ...resto } = scelta;
+  return resto;
+}
+
+/** L'orologio interno del visore (millisecondi da /proc/uptime). */
+export function parseUptimeMs(text) {
+  const dopo = String(text ?? '').split('---orologio---')[1] ?? '';
+  const m = /([\d.]+)/.exec(dopo);
+  return m ? Math.round(Number(m[1]) * 1000) : null;
+}
+
+/**
+ * Dove si trova il filmato **adesso**.
+ *
+ * `dumpsys` fotografa la posizione a un certo istante; se da allora il filmato
+ * ha continuato a scorrere, quella fotografia è già vecchia di qualche
+ * decimo di secondo. Il conto rimette in pari — ma solo se sta suonando: da
+ * fermo la posizione è quella e basta.
+ */
+export function posizioneOra(playback, uptimeMs) {
+  if (!playback) return null;
+  if (playback.state !== 'in riproduzione' || !uptimeMs || !playback.updatedMs) {
+    return playback.positionMs;
+  }
+  const passato = Math.max(0, uptimeMs - playback.updatedMs);
+  return Math.round(playback.positionMs + passato * (playback.speed || 1));
+}
+
+/** Stato del lettore su un visore, o null se il lettore non si lascia seguire. */
+export async function playerState(serial) {
+  const res = await adbTry(['-s', serial, 'shell', PLAYER_STATE_COMMAND], { timeout: 10000 });
+  if (!res.ok) return null;
+  const playback = parsePlaybackState(res.out);
+  if (!playback) return null;
+  return { ...playback, positionMs: posizioneOra(playback, parseUptimeMs(res.out)) };
+}
+
+export async function mediaKey(serial, azione) {
+  const keycode = MEDIA_KEYS[azione];
+  if (!keycode) throw new Error(`comando lettore sconosciuto: ${azione}`);
+  return inputKeyevent(serial, keycode);
+}
+
+/**
+ * Durata del filmato, chiesta all'indice multimediale di Android.
+ *
+ * Il visore la conosce già — è lo stesso dato che il suo lettore usa per
+ * disegnare la barra — e chiederla a lui costa una riga. Un file appena
+ * copiato può non essere ancora indicizzato: in quel caso non c'è durata, e la
+ * barra mostrerà solo il tempo trascorso invece di mentire su quanto manca.
+ */
+export function parseDurata(text) {
+  const m = /duration=(\d+)/.exec(String(text ?? ''));
+  return m ? Number(m[1]) : null;
+}
+
+export async function videoDuration(serial, percorso) {
+  const dove = String(percorso).replace(/'/g, `'\\''`);
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    `content query --uri content://media/external/video/media --projection duration --where "_data='${dove}'"`,
+  ]);
+  return res.ok ? parseDurata(res.out) : null;
+}
+
+/** Il pacchetto che aprirebbe un filmato, secondo il visore stesso. */
+export function parseResolvedActivity(text) {
+  const righe = String(text ?? '').split('\n').map((r) => r.trim()).filter(Boolean);
+  const riga = [...righe].reverse().find((r) => /^[A-Za-z0-9_.]+\/[A-Za-z0-9_.$]+$/.test(r));
+  return riga ? { package: riga.split('/')[0], activity: riga } : null;
+}
+
+export async function resolveVideoPlayer(serial) {
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    "cmd package resolve-activity --brief -a android.intent.action.VIEW -t 'video/*'",
+  ]);
+  return res.ok ? parseResolvedActivity(res.out) : null;
+}
+
+/**
+ * Quanti colpi di avanti/indietro servono per arrivare al punto voluto.
+ *
+ * Il passo non lo decidiamo noi: ogni lettore salta di quanto gli pare (dieci
+ * secondi, quindici, trenta). Lo si misura con un colpo solo e poi si fa il
+ * conto — meglio che indovinare e trovarsi altrove.
+ *
+ * Il tetto serve a non restare a martellare tasti: se con quaranta colpi non
+ * ci si arriva, il salto è troppo lungo per questa strada e va detto.
+ */
+export function colpiPerSalto(deltaMs, passoMs, { massimo = 40 } = {}) {
+  if (!passoMs) return 0;
+  const colpi = Math.round(deltaMs / passoMs);
+  return Math.max(-massimo, Math.min(massimo, colpi));
+}
+
+/**
+ * Porta il filmato a un punto preciso.
+ *
+ * Da fuori non esiste un «vai al minuto 3»: esistono i tasti avanti e indietro,
+ * e ogni lettore salta di quanto gli pare. Allora si fa come si farebbe a mano:
+ * si mette in pausa (fermo, la posizione non scappa e il salto si misura), si
+ * dà un colpo per vedere quanto vale, si fa il conto dei colpi che mancano, si
+ * verifica. E se il lettore ai colpi non risponde, lo si dice invece di far
+ * finta.
+ */
+export async function seekTo(serial, targetMs, { tolleranzaMs = 2000, giri = 3 } = {}) {
+  let stato = await playerState(serial);
+  if (!stato) throw new Error('il lettore non dice a che punto è il filmato: da qui non si può saltare');
+
+  const suonava = stato.state === 'in riproduzione';
+  if (suonava) {
+    await mediaKey(serial, 'pause');
+    await delay(400);
+    stato = (await playerState(serial)) ?? stato;
+  }
+
+  let passo = null;
+  for (let giro = 0; giro < giri; giro += 1) {
+    const delta = targetMs - stato.positionMs;
+    if (Math.abs(delta) <= tolleranzaMs) break;
+    if (passo === null) {
+      // Un colpo solo, da fermo: è la misura del passo di questo lettore.
+      await mediaKey(serial, delta > 0 ? 'fastForward' : 'rewind');
+      await delay(500);
+      const dopo = (await playerState(serial)) ?? stato;
+      passo = Math.abs(dopo.positionMs - stato.positionMs);
+      stato = dopo;
+      if (passo < 500) {
+        if (suonava) await mediaKey(serial, 'play');
+        throw new Error('questo lettore non risponde ai tasti avanti/indietro: il salto non è possibile');
+      }
+      continue;
+    }
+    const colpi = colpiPerSalto(delta, passo);
+    if (!colpi) break;
+    const tasto = colpi > 0 ? MEDIA_KEYS.fastForward : MEDIA_KEYS.rewind;
+    await inputKeyevents(serial, Array.from({ length: Math.abs(colpi) }, () => tasto));
+    await delay(600);
+    stato = (await playerState(serial)) ?? stato;
+  }
+
+  if (suonava) await mediaKey(serial, 'play');
+  return stato;
 }

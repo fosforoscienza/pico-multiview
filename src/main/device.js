@@ -63,6 +63,9 @@ export class Device extends EventEmitter {
     this.error = null;
     this.info = {};
     this.status = { battery: null, foreground: null, updatedAt: 0 };
+    // Il filmato che gli abbiamo mandato noi: il visore non sa dire quale file
+    // stia guardando, ma noi sì, ed è l'unico modo di conoscerne la durata.
+    this.playing = null;
     this.videoSize = null;
     this.session = null;
     this.mirror = config.mirror ?? 'scrcpy';
@@ -111,6 +114,7 @@ export class Device extends EventEmitter {
       displayId: this.displayId,
       quality: this.quality,
       pointerMode: this.pointerMode,
+      playing: this.playing,
     };
   }
 
@@ -582,6 +586,31 @@ export class Device extends EventEmitter {
 
   async listDisplays() {
     return apps.listDisplays(this.serial);
+  }
+
+  /** Segna quale filmato gli abbiamo mandato, con la sua durata. */
+  setPlaying(playing) {
+    this.playing = playing;
+    this.emit('state', this.toJSON());
+  }
+
+  /** A che punto è il filmato, secondo il lettore del visore. */
+  async playerState() {
+    const stato = await apps.playerState(this.serial);
+    if (!stato) return null;
+    return {
+      ...stato,
+      durationMs: this.playing?.durationMs ?? null,
+      name: this.playing?.name ?? null,
+    };
+  }
+
+  async mediaKey(azione) {
+    return apps.mediaKey(this.serial, azione);
+  }
+
+  async seekTo(ms) {
+    return apps.seekTo(this.serial, ms);
   }
 
   async refreshStatus(afterMs = 0) {

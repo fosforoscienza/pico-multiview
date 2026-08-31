@@ -93,6 +93,7 @@ export class DeviceManager extends EventEmitter {
     this.unreachable = new Map();
     this.reti = null; // sottoreti locali dell'ultimo giro: se cambiano si riprova subito
     this.statiDetti = new Map(); // serial -> stato già spiegato, per non ripeterlo
+    this.lettoriMuti = new Set(); // visori il cui lettore non pubblica lo stato
     this.statusTimer = null;
   }
 
@@ -343,8 +344,15 @@ export class DeviceManager extends EventEmitter {
     return serials.map((s) => this.devices.get(s)).filter(Boolean);
   }
 
-  /** Esegue un'azione su più visori in parallelo, senza far fallire il gruppo. */
-  async each(serials, fn, { concurrency = 10 } = {}) {
+  /**
+   * Esegue un'azione su più visori in parallelo, senza far fallire il gruppo.
+   *
+   * `quiet` serve alle azioni ripetute da sole — leggere a che punto è il
+   * filmato, due volte al secondo — dove un visore che non risponde
+   * riempirebbe il registro della stessa riga per tutta la proiezione. L'esito
+   * torna comunque a chi ha chiesto: è solo il registro a restare pulito.
+   */
+  async each(serials, fn, { concurrency = 10, quiet = false } = {}) {
     const list = this.targets(serials);
     const results = [];
     let cursor = 0;
@@ -357,7 +365,7 @@ export class DeviceManager extends EventEmitter {
           results.push({ serial: device.serial, ok: true, value: await fn(device) });
         } catch (err) {
           results.push({ serial: device.serial, ok: false, error: err.message });
-          device.log('error', err.message);
+          if (!quiet) device.log('error', err.message);
         }
       }
     };
@@ -413,13 +421,21 @@ export class DeviceManager extends EventEmitter {
    * Resta comunque un avvio simultaneo, non una sincronia fotogramma per
    * fotogramma: per quella servirebbe un'app dentro il visore.
    */
-  async playVideoEverywhere(voci) {
+  async playVideoEverywhere(voci, { fromStart = true } = {}) {
     const results = await Promise.all(
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
         try {
-          await apps.playVideo(serial, path);
-          device?.log('info', `riproduco ${apps.fileName(path)}`);
+          await apps.playVideo(serial, path, { fromStart });
+          // La durata la conosce l'indice del visore, e serve alla barra: senza,
+          // si vedrebbe il tempo trascorso senza sapere quanto manca.
+          const durationMs = await apps.videoDuration(serial, path).catch(() => null);
+          device?.setPlaying({ path, name: apps.fileName(path), durationMs, startedAt: Date.now() });
+          device?.log('info', `riproduco ${apps.fileName(path)}${fromStart ? ' dall\'inizio' : ''}`);
+          // La verifica non fa aspettare chi ha premuto: parte per conto suo e
+          // finisce nel registro. Serve perché «riparte dall'inizio» non può
+          // essere una speranza — o il lettore l'ha fatto, o va detto.
+          if (fromStart && device) this.#verificaPartenza(device).catch(() => {});
           return { serial, ok: true, value: path };
         } catch (err) {
           device?.log('error', `non riesco ad avviare ${apps.fileName(path)}: ${err.message}`);
@@ -428,6 +444,77 @@ export class DeviceManager extends EventEmitter {
       }),
     );
     return results;
+  }
+
+  /**
+   * Controlla che il filmato sia partito davvero dall'inizio.
+   *
+   * Chiudere il lettore prima di lanciare basta quasi sempre, ma «quasi» non è
+   * una garanzia: certi lettori si riaprono dove erano rimasti. Allora si
+   * guarda, e se è ripartito da metà lo si riporta indietro.
+   *
+   * E se il lettore non pubblica il suo stato, non c'è niente da guardare: è
+   * un limite di quel lettore, e va detto una volta — altrimenti l'operatore
+   * aspetterebbe una barra che non arriverà mai.
+   */
+  async #verificaPartenza(device, { attesaMs = 2500, sogliaMs = 5000 } = {}) {
+    await adb.delay(attesaMs);
+    const stato = await device.playerState().catch(() => null);
+    if (!stato) {
+      if (this.lettoriMuti.has(device.serial)) return;
+      this.lettoriMuti.add(device.serial);
+      device.log(
+        'error',
+        'il lettore di questo visore non dice a che punto è il filmato: la barra non può ' +
+          'seguirlo, e pausa e salto potrebbero non rispondere',
+      );
+      return;
+    }
+    this.lettoriMuti.delete(device.serial);
+    if (stato.positionMs <= sogliaMs) return;
+    device.log('info', `era ripartito da ${Math.round(stato.positionMs / 1000)}s: lo riporto all'inizio`);
+    await device.seekTo(0).catch((err) => device.log('error', `non riesco a riportarlo all'inizio: ${err.message}`));
+  }
+
+  /**
+   * A che punto è il filmato su ogni visore.
+   *
+   * Le letture partono insieme: in fila, l'ultimo visore risponderebbe con una
+   * fotografia più vecchia di quella del primo, e la barra li mostrerebbe
+   * sfasati anche quando sono allineati davvero.
+   */
+  async playersState(serials) {
+    return this.each(serials, (d) => d.playerState(), { quiet: true });
+  }
+
+  /**
+   * Un comando del lettore su tutti i visori, nello stesso momento.
+   *
+   * Insieme, non in fila: fermarsi è la cosa che più si nota se avviene a
+   * scaglioni, ed è il motivo per cui esiste questo pulsante.
+   */
+  async mediaEverywhere(serials, azione) {
+    return this.each(serials, async (d) => {
+      await d.mediaKey(azione);
+      return azione;
+    });
+  }
+
+  /** Porta tutti i visori allo stesso punto del filmato. */
+  async seekEverywhere(serials, ms) {
+    return this.each(serials, async (d) => {
+      const stato = await d.seekTo(ms);
+      return stato?.positionMs ?? null;
+    });
+  }
+
+  /** Rimanda dall'inizio il filmato che ciascuno sta già guardando. */
+  async replayEverywhere(serials) {
+    const voci = this.targets(serials)
+      .filter((d) => d.playing?.path)
+      .map((d) => ({ serial: d.serial, path: d.playing.path }));
+    if (!voci.length) throw new Error('nessun filmato in corso: mandane uno dalla finestra «Video…»');
+    return this.playVideoEverywhere(voci, { fromStart: true });
   }
 
   /** Pacchetti presenti su TUTTI i visori indicati (utile per la libreria app). */

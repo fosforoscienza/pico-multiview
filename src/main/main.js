@@ -271,6 +271,10 @@ function registerHandlers() {
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
   handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
   handle('devices:playVideo', ({ entries }) => manager.playVideoEverywhere(entries ?? []));
+  handle('devices:playerState', ({ serials }) => manager.playersState(serials));
+  handle('devices:media', ({ serials, action }) => manager.mediaEverywhere(serials, action));
+  handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
+  handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),

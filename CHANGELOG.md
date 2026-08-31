@@ -9,6 +9,29 @@ della guida PDF.
 
 ---
 
+## 2.6 — agosto 2026
+
+I filmati si comandano dal computer: si vede a che punto sono, si fermano insieme, si spostano
+tutti sullo stesso punto.
+
+- **La barra del filmato** compare quando un filmato è in corso: il punto dei visori, la durata,
+  e sotto ogni miniatura il punto di quel visore. Fra una lettura e l'altra scorre da sola —
+  chiedere al visore due volte al secondo, per dieci visori, sarebbe un martellamento.
+- **Pausa a tutti / Riprendi tutti.** Il tasto unico «play-pausa» di Android è un interruttore:
+  mandato a dieci visori di cui uno era già fermo, li lascia metà in moto e metà fermi. Qui si
+  mandano due tasti distinti, così il comando è un'istruzione e i visori restano allineati.
+- **Un clic sulla barra porta tutti in quel punto.** Da fuori non esiste un «vai al minuto due»:
+  l'app dà un colpo di avanti, misura quanto è valso su quel lettore, fa il conto dei colpi che
+  mancano e verifica. Arriva entro un paio di secondi dal punto chiesto — e se il lettore ai
+  tasti non risponde, lo dice invece di far finta.
+- **La fascia rossa** sulla barra è la distanza fra il visore più avanti e quello più indietro:
+  è il dato che altrimenti si scopre solo in sala, guardandoli.
+- **Un filmato mandato da qui riparte sempre dall'inizio**: il lettore viene chiuso prima di
+  lanciarlo, e dopo l'avvio l'app **controlla** di essere davvero all'inizio — se il lettore era
+  ripartito da metà, lo riporta indietro e lo scrive nel registro.
+- **Se il lettore del visore non pubblica il proprio stato**, il registro lo dice una volta: la
+  barra non può seguirlo, ed è un limite di quel lettore, non un guasto da cercare.
+
 ## 2.5 — agosto 2026
 
 Una difesa in più sulla ricerca dei video, per il caso che la 2.3 non copriva.

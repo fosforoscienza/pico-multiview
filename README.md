@@ -312,9 +312,32 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | far uscire uno dall'app | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
+| mandare un filmato a tutti | **Video…** → scegli il file → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
+| fermare tutti insieme | **Pausa a tutti** sulla barra del filmato |
+| portare tutti a un punto | clicca quel punto sulla barra del filmato |
+| far ripartire da capo | **Da capo** sulla barra del filmato |
 
 Il pannello **Log** in basso mostra cosa è successo, visore per visore: è la prima cosa da
 guardare quando qualcosa non va.
+
+### La barra del filmato
+
+Compare da sola quando un filmato è in corso, e sparisce quando finisce. Mostra il punto in cui
+sono i visori, e sotto ogni miniatura il punto di quel visore.
+
+La **fascia rossa** è la distanza fra il visore più avanti e quello più indietro. I comandi
+partono insieme, ma un visore che ha impiegato mezzo secondo in più ad aprire il file resta
+mezzo secondo indietro per tutto il filmato: la fascia lo rende visibile prima che lo si scopra
+in sala. Se si allarga, un clic sulla barra li rimette tutti sullo stesso punto.
+
+**Quanto è preciso il salto.** Da fuori non esiste un «vai al minuto due»: esistono i tasti
+avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app dà un colpo, misura
+quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
+punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
+
+**Se la barra non compare** mentre un filmato sta andando, il lettore di quel visore non pubblica
+il proprio stato: nessuno da fuori può sapere a che punto è, e il registro lo scrive. Pausa e
+salto in quel caso potrebbero non rispondere.
 
 ## Impostazioni per visore (icona ⚙︎)
 

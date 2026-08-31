@@ -1051,3 +1051,67 @@ body.is-remote .desktop-only {
     font-size: 13px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Barra del filmato
+   Compare solo mentre un filmato è in corso: è la riga in cui si legge a che
+   punto sono i visori, e da cui li si ferma o li si sposta tutti insieme.
+   --------------------------------------------------------------------------- */
+
+.playbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 12px;
+}
+
+.playbar-name {
+  font-weight: 600;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playbar-track {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.playbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: 5px;
+  background: var(--accent, #3b82f6);
+}
+
+/* Quanto sono distanti fra loro i visori: se la fascia si allarga, non stanno
+   guardando lo stesso istante, e va visto invece che scoperto in sala. */
+.playbar-spread {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-radius: 6px;
+  background: rgba(248, 113, 113, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  pointer-events: none;
+}
+
+.playbar-time {
+  min-width: 108px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* La posizione del singolo visore, sotto la sua anteprima. */
+.card-player {
+  padding: 0 10px 8px;
+  font-size: 11px;
+  color: var(--muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
