@@ -29,6 +29,12 @@ const TRACKBALL = 'trackball';
  */
 export function spiegaLogScrcpy(message) {
   const testo = String(message ?? '');
+  if (testo === 'Aborted' || testo.startsWith('Aborted ')) {
+    return (
+      'il server sul visore è morto sul nascere (Aborted): di solito significa che un server ' +
+      'precedente teneva ancora occupato lo schermo. Alla prossima partenza viene chiuso prima.'
+    );
+  }
   if (testo.includes('it was generated for a different device size')) {
     return (
       'il visore ha rifiutato il tocco: la misura dell\'immagine non combacia con quella ' +
@@ -75,6 +81,7 @@ export class Device extends EventEmitter {
     // dicono di venirne.
     this.pointerMode = config.pointerMode ?? 'scrcpy';
     this.screen = null; // dimensione vera dello schermo, letta alla bisogna
+    this.connecting = false; // una connessione alla volta: due si pestano i piedi
     this.disposed = false;
   }
 
@@ -123,6 +130,12 @@ export class Device extends EventEmitter {
 
   async connect() {
     if (this.disposed) return;
+    // Due connessioni sovrapposte — il pulsante ⟳ mentre gira la riconnessione
+    // automatica, un cambio di qualità nel mezzo — si fermano la sessione a
+    // vicenda e avviano due server sullo stesso visore. Nel registro si vedeva
+    // come due conteggi di tentativi che correvano insieme.
+    if (this.connecting) return;
+    this.connecting = true;
     this.#clearReconnect();
     this.#setState(STATE.CONNECTING);
     try {
@@ -136,6 +149,8 @@ export class Device extends EventEmitter {
       this.#setState(STATE.ERROR, err);
       this.log('error', err.message);
       this.#scheduleReconnect();
+    } finally {
+      this.connecting = false;
     }
   }
 
@@ -167,6 +182,10 @@ export class Device extends EventEmitter {
     });
     session.on('log', ({ level, message }) => this.log(level, spiegaLogScrcpy(message)));
     session.on('error', (err) => {
+      // Una morte violenta (SIGABRT, kill) può voler dire che il file del
+      // server sul visore non è più integro: alla prossima partenza lo
+      // ricopiamo, tanto il processo che lo usava non c'è più.
+      if (/terminato \(codice/.test(err.message)) dimenticaJar(this.serial);
       this.#setState(STATE.ERROR, err);
       this.log('error', err.message);
     });

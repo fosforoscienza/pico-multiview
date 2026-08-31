@@ -9,6 +9,21 @@ della guida PDF.
 
 ---
 
+## 2.1 — agosto 2026
+
+Il registro mostrava il server morire con «Aborted» (SIGABRT) a ogni avvio, in un cerchio che si
+autoalimentava. Tre cause, tutte corrette.
+
+- **Un server rimasto da una sessione precedente teneva occupato lo schermo del visore**, e ogni
+  server nuovo moriva sul nascere. Fermare il processo adb sul Mac non ferma quello remoto: ora
+  prima di ogni avvio i server rimasti vengono chiusi **sul visore**.
+- **Due connessioni potevano correre insieme** — il pulsante ⟳ durante la riconnessione
+  automatica, un cambio di qualità nel mezzo — fermandosi la sessione a vicenda: nel registro si
+  vedevano due conteggi di tentativi paralleli. Ora una alla volta.
+- Dopo una morte violenta del server, il file sul visore viene **ricopiato** alla partenza
+  successiva, nel dubbio che non sia più integro. E «Aborted» nel registro ora è spiegato in
+  italiano.
+
 ## 2.0 — agosto 2026
 
 **Video su tutti i visori insieme.** Nuovo pulsante *Video…* nella barra comandi: una barra di
