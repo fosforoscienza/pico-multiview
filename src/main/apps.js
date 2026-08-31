@@ -303,9 +303,19 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
   // il filmato e chi lo riproduce possono essere app diverse: si chiudono
   // **tutte** le app di riproduzione video, non una indovinata. Resta un
   // tentativo, non un requisito — sotto, l'avvio si difende da solo.
+  const azzerati = [];
   if (fromStart) {
     const home = await resolveHomePackage(serial).catch(() => null);
     await stopVideoApps(serial, { extra: [player, risolto?.package], home }).catch(() => {});
+    // Il «riprendi da dove eri» sta su disco, e sopravvive a qualunque
+    // chiusura: se il filmato riparte sempre dallo stesso punto è perché il
+    // lettore rilegge quel punto salvato. Si azzera il lettore — quello visto
+    // in azione, e quello a cui il visore affiderebbe il filmato — così
+    // riparte come appena installato. Solo loro: mai la home, mai il sistema.
+    for (const pkg of new Set([player, risolto?.package].filter(Boolean))) {
+      if (NON_LETTORI.has(pkg) || pkg === home) continue;
+      if (await clearAppData(serial, pkg).then(() => true, () => false)) azzerati.push(pkg);
+    }
   }
 
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
@@ -337,7 +347,7 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
       // Non basta che `am` non protesti: bisogna vedere qualcosa aperto. È la
       // differenza fra «il comando è stato accettato» e «il filmato è partito»,
       // ed è quella che finora l'app non sapeva fare.
-      if (await qualcosaSiEAperto(serial)) return out;
+      if (await qualcosaSiEAperto(serial)) return { out, azzerati };
       motivi.push(`${tentativo.descrizione}: il visore non ha aperto niente`);
     } catch (err) {
       motivi.push(`${tentativo.descrizione}: ${err.message}`);
@@ -630,6 +640,21 @@ export async function videoHandlerPackages(serial) {
   ]);
   if (!res.ok) return [];
   return parseVideoHandlers(res.out).filter((p) => !NON_LETTORI.has(p));
+}
+
+/**
+ * Cancella i dati salvati di un'app (pm clear).
+ *
+ * È il colpo che serve contro il «riprendi da dove eri» scritto su disco:
+ * chiudere il lettore non lo tocca — anzi lo congela, perché l'app non salva
+ * più niente e riparte per sempre dallo stesso punto. Sparisce anche ogni
+ * preferenza del lettore: è il prezzo, ed è il motivo per cui si azzera solo
+ * chi riproduce, mai il resto del visore.
+ */
+export async function clearAppData(serial, pkg) {
+  const out = await shell(serial, `pm clear ${pkg}`, { timeout: 20000 });
+  if (!/Success/i.test(out || '')) throw new Error(`pm clear ${pkg}: ${(out || '').trim() || 'nessuna risposta'}`);
+  return true;
 }
 
 /**

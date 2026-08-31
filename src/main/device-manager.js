@@ -136,6 +136,7 @@ export class DeviceManager extends EventEmitter {
     const entry = this.config.deviceEntry(serial) ?? {};
     device = new Device(serial, {
       label: label ?? entry.label ?? null,
+      playerPackage: entry.playerPackage ?? null,
       config: {
         mirror: entry.mirror ?? 'scrcpy',
         crop: entry.crop ?? null,
@@ -426,7 +427,14 @@ export class DeviceManager extends EventEmitter {
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
         try {
-          await apps.playVideo(serial, path, { fromStart, player: device?.playerPackage ?? null });
+          const esito = await apps.playVideo(serial, path, { fromStart, player: device?.playerPackage ?? null });
+          // Quali lettori sono stati azzerati va scritto: se un giorno un
+          // lettore perdesse le sue impostazioni, questa è la riga che spiega
+          // il perché — e se il filmato riparte ancora da metà, la sua assenza
+          // dice che il lettore vero non è ancora stato visto in azione.
+          if (esito?.azzerati?.length) {
+            device?.log('info', `azzerata la memoria di: ${esito.azzerati.join(', ')}`);
+          }
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);
@@ -459,9 +467,12 @@ export class DeviceManager extends EventEmitter {
    */
   async #verificaPartenza(device, { attesaMs = 2500, sogliaMs = 5000 } = {}) {
     await adb.delay(attesaMs);
-    // Chi si è aperto davvero: è il lettore da chiudere al prossimo avvio, ed è
-    // più affidabile di qualunque domanda al sistema su «chi apre i video».
-    await device.imparaLettore().catch(() => null);
+    // Chi si è aperto davvero: è il lettore da chiudere e azzerare al prossimo
+    // avvio, ed è più affidabile di qualunque domanda al sistema. Si salva
+    // nella configurazione: al riavvio dell'app, saperlo già dal primo lancio
+    // fa la differenza fra un primo filmato che riparte da metà e uno no.
+    const imparato = await device.imparaLettore().catch(() => null);
+    if (imparato) this.config.upsertDevice({ serial: device.serial, playerPackage: imparato });
     const stato = await device.playerState().catch(() => null);
     if (!stato) {
       if (this.lettoriMuti.has(device.serial)) return;

@@ -55,7 +55,7 @@ export const STATE = {
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000];
 
 export class Device extends EventEmitter {
-  constructor(serial, { label = null, config = {} } = {}) {
+  constructor(serial, { label = null, playerPackage = null, config = {} } = {}) {
     super();
     this.serial = serial;
     this.label = label;
@@ -67,8 +67,9 @@ export class Device extends EventEmitter {
     // stia guardando, ma noi sì, ed è l'unico modo di conoscerne la durata.
     this.playing = null;
     // Il lettore visto in azione l'ultima volta: è il dato che permette di
-    // chiuderlo prima del prossimo avvio, e quindi di ripartire dall'inizio.
-    this.playerPackage = null;
+    // chiuderlo e azzerarlo prima del prossimo avvio, e quindi di ripartire
+    // dall'inizio. Arriva dalla configurazione, così vale già al primo lancio.
+    this.playerPackage = playerPackage;
     this.homePackage = null;
     this.videoSize = null;
     this.session = null;

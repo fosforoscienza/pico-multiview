@@ -24,6 +24,7 @@ function visoreCheAnnota({
     `#!/bin/sh
 echo "$4" >> ${registro}
 case "$4" in
+  "pm clear"*) echo "Success";;
   *category.HOME*) echo "com.pvr.shortcut/.Home";;
   *query-activities*) for g in ${gestori}; do echo "$g"; done;;
   *resolve-activity*) echo "${lettore}";;
@@ -183,3 +184,33 @@ test('un lettore che rifiuta i flag non impedisce più l\'avvio', async () => {
   }
 });
 
+
+test('la memoria del lettore viene azzerata, ed è quello il colpo decisivo', async () => {
+  // Il «riprendi da dove eri» sta su disco: chiudere il lettore non lo tocca —
+  // anzi lo congela, perché l\'app non salva più niente e riparte per sempre
+  // dallo stesso punto. Era esattamente il sintomo: «da un punto sempre
+  // uguale». pm clear lo cancella, e il lettore riparte come appena
+  // installato.
+  const visore = visoreCheAnnota();
+  try {
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { player: 'com.picovr.wing.videoplayer' });
+    const comandi = visore.comandi();
+    assert.match(comandi, /pm clear com\.picovr\.wing\.videoplayer/, 'il lettore visto in azione');
+    assert.match(comandi, /pm clear com\.pvr\.filemanager/, 'e quello a cui il visore affiderebbe il filmato');
+    assert.ok(!comandi.includes('pm clear com.pvr.shortcut'), 'mai la schermata iniziale');
+    assert.ok(!comandi.includes('pm clear com.pvr.gallery'), 'e non ogni app che sa aprire video: solo chi riproduce');
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('senza «dall\'inizio» la memoria dei lettori non si tocca', async () => {
+  // Spegnere la spunta deve riportare all\'avvio più innocuo possibile.
+  const visore = visoreCheAnnota();
+  try {
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { fromStart: false });
+    assert.ok(!visore.comandi().includes('pm clear'));
+  } finally {
+    visore.pulisci();
+  }
+});

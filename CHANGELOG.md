@@ -9,6 +9,21 @@ della guida PDF.
 
 ---
 
+## 2.13 — agosto 2026
+
+«Riparte sempre dallo stesso punto»: il sintomo diceva tutto.
+
+- **Il «riprendi da dove eri» sta su disco**, e chiudere il lettore non lo tocca — anzi lo
+  **congela**: l'app chiusa non salva più niente, e riparte per sempre da quel punto. Ora, prima
+  di lanciare, la memoria del lettore viene **azzerata** (`pm clear`): riparte come appena
+  installato, quindi dall'inizio. Si azzera solo chi riproduce — il lettore visto in azione e
+  quello a cui il visore affiderebbe il filmato — mai la schermata iniziale, mai il sistema, e
+  nemmeno ogni app che sappia genericamente aprire video. Il registro dice chi è stato azzerato.
+- **Il lettore visto in azione viene salvato nella configurazione**: al riavvio dell'app vale già
+  dal primo lancio, che altrimenti sarebbe l'unico a ripartire da metà.
+- Vale anche per **Da capo**, che rifà la stessa strada.
+- Con la spunta **dall'inizio** spenta non si azzera e non si chiude niente, come prima.
+
 ## 2.12 — agosto 2026
 
 - **VLC è stato tolto**: sui visori non funzionava, e un'alternativa che non funziona è solo un
