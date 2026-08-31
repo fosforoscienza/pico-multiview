@@ -9,6 +9,21 @@ della guida PDF.
 
 ---
 
+## 2.14 — agosto 2026
+
+- **La modalità di proiezione si sceglie prima di avviare** — «3D 360° sopra-sotto», 360°, 180°,
+  2D — dal menù nella finestra Video. Con la modalità scelta si parla direttamente al lettore
+  PICO (`picovr.intent.action.player`, `videoType`): il filmato parte **già** nella proiezione
+  giusta, invece di cominciare «al cinema» su uno schermo piatto e correggersi da solo dopo
+  qualche secondo. Action e codici vengono dal codice pubblicato da PICO, non da tentativi. Su
+  «Riconosci da solo» tutto resta com'era, e un visore che non capisce la chiamata PICO scala
+  sui tentativi soliti.
+- **«Dall'inizio» è di nuovo il default, sempre.** Il collegamento della spunta era sparito in
+  una pulizia: la casella mostrava il segno ma non parlava più con nessuno, e la configurazione
+  conservava un vecchio «no» invisibile — per questo la conferma diceva «da dove era rimasto».
+  Ora la spunta è viva, e a ogni avvio dell'app torna accesa: spegnerla vale per la sessione, non
+  per sempre.
+
 ## 2.13 — agosto 2026
 
 «Riparte sempre dallo stesso punto»: il sintomo diceva tutto.

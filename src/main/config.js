@@ -39,11 +39,10 @@ export const DEFAULT_CONFIG = {
   // quelli «media» — gli unici standard — su molti non fanno proprio niente.
   // Si sceglie dalla barra del filmato, provandoli.
   playerKeys: 'media',
-  // Se un filmato mandato da qui debba ricominciare da capo. Si può spegnere:
-  // farlo ripartire dall'inizio richiede di chiudere prima il lettore, e su un
-  // visore che facesse storie è meglio un filmato che parte da metà che uno
-  // che non parte.
-  fromStart: true,
+  // Come proiettare i filmati sul lettore PICO ('auto' = lascia riconoscere).
+  // Resta in configurazione perché in un evento i filmati sono tutti dello
+  // stesso tipo: scelto una volta, vale per la giornata.
+  videoMode: 'auto',
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

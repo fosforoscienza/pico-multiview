@@ -313,6 +313,7 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
 | mandare un filmato a tutti | **Video…** → scegli il file → **conferma** → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
+| un 360 che parte «al cinema» | nella finestra Video scegli la modalità (es. **3D 360° sopra-sotto**): il lettore parte già giusto |
 | fermare tutti insieme | **Pausa a tutti** sulla barra del filmato |
 | portare tutti a un punto | clicca quel punto sulla barra del filmato |
 | far ripartire da capo | **Da capo** sulla barra del filmato |

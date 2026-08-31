@@ -183,6 +183,7 @@ function registerHandlers() {
     config: config.data,
     keycodes: KEYCODE,
     playerProfiles: apps.PROFILI_LETTORE,
+    videoModes: apps.VIDEO_MODES,
     remote: remote?.status ?? null,
     brand: brandForUi(),
   }));
@@ -272,7 +273,12 @@ function registerHandlers() {
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
   handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
-  handle('devices:playVideo', ({ entries }) => manager.playVideoEverywhere(entries ?? []));
+  handle('devices:playVideo', ({ entries, fromStart, videoType }) =>
+    manager.playVideoEverywhere(entries ?? [], {
+      fromStart: fromStart !== false,
+      videoType: videoType ?? null,
+    }),
+  );
   handle('devices:playerState', ({ serials }) => manager.playersState(serials));
   handle('devices:media', ({ serials, action, profile }) =>
     manager.mediaEverywhere(serials, action, profile ?? config.data.playerKeys),

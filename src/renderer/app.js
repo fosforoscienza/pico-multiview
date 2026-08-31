@@ -25,7 +25,12 @@ const state = {
   playerTimer: null,
   playerKeys: 'media', // con quali tasti si comanda il lettore del visore
   profiliLettore: {},
-  fromStart: true, // se i filmati mandati da qui devono ricominciare da capo
+  // Ricominciare da capo è il default a ogni avvio dell'app, di proposito: è
+  // quello che si vuole in sala, e una scelta diversa fatta ieri non deve
+  // sorprendere oggi. La spunta serve per l'eccezione, non per la regola.
+  fromStart: true,
+  videoMode: 'auto', // come proiettare i filmati (auto = lascia riconoscere)
+  videoModes: {},
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -194,11 +199,28 @@ function openVideoModal() {
   $('video-modal').classList.remove('hidden');
   $('video-search').value = '';
   $('video-search').focus();
+  wireVideoMode();
   renderVideoList();
   // Se non abbiamo ancora letto i file, li leggiamo ora: la ricerca su dieci
   // visori richiede qualche secondo, e farla all'avvio dell'app sarebbe tempo
   // sprecato per chi non usa i video.
   if (!state.videos.length) loadVideos();
+}
+
+function wireVideoMode() {
+  const menu = $('video-mode');
+  if (menu.options.length) return;
+  for (const [id, modo] of Object.entries(state.videoModes)) {
+    const opzione = document.createElement('option');
+    opzione.value = id;
+    opzione.textContent = modo.etichetta;
+    menu.append(opzione);
+  }
+  menu.value = state.videoMode;
+  menu.addEventListener('change', async () => {
+    state.videoMode = menu.value;
+    await window.pico.config.patch({ videoMode: menu.value }).catch((err) => log(err.message, 'error'));
+  });
 }
 
 async function loadVideos() {
@@ -272,15 +294,20 @@ async function playVideo(video) {
   // riga dell'elenco serve a scegliere, la conferma a lanciare. Senza, basta
   // sfiorare la voce sbagliata davanti al pubblico.
   const quanti = video.on.length;
+  const modo = state.videoModes[state.videoMode];
+  const comeProiettato = modo?.code != null ? ` Proiettato: ${modo.etichetta}.` : '';
   const ok = await chiediConferma({
     titolo: `Avviare «${video.name}»?`,
     testo:
       `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}, nello stesso momento` +
-      (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.'),
+      (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.') +
+      comeProiettato,
     conferma: 'Avvia',
   });
   if (!ok) return;
-  const results = await run(window.pico.devices.playVideo(video.on));
+  const results = await run(
+    window.pico.devices.playVideo(video.on, { fromStart: state.fromStart, videoType: modo?.code ?? null }),
+  );
   if (results === null) return;
   reportBatch(results, `«${video.name}»`);
   $('video-modal').classList.add('hidden');
@@ -1307,7 +1334,8 @@ async function boot() {
   state.unassigned = new Set(info.config.unassigned ?? []);
   state.playerKeys = info.config.playerKeys ?? 'media';
   state.profiliLettore = info.playerProfiles ?? {};
-  state.fromStart = info.config.fromStart !== false;
+  state.videoMode = info.config.videoMode ?? 'auto';
+  state.videoModes = info.videoModes ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
@@ -1486,6 +1514,21 @@ function wirePlaybar() {
     const results = await run(window.pico.devices.seek(targetSerials(), ms));
     reportBatch(results, `salto a ${formattaTempo(ms)}`);
     setTimeout(pollPlayers, 600);
+  });
+
+  // La spunta «dall'inizio» è stato di sessione, non configurazione: a ogni
+  // avvio torna accesa. (Il collegamento era sparito in una pulizia: la
+  // casella mostrava il segno ma non parlava più con nessuno — e il config
+  // conservava un vecchio «no» che nessuno vedeva.)
+  const daCapo = $('from-start');
+  daCapo.checked = state.fromStart;
+  daCapo.addEventListener('change', () => {
+    state.fromStart = daCapo.checked;
+    log(
+      daCapo.checked
+        ? 'i filmati ripartiranno dall\'inizio'
+        : 'i filmati ripartiranno da dove erano rimasti (fino al prossimo avvio dell\'app)',
+    );
   });
 
   const menu = $('player-keys');

@@ -422,12 +422,16 @@ export class DeviceManager extends EventEmitter {
    * Resta comunque un avvio simultaneo, non una sincronia fotogramma per
    * fotogramma: per quella servirebbe un'app dentro il visore.
    */
-  async playVideoEverywhere(voci, { fromStart = this.config.data.fromStart !== false } = {}) {
+  async playVideoEverywhere(voci, { fromStart = true, videoType = null } = {}) {
     const results = await Promise.all(
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
         try {
-          const esito = await apps.playVideo(serial, path, { fromStart, player: device?.playerPackage ?? null });
+          const esito = await apps.playVideo(serial, path, {
+            fromStart,
+            videoType,
+            player: device?.playerPackage ?? null,
+          });
           // Quali lettori sono stati azzerati va scritto: se un giorno un
           // lettore perdesse le sue impostazioni, questa è la riga che spiega
           // il perché — e se il filmato riparte ancora da metà, la sua assenza

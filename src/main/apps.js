@@ -296,7 +296,7 @@ export async function listVideos(serial) {
  * che sul visore è il suo lettore video. Indicarne uno a mano vorrebbe dire
  * indovinare il nome del pacchetto, che cambia da modello a modello.
  */
-export async function playVideo(serial, percorso, { fromStart = true, player = null } = {}) {
+export async function playVideo(serial, percorso, { fromStart = true, player = null, videoType = null } = {}) {
   const risolto = await resolveVideoPlayer(serial, percorso).catch(() => null);
 
   // Un lettore lasciato aperto riprenderebbe da dov'era, e sul visore chi apre
@@ -335,6 +335,11 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
   // dall'inizio, ma su certi lettori impediscono l'avvio — e un filmato che
   // parte da metà vale infinitamente più di uno che non parte.
   const tentativi = [
+    // Quando l'operatore ha scelto la modalità, si parla direttamente al
+    // lettore PICO: parte già nella proiezione giusta, invece di cominciare
+    // «al cinema» e correggersi dopo. Sui visori che non capiscono questa
+    // chiamata non si apre niente, e si scala sui tentativi soliti.
+    videoType != null && { descrizione: 'lettore PICO con modalità', comando: picoStartCommand(percorso, { videoType }) },
     { descrizione: 'comando semplice', comando: base },
     risolto && { descrizione: `lettore esplicito (${risolto.package})`, comando: `am start -n ${risolto.activity} -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'` },
     { descrizione: 'con riavvio pulito', comando: `${base} --activity-clear-task --activity-new-task --ei position 0` },
@@ -586,6 +591,40 @@ export async function resolveVideoPlayer(serial, percorso = null) {
   const trovato = res.ok ? parseResolvedActivity(res.out) : null;
   if (!trovato || NON_LETTORI.has(trovato.package)) return null;
   return trovato;
+}
+
+/**
+ * Le modalità del lettore PICO, coi codici che il lettore stesso usa.
+ *
+ * Vengono dal codice pubblicato da PICO (launch-pico-player, MovieType.java):
+ * non sono indovinate. Dirgliela al lancio evita la scena che si vede in sala:
+ * il filmato parte «al cinema», su uno schermo piatto davanti al visitatore, e
+ * solo dopo qualche secondo il lettore capisce da solo che era un 360.
+ */
+export const VIDEO_MODES = {
+  auto: { etichetta: 'Riconosci da solo', code: null },
+  flat2d: { etichetta: '2D piatto', code: 0 },
+  deg360: { etichetta: '360°', code: 2 },
+  deg360tb: { etichetta: '3D 360° sopra-sotto', code: 3 },
+  deg360lr: { etichetta: '3D 360° fianco-a-fianco', code: 5 },
+  deg180: { etichetta: '180°', code: 10 },
+  deg180tb: { etichetta: '3D 180° sopra-sotto', code: 11 },
+};
+
+/**
+ * Il comando che apre il lettore PICO dicendogli subito come proiettare.
+ *
+ * `videoType` viaggia come **stringa**, non come numero: è così che lo passa
+ * il codice di PICO, ed è il genere di dettaglio che non si contraddice.
+ */
+export function picoStartCommand(percorso, { videoType = null } = {}) {
+  const uri = fileUri(percorso).replace(/'/g, `'\\''`);
+  const nome = fileName(percorso).replace(/'/g, `'\\''`);
+  const tipo = videoType != null ? ` --es videoType ${videoType}` : '';
+  return (
+    `am start -a picovr.intent.action.player ` +
+    `--es uri '${uri}' --es title '${nome}'${tipo}`
+  );
 }
 
 /**

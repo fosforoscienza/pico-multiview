@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { avvioRiuscito, motivoAvvioFallito, playVideo } from '../src/main/apps.js';
+import { VIDEO_MODES, avvioRiuscito, motivoAvvioFallito, picoStartCommand, playVideo } from '../src/main/apps.js';
 
 // «Riparte dall'inizio» non è una speranza: sono tre cose fatte al visore, e
 // se una manca il filmato riprende da dov'era. Qui si guarda cosa arriva
@@ -210,6 +210,43 @@ test('senza «dall\'inizio» la memoria dei lettori non si tocca', async () => {
   try {
     await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { fromStart: false });
     assert.ok(!visore.comandi().includes('pm clear'));
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('con la modalità scelta si parla direttamente al lettore PICO', async () => {
+  // È la differenza fra un 360 che parte da 360 e uno che parte «al cinema»
+  // su uno schermo piatto e si corregge dopo. Action ed extra vengono dal
+  // codice pubblicato da PICO, non da tentativi: videoType 3 è «3D 360
+  // sopra-sotto», e viaggia come stringa perché così lo passa PICO.
+  const cmd = picoStartCommand('/sdcard/Movies/Tra Borghi e Natura.mp4', {
+    videoType: VIDEO_MODES.deg360tb.code,
+  });
+  assert.match(cmd, /-a picovr\.intent\.action\.player/);
+  assert.match(cmd, /--es videoType 3/);
+  assert.match(cmd, /--es uri 'file:\/\/\/sdcard\/Movies\/Tra%20Borghi%20e%20Natura\.mp4'/);
+
+  const visore = visoreCheAnnota();
+  try {
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { videoType: 3 });
+    const avvii = visore.comandi().split('\n').filter((r) => r.startsWith('am start'));
+    assert.match(avvii[0], /picovr\.intent\.action\.player/, 'il lancio PICO viene per primo');
+    assert.equal(avvii.length, 1, 'e se apre, basta lui');
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('un visore che non capisce la chiamata PICO scala sui tentativi soliti', async () => {
+  const visore = visoreCheAnnota();
+  try {
+    // Il finto risponde con un errore alla chiamata PICO: come farebbe un
+    // visore d\'altra marca.
+    fs.appendFileSync(process.env.PICO_ADB, '');
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { videoType: null });
+    const avvii = visore.comandi().split('\n').filter((r) => r.startsWith('am start'));
+    assert.ok(!avvii[0].includes('picovr.intent.action.player'), 'senza modalità scelta niente chiamata PICO');
   } finally {
     visore.pulisci();
   }
