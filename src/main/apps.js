@@ -298,9 +298,17 @@ export async function listVideos(serial) {
  */
 export async function playVideo(serial, percorso, { fromStart = true, player = null, lettore = 'sistema' } = {}) {
   // Con VLC non c'è niente da chiudere e niente da indovinare: la posizione di
-  // partenza sta nel comando stesso, ed è lui a rispettarla.
+  // partenza sta nel comando stesso, ed è lui a rispettarla. Ma se VLC non c'è
+  // su questo visore, il comando non apre niente **in silenzio**: meglio dirlo
+  // prima, e dire anche come tornare indietro.
   if (lettore === 'vlc') {
-    return shell(serial, vlcStartCommand(percorso, { fromStart }), { timeout: 20000 });
+    if (!(await isInstalled(serial, VLC.package))) {
+      throw new Error(
+        'VLC non è installato su questo visore: installalo con «Installa VLC…» ' +
+          'oppure rimetti «Lettore del visore» nel menù della barra',
+      );
+    }
+    return eseguiAvvio(serial, vlcStartCommand(percorso, { fromStart }));
   }
   // Il lettore lasciato aperto riprenderebbe da dov'era: chi manda un filmato
   // da qui lo sta mostrando a una sala, e vuole l'inizio. Chiuderlo prima è il
@@ -310,8 +318,8 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
   // affidabile che abbiamo — meglio di qualunque domanda al sistema, perché è
   // il pacchetto che si è davvero aperto su questo visore.
   if (fromStart) {
-    const lettore = player ?? (await resolveVideoPlayer(serial, percorso))?.package ?? null;
-    if (lettore && !NON_LETTORI.has(lettore)) await stopApp(serial, lettore).catch(() => {});
+    const daChiudere = player ?? (await resolveVideoPlayer(serial, percorso))?.package ?? null;
+    if (daChiudere && !NON_LETTORI.has(daChiudere)) await stopApp(serial, daChiudere).catch(() => {});
   }
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
   // stringa del comando: va protetto qui, dopo.
@@ -324,12 +332,28 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
   // stesso filmato riceve il nuovo comando **dentro** la schermata di prima e
   // riprende da dov'era, invece di ricominciare. Con `clear-task` la schermata
   // viene rifatta da capo.
+  const base = `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'`;
   const daCapo = fromStart ? ' --activity-clear-task --activity-new-task --ei position 0' : '';
-  return shell(
-    serial,
-    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'${daCapo}`,
-    { timeout: 20000 },
-  );
+  try {
+    return await eseguiAvvio(serial, `${base}${daCapo}`);
+  } catch (err) {
+    // I flag servono a far ripartire il filmato da capo, ma non a tutti i costi:
+    // se un lettore li rifiuta, meglio un filmato che parte da metà di uno
+    // schermo fermo davanti al pubblico. Il ripiego però va detto.
+    if (!daCapo) throw err;
+    const out = await eseguiAvvio(serial, base);
+    throw Object.assign(
+      new Error(`avviato, ma non da capo: questo lettore rifiuta il riavvio pulito (${err.message})`),
+      { partito: true, out },
+    );
+  }
+}
+
+/** Lancia e controlla: un avvio che non ha aperto niente dev'essere un errore. */
+async function eseguiAvvio(serial, comando) {
+  const out = await shell(serial, comando, { timeout: 20000 });
+  if (!avvioRiuscito(out)) throw new Error(motivoAvvioFallito(out));
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -540,6 +564,53 @@ export async function resolveVideoPlayer(serial, percorso = null) {
   const trovato = res.ok ? parseResolvedActivity(res.out) : null;
   if (!trovato || NON_LETTORI.has(trovato.package)) return null;
   return trovato;
+}
+
+/**
+ * `am start` è riuscito?
+ *
+ * `am` **esce sempre con successo**, anche quando non ha aperto niente: scrive
+ * «Error: …» e se ne va con la coscienza a posto. Era per questo che un
+ * filmato che non partiva non produceva nessun messaggio — l'app credeva di
+ * averlo avviato.
+ *
+ * «Warning: Activity not started, its current task has been brought to the
+ * front» invece è un successo: l'app era già aperta ed è tornata davanti.
+ */
+export function avvioRiuscito(output) {
+  const testo = String(output ?? '');
+  if (/^\s*Error(:| type)/mi.test(testo)) return false;
+  if (/does not exist|Permission Denial|Unable to resolve|no activity found/i.test(testo)) return false;
+  return true;
+}
+
+/** Il messaggio da mostrare quando l'avvio non è riuscito. */
+export function motivoAvvioFallito(output) {
+  const riga = String(output ?? '')
+    .split('\n')
+    .map((r) => r.trim())
+    .find((r) => /^Error|does not exist|Permission Denial|Unable to resolve/i.test(r));
+  return riga || 'il visore non ha aperto niente e non ha detto perché';
+}
+
+/**
+ * Questo pacchetto sa aprire dei filmati?
+ *
+ * Serve a non prendere per lettore la prima app che si trova in primo piano
+ * dopo un avvio: se il filmato non è partito, davanti c'è dell'altro — e
+ * ricordarselo come «lettore» vorrebbe dire chiuderlo al prossimo giro. Un
+ * visore su cui l'app chiude la schermata iniziale è messo peggio di prima.
+ */
+export async function gestisceVideo(serial, pkg) {
+  if (!pkg) return false;
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    "cmd package query-activities -a android.intent.action.VIEW -t 'video/*'",
+  ]);
+  if (!res.ok || !res.out) return false;
+  return res.out.includes(pkg);
 }
 
 /** Il pacchetto della schermata iniziale del visore. */

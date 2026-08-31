@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { playVideo } from '../src/main/apps.js';
+import { avvioRiuscito, motivoAvvioFallito, playVideo } from '../src/main/apps.js';
 
 // «Riparte dall'inizio» non è una speranza: sono tre cose fatte al visore, e
 // se una manca il filmato riprende da dov'era. Qui si guarda cosa arriva
@@ -104,6 +104,86 @@ test('senza «dall\'inizio» non si chiude e non si azzera niente', async () => 
     const comandi = visore.comandi();
     assert.ok(!comandi.includes('force-stop'));
     assert.ok(!comandi.includes('clear-task'));
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('un avvio che non ha aperto niente non passa per riuscito', async () => {
+  // `am` esce **sempre** con successo, anche quando scrive «Error: …». Era per
+  // questo che un filmato che non partiva non produceva nessun messaggio:
+  // l'app credeva di averlo avviato.
+  assert.equal(avvioRiuscito('Starting: Intent { act=android.intent.action.VIEW }'), true);
+  assert.equal(avvioRiuscito('Error: Activity class {org.videolan.vlc/.x} does not exist.'), false);
+  assert.equal(avvioRiuscito('Error: Activity not started, unable to resolve Intent'), false);
+  // Questo invece è un successo: l'app era già aperta ed è tornata davanti.
+  assert.equal(
+    avvioRiuscito('Warning: Activity not started, its current task has been brought to the front'),
+    true,
+  );
+  assert.match(
+    motivoAvvioFallito('Starting: …\nError: Activity class {x} does not exist.'),
+    /does not exist/,
+  );
+});
+
+/** Visore finto che rifiuta i flag di riavvio ma accetta il comando semplice. */
+function visoreCheRifiutaIFlag() {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pico-flag-'));
+  const registro = path.join(base, 'comandi');
+  fs.writeFileSync(registro, '');
+  const file = path.join(base, 'adb');
+  fs.writeFileSync(
+    file,
+    `#!/bin/sh
+echo "$4" >> ${registro}
+case "$4" in
+  *clear-task*) echo "Error: Activity not started, unable to resolve Intent";;
+  *resolve-activity*) echo "com.pvr.filemanager/.VideoActivity";;
+esac
+exit 0
+`,
+    { mode: 0o755 },
+  );
+  process.env.PICO_ADB = file;
+  return {
+    comandi: () => fs.readFileSync(registro, 'utf8'),
+    pulisci: () => {
+      delete process.env.PICO_ADB;
+      fs.rmSync(base, { recursive: true, force: true });
+    },
+  };
+}
+
+test('se il lettore rifiuta il riavvio pulito, il filmato parte lo stesso', async () => {
+  // Davanti al pubblico la differenza fra «parte da metà» e «non parte» è
+  // tutta. Il ripiego però va detto, non nascosto.
+  const visore = visoreCheRifiutaIFlag();
+  try {
+    const err = await playVideo('finto:5555', '/sdcard/Movies/tour.mp4').then(
+      () => null,
+      (e) => e,
+    );
+    assert.ok(err, 'l\'esito non è un successo pieno');
+    assert.equal(err.partito, true, 'ma il filmato è partito');
+    assert.match(err.message, /non da capo/);
+    const comandi = visore.comandi().split('\n').filter((r) => r.startsWith('am start'));
+    assert.equal(comandi.length, 2, 'prima col riavvio pulito, poi senza');
+    assert.ok(!comandi[1].includes('clear-task'), 'il secondo tentativo è quello semplice');
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('VLC scelto ma non installato lo dice, e dice come tornare indietro', async () => {
+  // Senza questo il comando non apriva niente in silenzio: lo schermo restava
+  // fermo e il registro vuoto.
+  const visore = visoreCheAnnota();
+  try {
+    await assert.rejects(
+      () => playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { lettore: 'vlc' }),
+      /VLC non è installato.*Lettore del visore/s,
+    );
   } finally {
     visore.pulisci();
   }

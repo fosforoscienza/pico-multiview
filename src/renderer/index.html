@@ -185,6 +185,22 @@
       </span>
     </footer>
 
+    <!--
+      Conferma prima di mandare un filmato in sala. È un modale dell'app e non
+      il dialogo del browser: quello, dentro Electron, può non comparire — e un
+      dialogo che non compare è un «no» che nessuno ha detto.
+    -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="confirm-title">Confermi?</h3>
+        <p id="confirm-text" class="muted"></p>
+        <div class="modal-actions">
+          <button id="confirm-no" class="btn">Annulla</button>
+          <button id="confirm-yes" class="btn btn-primary">Avvia</button>
+        </div>
+      </div>
+    </div>
+
     <div id="video-modal" class="modal hidden">
       <div class="modal-card modal-wide">
         <h3>Video sui visori</h3>

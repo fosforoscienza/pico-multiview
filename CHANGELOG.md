@@ -9,6 +9,27 @@ della guida PDF.
 
 ---
 
+## 2.10 — agosto 2026
+
+«Il video non parte più»: due difetti introdotti dalle due versioni precedenti, e la ragione per
+cui nessuno dei due si vedeva.
+
+- **Un avvio fallito passava per riuscito.** `am start` esce **sempre** con successo, anche
+  quando scrive «Error: …» e non apre niente: l'app credeva di aver avviato il filmato, e non
+  diceva nulla. Ora l'esito viene letto, e un avvio che non ha aperto niente è un errore col suo
+  motivo. È il difetto che rendeva invisibili gli altri due.
+- **La conferma non era un modale dell'app ma il dialogo del browser**, che dentro Electron può
+  non comparire: e un dialogo che non compare vale come un «no» che nessuno ha detto — il filmato
+  non parte e non lascia traccia. Ora è un modale come gli altri, con Invio e Esc.
+- **VLC scelto ma non installato** faceva un comando che non apriva niente, in silenzio. Ora lo
+  dice prima, e dice anche come tornare indietro.
+- **Se un lettore rifiuta il riavvio pulito**, il filmato parte lo stesso col comando semplice:
+  davanti al pubblico la differenza fra «parte da metà» e «non parte» è tutta. Il ripiego viene
+  scritto nel registro, non nascosto.
+- **La schermata iniziale non può più essere scambiata per un lettore.** Il pacchetto in primo
+  piano viene ricordato solo se sa davvero aprire filmati: un visore su cui l'app chiude il
+  proprio launcher è messo peggio di prima.
+
 ## 2.9 — agosto 2026
 
 **VLC come lettore dei visori**, in alternativa a quello di sistema.

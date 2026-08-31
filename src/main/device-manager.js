@@ -442,6 +442,14 @@ export class DeviceManager extends EventEmitter {
           if (fromStart && device) this.#verificaPartenza(device).catch(() => {});
           return { serial, ok: true, value: path };
         } catch (err) {
+          // Un filmato partito «ma non da capo» è partito: va segnalato, non
+          // contato fra i fallimenti — davanti al pubblico la differenza fra
+          // «da metà» e «niente» è tutta.
+          if (err.partito) {
+            device?.setPlaying({ path, name: apps.fileName(path), durationMs: null, startedAt: Date.now() });
+            device?.log('error', err.message);
+            return { serial, ok: true, value: path };
+          }
           device?.log('error', `non riesco ad avviare ${apps.fileName(path)}: ${err.message}`);
           return { serial, ok: false, error: err.message };
         }

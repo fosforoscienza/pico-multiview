@@ -273,10 +273,11 @@ async function playVideo(video) {
   // riga dell'elenco serve a scegliere, la conferma a lanciare. Senza, basta
   // sfiorare la voce sbagliata davanti al pubblico.
   const quanti = video.on.length;
-  const ok = window.confirm(
-    `Avviare «${video.name}» su ${quanti} visore${quanti > 1 ? 'i' : ''}?\n\n` +
-      'Parte dall\'inizio su tutti, nello stesso momento.',
-  );
+  const ok = await chiediConferma({
+    titolo: `Avviare «${video.name}»?`,
+    testo: `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}, dall'inizio, nello stesso momento.`,
+    conferma: 'Avvia',
+  });
   if (!ok) return;
   const results = await run(window.pico.devices.playVideo(video.on));
   if (results === null) return;
@@ -1580,4 +1581,40 @@ async function controllaVlc() {
   } else {
     setStatus('VLC c\'è su tutti i visori.');
   }
+}
+
+/**
+ * Chiede conferma con un modale dell'app.
+ *
+ * Non `window.confirm`: dentro Electron quel dialogo può non comparire, e un
+ * dialogo che non compare vale come un «no» che nessuno ha detto — il comando
+ * non parte e non lascia traccia, che è il modo peggiore in cui una cosa possa
+ * non funzionare.
+ */
+function chiediConferma({ titolo, testo, conferma = 'Avvia' }) {
+  const modale = $('confirm-modal');
+  $('confirm-title').textContent = titolo;
+  $('confirm-text').textContent = testo;
+  $('confirm-yes').textContent = conferma;
+  modale.classList.remove('hidden');
+  $('confirm-yes').focus();
+
+  return new Promise((resolve) => {
+    const chiudi = (risposta) => {
+      modale.classList.add('hidden');
+      $('confirm-yes').removeEventListener('click', si);
+      $('confirm-no').removeEventListener('click', no);
+      document.removeEventListener('keydown', tasto);
+      resolve(risposta);
+    };
+    const si = () => chiudi(true);
+    const no = () => chiudi(false);
+    const tasto = (e) => {
+      if (e.key === 'Escape') chiudi(false);
+      if (e.key === 'Enter') chiudi(true);
+    };
+    $('confirm-yes').addEventListener('click', si);
+    $('confirm-no').addEventListener('click', no);
+    document.addEventListener('keydown', tasto);
+  });
 }

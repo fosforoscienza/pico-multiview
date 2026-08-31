@@ -621,9 +621,15 @@ export class Device extends EventEmitter {
   async imparaLettore() {
     if (!this.homePackage) this.homePackage = await apps.resolveHomePackage(this.serial).catch(() => null);
     const fg = await apps.foregroundPackage(this.serial).catch(() => null);
-    const lettore = apps.riconosciLettore(fg, this.homePackage);
-    if (lettore) this.playerPackage = lettore;
-    return lettore;
+    const candidato = apps.riconosciLettore(fg, this.homePackage);
+    // Non basta che sia in primo piano: dev'essere un'app che i filmati li sa
+    // aprire. Se il filmato non è partito, davanti c'è dell'altro — e
+    // ricordarselo come lettore vorrebbe dire chiuderlo al prossimo avvio.
+    if (candidato && (await apps.gestisceVideo(this.serial, candidato))) {
+      this.playerPackage = candidato;
+      return candidato;
+    }
+    return null;
   }
 
   async refreshStatus(afterMs = 0) {
