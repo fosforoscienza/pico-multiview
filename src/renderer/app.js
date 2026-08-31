@@ -31,6 +31,7 @@ const state = {
   fromStart: true,
   videoMode: 'auto', // come proiettare i filmati (auto = lascia riconoscere)
   videoModes: {},
+  prossimaAzioneMedia: 'pause', // quando il lettore non si legge, si alterna
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -1433,7 +1434,7 @@ function drawPlaybar() {
   barra.classList.remove('hidden');
 
   const sintesi = riepilogo(lettureCorrenti());
-  const b = statoBarra(sintesi, filmatiMandati());
+  const b = statoBarra(sintesi, filmatiMandati(), { prossimaAzione: state.prossimaAzioneMedia });
 
   $('playbar-name').textContent = b.nome;
   $('playbar-time').textContent = b.tempo;
@@ -1491,7 +1492,9 @@ function wirePlaybar() {
     const sintesi = riepilogo(lettureCorrenti());
     // Play e pausa espliciti, mai l'interruttore: se un visore fosse rimasto
     // indietro, il tasto unico lo farebbe ripartire mentre ferma gli altri.
-    const azione = sintesi?.inRiproduzione ? 'pause' : 'play';
+    // Quando il lettore non si legge, si alterna ricordando l'ultimo ordine.
+    const azione = sintesi ? (sintesi.inRiproduzione ? 'pause' : 'play') : state.prossimaAzioneMedia;
+    state.prossimaAzioneMedia = azione === 'pause' ? 'play' : 'pause';
     const results = await run(window.pico.devices.media(targetSerials(), azione, state.playerKeys));
     reportBatch(results, azione === 'pause' ? 'pausa' : 'ripresa');
     setTimeout(pollPlayers, 400);

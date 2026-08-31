@@ -9,6 +9,24 @@ della guida PDF.
 
 ---
 
+## 2.15 — agosto 2026
+
+Due strumenti per i due sintomi rimasti: il 360 che parte «al cinema», e la pausa che non fa
+niente.
+
+- **Il registro ora dice con quale chiamata è partito il filmato** («avviato con: …») e quali
+  sono state saltate e perché. «Parte ma in cinema» e «parte ma da metà» si diagnosticano solo
+  sapendo quale strada ha aperto il filmato — prima non lo scriveva nessuno.
+- **La chiamata PICO con la modalità ora nomina l'activity** che il visore stesso le indica, e se
+  nessuna app gestisce `picovr.intent.action.player` lo scrive invece di provare a vuoto.
+- **Nuovo profilo «Lettore PICO (comando diretto)»** nel menù dei tasti: play e pausa viaggiano
+  sull'annuncio documentato da PICO per G2 4K e Neo (`PLAY_CONTROL`, operazione scritta per
+  esteso), che arriva dove nessun tasto arriva — il lettore PICO non apre una sessione
+  multimediale, e i tasti media non lo raggiungono mai. Play e pausa restano espliciti: niente
+  interruttore che scambia i visori.
+- **Quando il lettore non si legge, il pulsante alterna e ricorda l'ultimo ordine**: prima
+  restava «Pausa a tutti» per sempre, e chi fermava non poteva più riprendere.
+
 ## 2.14 — agosto 2026
 
 - **La modalità di proiezione si sceglie prima di avviare** — «3D 360° sopra-sotto», 360°, 180°,

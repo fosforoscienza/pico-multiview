@@ -121,3 +121,13 @@ test('se i visori sono sparpagliati il pulsante propone di riprenderli', () => {
   assert.equal(b.distanti, true);
   assert.match(b.nota, /di scarto/);
 });
+
+test('quando il lettore non si legge, il pulsante alterna e ricorda', () => {
+  // Senza lettura non si sa se i visori sono fermi o in moto: il pulsante
+  // ricorda l\'ultimo ordine dato e propone l\'altro. Non è elegante, è onesto
+  // — e senza, chi ferma non può più riprendere.
+  const fermo = statoBarra(null, [{ name: 'tour.mp4' }], { prossimaAzione: 'pause' });
+  assert.equal(fermo.etichettaPausa, 'Pausa a tutti');
+  const riparti = statoBarra(null, [{ name: 'tour.mp4' }], { prossimaAzione: 'play' });
+  assert.equal(riparti.etichettaPausa, 'Riprendi tutti');
+});

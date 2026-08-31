@@ -439,6 +439,11 @@ export class DeviceManager extends EventEmitter {
           if (esito?.azzerati?.length) {
             device?.log('info', `azzerata la memoria di: ${esito.azzerati.join(', ')}`);
           }
+          // La strada con cui è partito va scritta: «parte ma in cinema» e
+          // «parte ma da metà» si diagnosticano solo sapendo quale chiamata ha
+          // aperto il filmato, e quali sono state saltate e perché.
+          for (const saltato of esito?.saltati ?? []) device?.log('error', saltato);
+          if (esito?.via) device?.log('info', `avviato con: ${esito.via}`);
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);

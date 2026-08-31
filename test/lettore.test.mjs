@@ -120,7 +120,10 @@ test('ogni modo di comandare il lettore ha i suoi tasti, anche per il salto', ()
   // telecomando in mano — ed è così che lo usa chi ha il visore in testa.
   for (const [nome, profilo] of Object.entries(PROFILI_LETTORE)) {
     assert.ok(profilo.etichetta, `${nome} deve avere un nome leggibile`);
-    for (const tasto of ['play', 'pause', 'avanti', 'indietro']) {
+    // Chi parla via annuncio (il lettore PICO) non ha tasti di play/pausa:
+    // per lui bastano le frecce del salto.
+    const tasti = profilo.broadcast ? ['avanti', 'indietro'] : ['play', 'pause', 'avanti', 'indietro'];
+    for (const tasto of tasti) {
       assert.equal(typeof profilo[tasto], 'number', `${nome}: manca ${tasto}`);
     }
   }
@@ -129,4 +132,32 @@ test('ogni modo di comandare il lettore ha i suoi tasti, anche per il salto', ()
   assert.equal(PROFILI_LETTORE.media.avanti, 90);
   // Un profilo sconosciuto non deve far saltare niente: si torna allo standard.
   assert.equal(profiloLettore('inventato'), PROFILI_LETTORE.media);
+});
+
+test('il profilo del lettore PICO manda l\'annuncio, non un tasto', async () => {
+  // Il lettore PICO non apre una sessione multimediale: i tasti media non lo
+  // raggiungono mai, ed era il motivo per cui «pausa» non faceva niente.
+  // Il canale suo — documentato da PICO per G2 4K e Neo — è un annuncio con
+  // l'operazione scritta per esteso: play e pausa espliciti, mai interruttore.
+  const { default: fs } = await import('node:fs');
+  const { default: os } = await import('node:os');
+  const { default: path } = await import('node:path');
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pico-broadcast-'));
+  const registro = path.join(base, 'comandi');
+  fs.writeFileSync(registro, '');
+  fs.writeFileSync(path.join(base, 'adb'), `#!/bin/sh\necho "$4" >> ${registro}\nexit 0\n`, { mode: 0o755 });
+  process.env.PICO_ADB = path.join(base, 'adb');
+  try {
+    const { mediaKey } = await import('../src/main/apps.js');
+    await mediaKey('finto:5555', 'pause', 'pico');
+    await mediaKey('finto:5555', 'play', 'pico');
+    const comandi = fs.readFileSync(registro, 'utf8');
+    assert.match(comandi, /am broadcast -a com\.picovr\.wing\.player\.PLAY_CONTROL/);
+    assert.match(comandi, /--es operation pause/);
+    assert.match(comandi, /--es operation play/);
+    assert.ok(!comandi.includes('input keyevent'), 'nessun tasto: non arriverebbe');
+  } finally {
+    delete process.env.PICO_ADB;
+    fs.rmSync(base, { recursive: true, force: true });
+  }
 });

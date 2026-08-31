@@ -71,13 +71,16 @@ export function riepilogo(letture, adesso = Date.now()) {
  * @param sintesi   riepilogo delle letture, o null se nessuno ha risposto
  * @param mandati   i filmati che abbiamo mandato noi e risultano in corso
  */
-export function statoBarra(sintesi, mandati = []) {
+export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause' } = {}) {
   if (!sintesi) {
     return {
       nome: mandati[0]?.name ?? 'Nessun filmato in corso',
       tempo: '–',
       quota: 0,
-      etichettaPausa: 'Pausa a tutti',
+      // Il lettore non si legge, quindi lo stato non si sa: il pulsante
+      // alterna, ricordando l'ultimo ordine dato. Non è elegante, è onesto —
+      // e senza, chi ferma non può più riprendere.
+      etichettaPausa: prossimaAzione === 'play' ? 'Riprendi tutti' : 'Pausa a tutti',
       // I tasti del lettore si mandano anche senza sapere dove sia il filmato:
       // è il salto che, senza posizione, non ha un bersaglio.
       pausaAttiva: mandati.length > 0,

@@ -251,3 +251,31 @@ test('un visore che non capisce la chiamata PICO scala sui tentativi soliti', as
     visore.pulisci();
   }
 });
+
+test('se nessuno gestisce la chiamata PICO, lo si scrive e si parte normale', async () => {
+  // È la riga che distingue «la chiamata non è arrivata» da «è arrivata ed è
+  // stata ignorata»: senza, un 360 che parte al cinema non si può diagnosticare.
+  const visore = visoreCheAnnota({ lettore: 'android/com.android.internal.app.ResolverActivity' });
+  try {
+    const esito = await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { videoType: 3 });
+    assert.match(esito.saltati[0], /nessuna app gestisce picovr\.intent\.action\.player/);
+    assert.match(esito.via, /comando semplice/);
+  } finally {
+    visore.pulisci();
+  }
+});
+
+test('la chiamata PICO nomina l\'activity che il visore le ha indicato', async () => {
+  const visore = visoreCheAnnota();
+  try {
+    const esito = await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { videoType: 3 });
+    assert.match(esito.via, /lettore PICO con modalità/);
+    const avvio = visore
+      .comandi()
+      .split('\n')
+      .find((r) => r.startsWith('am start') && r.includes('picovr.intent.action.player'));
+    assert.match(avvio, /-n com\.pvr\.filemanager\/\.VideoActivity/, 'chiamata esplicita, non lasciata alla scelta automatica');
+  } finally {
+    visore.pulisci();
+  }
+});

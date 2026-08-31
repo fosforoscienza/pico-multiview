@@ -334,25 +334,36 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
   // Ultimi i flag che rifanno la schermata da capo: aiutano a ripartire
   // dall'inizio, ma su certi lettori impediscono l'avvio — e un filmato che
   // parte da metà vale infinitamente più di uno che non parte.
+  // Quando l'operatore ha scelto la modalità, si parla direttamente al
+  // lettore PICO: parte già nella proiezione giusta, invece di cominciare
+  // «al cinema» e correggersi dopo. Prima però si chiede al visore CHI
+  // gestisca quella chiamata: se nessuno, si salta il tentativo e lo si
+  // scrive — è la riga che distingue «la chiamata non è arrivata» da «è
+  // arrivata ed è stata ignorata», e senza non si può ragionare.
+  const motivi = [];
+  let picoAct = null;
+  if (videoType != null) {
+    picoAct = await resolveAction(serial, 'picovr.intent.action.player').catch(() => null);
+    if (!picoAct) motivi.push('lettore PICO con modalità: nessuna app gestisce picovr.intent.action.player');
+  }
+
   const tentativi = [
-    // Quando l'operatore ha scelto la modalità, si parla direttamente al
-    // lettore PICO: parte già nella proiezione giusta, invece di cominciare
-    // «al cinema» e correggersi dopo. Sui visori che non capiscono questa
-    // chiamata non si apre niente, e si scala sui tentativi soliti.
-    videoType != null && { descrizione: 'lettore PICO con modalità', comando: picoStartCommand(percorso, { videoType }) },
+    videoType != null && picoAct && {
+      descrizione: `lettore PICO con modalità (${picoAct.package})`,
+      comando: picoStartCommand(percorso, { videoType, activity: picoAct.activity }),
+    },
     { descrizione: 'comando semplice', comando: base },
     risolto && { descrizione: `lettore esplicito (${risolto.package})`, comando: `am start -n ${risolto.activity} -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'` },
     { descrizione: 'con riavvio pulito', comando: `${base} --activity-clear-task --activity-new-task --ei position 0` },
   ].filter(Boolean);
 
-  const motivi = [];
   for (const tentativo of tentativi) {
     try {
       const out = await eseguiAvvio(serial, tentativo.comando);
       // Non basta che `am` non protesti: bisogna vedere qualcosa aperto. È la
       // differenza fra «il comando è stato accettato» e «il filmato è partito»,
       // ed è quella che finora l'app non sapeva fare.
-      if (await qualcosaSiEAperto(serial)) return { out, azzerati };
+      if (await qualcosaSiEAperto(serial)) return { out, azzerati, via: tentativo.descrizione, saltati: motivi };
       motivi.push(`${tentativo.descrizione}: il visore non ha aperto niente`);
     } catch (err) {
       motivi.push(`${tentativo.descrizione}: ${err.message}`);
@@ -419,6 +430,11 @@ export const MEDIA_KEYS = {
  * riprendere) o se ci sono due tasti distinti.
  */
 export const PROFILI_LETTORE = {
+  // Il lettore PICO non apre una sessione multimediale, quindi i tasti media
+  // non lo raggiungono mai — ma ascolta un canale suo, documentato da PICO per
+  // le serie G2 4K e Neo: un annuncio con l'operazione scritta per esteso.
+  // Play e pausa espliciti, quindi niente interruttore che scambia i visori.
+  pico: { etichetta: 'Lettore PICO (comando diretto)', broadcast: true, avanti: 22, indietro: 21 },
   media: { etichetta: 'Tasti media', play: 126, pause: 127, toggle: false, avanti: 90, indietro: 89 },
   mediaToggle: { etichetta: 'Media play/pausa (unico)', play: 85, pause: 85, toggle: true, avanti: 90, indietro: 89 },
   ok: { etichetta: 'OK / Invio', play: 66, pause: 66, toggle: true, avanti: 22, indietro: 21 },
@@ -528,6 +544,16 @@ export async function playerState(serial) {
 
 export async function mediaKey(serial, azione, profilo = 'media') {
   const tasti = profiloLettore(profilo);
+  if (tasti.broadcast && (azione === 'play' || azione === 'pause')) {
+    // L'annuncio del lettore PICO: arriva anche dove nessun tasto arriva,
+    // perché non passa dalla finestra a fuoco né dalla sessione multimediale.
+    return shell(
+      serial,
+      `am broadcast -a com.picovr.wing.player.PLAY_CONTROL ` +
+        `--es controltype playcommand --es mediatype video --es operation ${azione === 'play' ? 'play' : 'pause'}`,
+      { timeout: 8000 },
+    );
+  }
   const keycode = tasti[azione] ?? MEDIA_KEYS[azione];
   if (!keycode) throw new Error(`comando lettore sconosciuto: ${azione}`);
   return inputKeyevent(serial, keycode);
@@ -580,6 +606,19 @@ const NON_LETTORI = new Set(['android', 'com.android.systemui']);
  * riprendeva da dove era rimasto. Era questa la ragione per cui «riparte
  * dall'inizio» non ripartiva dall'inizio.
  */
+/** L'activity che risponde a un'action, o null se nessuno la gestisce. */
+export async function resolveAction(serial, action) {
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    `cmd package resolve-activity --brief -a ${action}`,
+  ]);
+  const trovato = res.ok ? parseResolvedActivity(res.out) : null;
+  if (!trovato || NON_LETTORI.has(trovato.package)) return null;
+  return trovato;
+}
+
 export async function resolveVideoPlayer(serial, percorso = null) {
   const conFile = percorso ? ` -d '${fileUri(percorso).replace(/'/g, `'\\''`)}'` : '';
   const res = await adbTry([
@@ -617,12 +656,16 @@ export const VIDEO_MODES = {
  * `videoType` viaggia come **stringa**, non come numero: è così che lo passa
  * il codice di PICO, ed è il genere di dettaglio che non si contraddice.
  */
-export function picoStartCommand(percorso, { videoType = null } = {}) {
+export function picoStartCommand(percorso, { videoType = null, activity = null } = {}) {
   const uri = fileUri(percorso).replace(/'/g, `'\\''`);
   const nome = fileName(percorso).replace(/'/g, `'\\''`);
   const tipo = videoType != null ? ` --es videoType ${videoType}` : '';
+  // L'activity, quando la conosciamo, si nomina: la chiamata arriva al lettore
+  // senza passare dalla scelta automatica, che è il punto in cui una chiamata
+  // «di famiglia» come questa può perdersi.
+  const dove = activity ? `-n ${activity} ` : '';
   return (
-    `am start -a picovr.intent.action.player ` +
+    `am start ${dove}-a picovr.intent.action.player ` +
     `--es uri '${uri}' --es title '${nome}'${tipo}`
   );
 }
