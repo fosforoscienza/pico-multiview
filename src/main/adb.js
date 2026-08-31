@@ -40,11 +40,10 @@ const CANDIDATE_ADB_PATHS = [
 ];
 
 export function adbPath() {
+  // PICO_ADB si rilegge ogni volta, prima della cache: è un'indicazione
+  // esplicita di chi lancia l'app, e deve poter cambiare senza riavviarla.
+  if (process.env.PICO_ADB && fs.existsSync(process.env.PICO_ADB)) return process.env.PICO_ADB;
   if (cachedAdbPath) return cachedAdbPath;
-  if (process.env.PICO_ADB && fs.existsSync(process.env.PICO_ADB)) {
-    cachedAdbPath = process.env.PICO_ADB;
-    return cachedAdbPath;
-  }
   for (const p of CANDIDATE_ADB_PATHS) {
     if (fs.existsSync(p)) {
       cachedAdbPath = p;
@@ -143,10 +142,19 @@ export async function listDevices() {
   return devices;
 }
 
+/**
+ * Prova a collegarsi a un visore in rete.
+ *
+ * Non lancia mai: un indirizzo che non risponde è la normalità — un visore
+ * spento, o salvato su una rete che non c'è più — e farne un'eccezione
+ * significava interrompere a metà il giro di aggiornamento che la conteneva,
+ * lasciando fuori anche i visori attaccati al cavo.
+ */
 export async function connect(host, port = 5555) {
-  const out = await adb(['connect', `${host}:${port}`], { timeout: 8000 });
-  const ok = /connected to/i.test(out) && !/failed|cannot|refused/i.test(out);
-  return { ok, message: out.trim() };
+  const res = await adbTry(['connect', `${host}:${port}`], { timeout: 8000 });
+  const out = (res.ok ? res.out : res.out || res.err?.message || '').trim();
+  const ok = res.ok && /connected to/i.test(out) && !/failed|cannot|refused/i.test(out);
+  return { ok, message: out || 'nessuna risposta da adb' };
 }
 
 export async function disconnect(serial) {
@@ -211,6 +219,17 @@ export function localSubnets() {
     }
   }
   return [...subnets];
+}
+
+/**
+ * Bussa alla porta adb di un indirizzo, senza scomodare adb.
+ *
+ * `adb connect` verso un indirizzo morto costa fino a otto secondi; questa
+ * porta chiusa si scopre in una frazione di secondo, ed è la differenza fra un
+ * elenco che si aggiorna subito e uno che sembra bloccato.
+ */
+export function isPortOpen(host, port = 5555, timeout = 1500) {
+  return probePort(host, port, timeout);
 }
 
 function probePort(host, port, timeout) {

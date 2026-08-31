@@ -39,13 +39,60 @@ export function decideAdd(candidate, registered) {
   return { action: 'skip', twin: twin.serial };
 }
 
+/**
+ * Quanto aspettare prima di ribussare a un indirizzo che non risponde.
+ *
+ * Ritentarlo a ogni aggiornamento significava pagarne l'attesa ogni volta; non
+ * ritentarlo mai significava non accorgersi del visore che torna acceso. Le
+ * attese crescono, con un tetto: mezzo minuto, poi uno, poi due, fino a cinque.
+ */
+export function attesaRiprova(tentativi) {
+  return Math.min(30000 * 2 ** Math.max(0, tentativi - 1), 300000);
+}
+
+/**
+ * Gli indirizzi salvati a cui vale la pena ribussare adesso.
+ *
+ * Fuori restano quelli già collegati e quelli in attesa dopo un buco nell'acqua.
+ */
+export function daRiconnettere({ salvati = [], online = new Set(), irraggiungibili = new Map(), now = Date.now() } = {}) {
+  return salvati
+    .map((e) => e.serial)
+    .filter((serial) => isWifi(serial) && !online.has(serial))
+    .filter((serial) => (irraggiungibili.get(serial)?.prossimo ?? 0) <= now);
+}
+
+/**
+ * Cosa dire di un visore che adb vede ma non è pronto all'uso.
+ *
+ * Sono i due modi in cui un cavo attaccato non serve a niente, e finora non
+ * producevano **nessuna riga** nel registro: l'operatore vedeva un elenco
+ * vuoto e un cavo in mano, senza sapere che il visore era lì e cosa mancasse.
+ */
+export function diagnosiCollegamento(seen = []) {
+  const spiegazioni = {
+    unauthorized:
+      'collegato ma non ancora autorizzato: indossa il visore e accetta «Consenti debug USB» ' +
+      '(spunta «ricorda sempre», così non lo richiede più)',
+    offline:
+      'collegato ma adb lo vede «offline»: stacca e riattacca il cavo, oppure riavvia il visore',
+  };
+  return seen
+    .filter((d) => d.state !== 'device' && spiegazioni[d.state])
+    .map((d) => ({ serial: d.serial, level: 'error', message: spiegazioni[d.state] }));
+}
+
 export class DeviceManager extends EventEmitter {
   constructor(config) {
     super();
     this.config = config;
     this.devices = new Map(); // serial -> Device
     this.hardwareIds = new Map(); // serial -> ro.serialno, per riconoscere i doppioni
-    this.unreachable = new Set(); // indirizzi salvati che non rispondono: lo diciamo una volta sola
+    // indirizzo salvato -> {tentativi, prossimo}: quando ribussare, e da quante
+    // volte non risponde. Serve a non pagare l'attesa a ogni aggiornamento.
+    this.unreachable = new Map();
+    this.reti = null; // sottoreti locali dell'ultimo giro: se cambiano si riprova subito
+    this.statiDetti = new Map(); // serial -> stato già spiegato, per non ripeterlo
     this.statusTimer = null;
   }
 
@@ -128,36 +175,46 @@ export class DeviceManager extends EventEmitter {
   /**
    * Allinea il registro a quello che vede adb: aggiunge i nuovi dispositivi
    * online e prova a ricollegare quelli salvati in configurazione.
+   *
+   * L'ordine conta. Prima i visori che adb già vede — il cavo, soprattutto —
+   * e solo dopo i tentativi verso la rete: quando le due cose stavano in fila,
+   * un indirizzo salvato che non risponde teneva fermo il giro per secondi, e
+   * se falliva con un errore lo interrompeva del tutto. Il visore attaccato al
+   * cavo non arrivava mai a essere aggiunto.
    */
   async sync({ autoConnect = this.config.data.autoConnect } = {}) {
     const seen = await adb.listDevices();
     const online = new Set(seen.filter((d) => d.state === 'device').map((d) => d.serial));
 
+    await this.#registra(online, autoConnect);
+
     if (autoConnect) {
-      for (const entry of this.config.data.devices) {
-        if (!online.has(entry.serial) && entry.serial.includes(':')) {
-          const [host, port] = entry.serial.split(':');
-          const res = await adb.connect(host, Number(port) || 5555);
-          if (res.ok) {
-            online.add(entry.serial);
-            this.unreachable.delete(entry.serial);
-          } else if (!this.unreachable.has(entry.serial)) {
-            // Un indirizzo salvato che non risponde più — tipico dopo un
-            // cambio di rete — verrebbe ritentato a ogni aggiornamento. Lo si
-            // dice una volta, con cosa fare, invece di riempire il registro.
-            this.unreachable.add(entry.serial);
-            this.emit('log', {
-              serial: entry.serial,
-              level: 'error',
-              message:
-                `${entry.serial} non risponde: è un visore salvato su un indirizzo che non esiste più ` +
-                '(succede cambiando rete). Toglilo dalla sua postazione, oppure riaggiungilo con l\'indirizzo nuovo.',
-            });
-          }
-        }
+      const tornati = await this.#riconnettiSalvati(online);
+      for (const serial of tornati) online.add(serial);
+      if (tornati.length) await this.#registra(new Set(tornati), autoConnect);
+    }
+
+    for (const avviso of diagnosiCollegamento(seen)) {
+      // Una volta sola per stato: chi non autorizza il visore al primo
+      // aggiornamento non lo autorizza nemmeno al decimo avviso uguale.
+      if (this.statiDetti.get(avviso.serial) === avviso.message) continue;
+      this.statiDetti.set(avviso.serial, avviso.message);
+      this.emit('log', avviso);
+    }
+    for (const d of seen) {
+      if (d.state === 'device') this.statiDetti.delete(d.serial);
+      const dev = this.devices.get(d.serial);
+      if (dev && d.state !== 'device' && dev.state === STATE.STREAMING) {
+        dev.log('error', `dispositivo in stato "${d.state}"`);
       }
     }
 
+    this.emit('devices', this.list());
+    return { seen, online: [...online] };
+  }
+
+  /** Mette in elenco i visori che adb vede pronti, saltando i doppioni. */
+  async #registra(online, autoConnect) {
     for (const serial of online) {
       if (this.devices.has(serial)) continue;
       const decision = decideAdd(
@@ -184,18 +241,60 @@ export class DeviceManager extends EventEmitter {
       }
       this.add(serial, { connect: autoConnect });
     }
+  }
 
-    // Aggiorna gli stati "non autorizzato / offline" per dare un feedback utile.
-    for (const d of seen) {
-      const dev = this.devices.get(d.serial);
-      if (!dev) continue;
-      if (d.state !== 'device' && dev.state === STATE.STREAMING) {
-        dev.log('error', `dispositivo in stato "${d.state}"`);
-      }
+  /**
+   * Ribussa agli indirizzi salvati che non sono già collegati.
+   *
+   * Tutti insieme, non in fila: sono attese di rete, e una decina di visori
+   * spenti metterebbe in coda un minuto buono di aggiornamento.
+   */
+  async #riconnettiSalvati(online) {
+    // Cambiare rete cambia gli indirizzi buoni: le attese accumulate finora
+    // non dicono più niente, e si riprova subito da capo.
+    const reti = adb.localSubnets().sort().join(' ');
+    if (this.reti !== null && this.reti !== reti) this.unreachable.clear();
+    this.reti = reti;
+
+    const now = Date.now();
+    const piano = daRiconnettere({
+      salvati: this.config.data.devices,
+      online,
+      irraggiungibili: this.unreachable,
+      now,
+    });
+    const esiti = await Promise.all(piano.map((serial) => this.#riconnetti(serial, now)));
+    return esiti.filter(Boolean);
+  }
+
+  async #riconnetti(serial, now) {
+    const [host, porta] = serial.split(':');
+    const port = Number(porta) || 5555;
+    // Si bussa alla porta prima di chiamare adb: un indirizzo morto si scopre
+    // in un attimo, mentre "adb connect" ci mette fino a otto secondi.
+    const raggiungibile = await adb.isPortOpen(host, port);
+    const res = raggiungibile
+      ? await adb.connect(host, port)
+      : { ok: false, message: 'non risponde sulla porta adb' };
+    if (res.ok) {
+      this.unreachable.delete(serial);
+      return serial;
     }
-
-    this.emit('devices', this.list());
-    return { seen, online: [...online] };
+    const tentativi = (this.unreachable.get(serial)?.tentativi ?? 0) + 1;
+    this.unreachable.set(serial, { tentativi, prossimo: now + attesaRiprova(tentativi) });
+    // Un indirizzo che non risponde più — tipico dopo un cambio di rete — lo si
+    // dice una volta, con cosa fare, invece di riempire il registro.
+    if (tentativi > 1) return null;
+    const dove = this.reti ? ` Il computer ora è sulla rete ${this.reti.split(' ').join(', ')}.` : '';
+    this.emit('log', {
+      serial,
+      level: 'error',
+      message:
+        `${serial} non risponde: è un visore salvato su un indirizzo che non esiste più ` +
+        `(succede cambiando rete).${dove} Toglilo dalla sua postazione, oppure riaggiungilo ` +
+        'con l\'indirizzo nuovo.',
+    });
+    return null;
   }
 
   /** Scansione della rete + aggiunta di tutto ciò che risponde. */

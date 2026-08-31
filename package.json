@@ -1,6 +1,6 @@
 {
   "name": "pico-multiview",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Regia multi-visore per PICO 4: mosaico dei 10 schermi, avvio/chiusura app e puntatore mouse su ogni visore.",
   "type": "module",

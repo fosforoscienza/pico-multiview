@@ -9,6 +9,27 @@ della guida PDF.
 
 ---
 
+## 2.4 — agosto 2026
+
+«Non si connette, né via cavo né via wifi»: il registro mostrava solo tentativi verso indirizzi
+di una rete abbandonata. Erano quelli a impedire tutto il resto.
+
+- **Un indirizzo salvato che non risponde non interrompe più l'aggiornamento.** `adb connect`
+  usciva con errore, l'errore risaliva fino a interrompere il giro a metà, e i visori che adb
+  già vedeva — quelli **attaccati al cavo** — non arrivavano mai a essere messi in elenco. Ora
+  il cavo viene servito per primo, e la rete dopo.
+- **Gli indirizzi salvati si provano tutti insieme, e si bussa alla porta prima di chiamare
+  adb**: un indirizzo morto costa una frazione di secondo invece di otto, e due indirizzi morti
+  non fanno più quindici secondi di attesa a ogni aggiornamento.
+- **Chi non risponde viene ritentato con calma** — mezzo minuto, poi uno, fino a cinque — e
+  **subito** se cambia la rete del computer: è il momento in cui gli indirizzi salvati possono
+  tornare buoni.
+- **Un cavo attaccato ma inutile ora lo dice.** Un visore che adb vede «unauthorized» oppure
+  «offline» non produceva nessuna riga: elenco vuoto e cavo in mano, senza sapere che il visore
+  era lì e cosa gli mancasse. Ora il registro dice cosa fare.
+- Il messaggio sull'indirizzo perduto dice anche **su quale rete si trova ora il computer**: è
+  il dato che spiega in un colpo perché quel `192.168.1.x` non risponde più.
+
 ## 2.3 — agosto 2026
 
 «Il video lo vedo nel visore, ma dal computer non lo trova»: la ricerca guardava nel posto
