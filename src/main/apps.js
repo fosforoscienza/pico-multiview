@@ -296,29 +296,16 @@ export async function listVideos(serial) {
  * che sul visore è il suo lettore video. Indicarne uno a mano vorrebbe dire
  * indovinare il nome del pacchetto, che cambia da modello a modello.
  */
-export async function playVideo(serial, percorso, { fromStart = true, player = null, lettore = 'sistema' } = {}) {
-  // Con VLC non c'è niente da chiudere e niente da indovinare: la posizione di
-  // partenza sta nel comando stesso, ed è lui a rispettarla. Ma se VLC non c'è
-  // su questo visore, il comando non apre niente **in silenzio**: meglio dirlo
-  // prima, e dire anche come tornare indietro.
-  if (lettore === 'vlc') {
-    if (!(await isInstalled(serial, VLC.package))) {
-      throw new Error(
-        'VLC non è installato su questo visore: installalo con «Installa VLC…» ' +
-          'oppure rimetti «Lettore del visore» nel menù della barra',
-      );
-    }
-    return eseguiAvvio(serial, vlcStartCommand(percorso, { fromStart }));
-  }
-
+export async function playVideo(serial, percorso, { fromStart = true, player = null } = {}) {
   const risolto = await resolveVideoPlayer(serial, percorso).catch(() => null);
-  const daChiudere = player ?? risolto?.package ?? null;
 
-  // Il lettore lasciato aperto riprenderebbe da dov'era: chiuderlo prima è il
-  // modo che non dipende da quali extra questo lettore capisce. Resta però un
+  // Un lettore lasciato aperto riprenderebbe da dov'era, e sul visore chi apre
+  // il filmato e chi lo riproduce possono essere app diverse: si chiudono
+  // **tutte** le app di riproduzione video, non una indovinata. Resta un
   // tentativo, non un requisito — sotto, l'avvio si difende da solo.
-  if (fromStart && daChiudere && !NON_LETTORI.has(daChiudere)) {
-    await stopApp(serial, daChiudere).catch(() => {});
+  if (fromStart) {
+    const home = await resolveHomePackage(serial).catch(() => null);
+    await stopVideoApps(serial, { extra: [player, risolto?.package], home }).catch(() => {});
   }
 
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
@@ -619,6 +606,49 @@ export function motivoAvvioFallito(output) {
 }
 
 /**
+ * I pacchetti che sanno aprire filmati, secondo il visore stesso.
+ *
+ * È l'elenco delle «app di riproduzione video» da chiudere prima di lanciare:
+ * sul visore chi apre il filmato e chi lo riproduce possono essere app diverse
+ * (il gestore file delega al lettore), e chiudere solo la prima lasciava la
+ * seconda viva, con il suo «riprendi da dove eri» intatto.
+ */
+export function parseVideoHandlers(text) {
+  const pacchetti = new Set();
+  for (const m of String(text ?? '').matchAll(/([A-Za-z][A-Za-z0-9_.]*)\/[A-Za-z0-9_.$]+/g)) {
+    pacchetti.add(m[1]);
+  }
+  return [...pacchetti];
+}
+
+export async function videoHandlerPackages(serial) {
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    "cmd package query-activities --components -a android.intent.action.VIEW -t 'video/*'",
+  ]);
+  if (!res.ok) return [];
+  return parseVideoHandlers(res.out).filter((p) => !NON_LETTORI.has(p));
+}
+
+/**
+ * Chiude tutte le app di riproduzione video del visore, in un colpo solo.
+ *
+ * Un solo comando con tutti i force-stop in fila: dieci comandi separati
+ * sarebbero dieci viaggi, e il lancio del filmato arriverebbe con secondi di
+ * ritardo su un visore e non sull'altro.
+ */
+export async function stopVideoApps(serial, { extra = [], home = null } = {}) {
+  const trovati = await videoHandlerPackages(serial);
+  const daChiudere = [...new Set([...trovati, ...extra.filter(Boolean)])]
+    .filter((p) => !NON_LETTORI.has(p) && p !== home);
+  if (!daChiudere.length) return [];
+  await shell(serial, daChiudere.map((p) => `am force-stop ${p}`).join('; '), { timeout: 20000 });
+  return daChiudere;
+}
+
+/**
  * Questo pacchetto sa aprire dei filmati?
  *
  * Serve a non prendere per lettore la prima app che si trova in primo piano
@@ -690,16 +720,8 @@ export function colpiPerSalto(deltaMs, passoMs, { massimo = 40 } = {}) {
 export async function seekTo(
   serial,
   targetMs,
-  { tolleranzaMs = 2000, giri = 3, profilo = 'media', lettore = 'sistema', percorso = null } = {},
+  { tolleranzaMs = 2000, giri = 3, profilo = 'media' } = {},
 ) {
-  // Con VLC il salto non si insegue: si riapre il filmato al punto voluto, e
-  // quel punto è quello. È esatto, è immediato, ed è uguale su ogni visore —
-  // che è poi la ragione per cui questo pulsante esiste.
-  if (lettore === 'vlc' && percorso) {
-    await shell(serial, vlcStartCommand(percorso, { positionMs: targetMs }), { timeout: 20000 });
-    await delay(800);
-    return (await playerState(serial)) ?? { positionMs: targetMs, state: 'in riproduzione' };
-  }
   const tasti = profiloLettore(profilo);
   let stato = await playerState(serial);
   if (!stato) throw new Error('il lettore non dice a che punto è il filmato: da qui non si può saltare');
@@ -738,65 +760,4 @@ export async function seekTo(
 
   if (suonava) await mediaKey(serial, 'play', profilo);
   return stato;
-}
-
-// ---------------------------------------------------------------------------
-// VLC come lettore
-// ---------------------------------------------------------------------------
-
-/**
- * VLC, quando c'è, è un lettore che si lascia comandare davvero.
- *
- * Il lettore di sistema del visore non pubblica il proprio stato e non riceve i
- * tasti media: da fuori è cieco e sordo. VLC apre una sessione multimediale —
- * quindi la barra sa dove si trova e i tasti arrivano — e soprattutto accetta la
- * posizione **dentro il comando di avvio**: il salto diventa esatto invece che
- * inseguito a colpi, e «dall'inizio» smette di dipendere da chi chiude cosa.
- */
-export const VLC = {
-  package: 'org.videolan.vlc',
-  activity: 'org.videolan.vlc/.gui.video.VideoPlayerActivity',
-  nome: 'VLC',
-};
-
-/** I lettori che l'app sa comandare. */
-export const LETTORI = {
-  sistema: { etichetta: 'Lettore del visore', package: null },
-  vlc: { etichetta: 'VLC', package: VLC.package },
-};
-
-/**
- * Il comando che apre un filmato con VLC.
- *
- * `from_start` e `position` sono extra che VLC conosce: sono il motivo per cui
- * con lui l'inizio è l'inizio e un salto è un salto, senza chiudere niente e
- * senza contare colpi di avanzamento.
- */
-export function vlcStartCommand(percorso, { fromStart = true, positionMs = null } = {}) {
-  const uri = fileUri(percorso).replace(/'/g, `'\\''`);
-  const nome = fileName(percorso).replace(/'/g, `'\\''`);
-  const dove =
-    positionMs != null ? ` --el position ${Math.max(0, Math.round(positionMs))} --ez from_start false` : '';
-  const daCapo = positionMs == null && fromStart ? ' --ez from_start true --el position 0' : '';
-  return (
-    `am start -n ${VLC.activity} -a android.intent.action.VIEW ` +
-    `-d '${uri}' -t 'video/*' -e title '${nome}'${daCapo}${dove}`
-  );
-}
-
-/** Vero se il pacchetto è installato sul visore. */
-export async function isInstalled(serial, pkg) {
-  const res = await adbTry(['-s', serial, 'shell', `pm list packages ${pkg}`]);
-  return res.ok && new RegExp(`package:${pkg.replace(/\./g, '\\.')}\\s*$`, 'm').test(res.out || '');
-}
-
-/**
- * Installa un apk sul visore.
- *
- * `-r` reinstalla senza perdere i dati, `-g` concede subito i permessi: senza,
- * VLC si aprirebbe chiedendo l'accesso ai file, e la richiesta comparirebbe
- * dentro il visore — dove, durante un evento, non la vede nessuno.
- */
-export async function installApk(serial, apkPath) {
-  return adb(['-s', serial, 'install', '-r', '-g', apkPath], { timeout: 300000 });
 }

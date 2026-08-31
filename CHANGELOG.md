@@ -9,6 +9,17 @@ della guida PDF.
 
 ---
 
+## 2.12 — agosto 2026
+
+- **VLC è stato tolto**: sui visori non funzionava, e un'alternativa che non funziona è solo un
+  menù in più da sbagliare. Si torna al solo lettore del visore.
+- **Prima di lanciare si chiudono TUTTE le app di riproduzione video**, non una indovinata:
+  l'elenco lo dà il visore stesso. Sul visore chi apre il filmato e chi lo riproduce possono
+  essere app diverse — il gestore file delega al lettore — e chiudere solo la prima lasciava la
+  seconda viva, con il suo «riprendi da dove eri» intatto. Era questo a far ripartire i filmati
+  da metà. Le chiusure viaggiano in un comando solo, e la schermata iniziale non è mai
+  nell'elenco.
+
 ## 2.11 — agosto 2026
 
 Un passo indietro dove serviva, e le difese perché non succeda più.

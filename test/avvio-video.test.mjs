@@ -11,7 +11,10 @@ import { avvioRiuscito, motivoAvvioFallito, playVideo } from '../src/main/apps.j
 // davvero al visore.
 
 /** Un visore finto che scrive su un file tutti i comandi che riceve. */
-function visoreCheAnnota({ lettore = 'com.pvr.filemanager/.VideoActivity' } = {}) {
+function visoreCheAnnota({
+  lettore = 'com.pvr.filemanager/.VideoActivity',
+  gestori = 'com.pvr.filemanager/.VideoActivity com.pvr.gallery/.Player',
+} = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pico-avvio-'));
   const registro = path.join(base, 'comandi');
   fs.writeFileSync(registro, '');
@@ -21,6 +24,8 @@ function visoreCheAnnota({ lettore = 'com.pvr.filemanager/.VideoActivity' } = {}
     `#!/bin/sh
 echo "$4" >> ${registro}
 case "$4" in
+  *category.HOME*) echo "com.pvr.shortcut/.Home";;
+  *query-activities*) for g in ${gestori}; do echo "$g"; done;;
   *resolve-activity*) echo "${lettore}";;
 esac
 exit 0
@@ -46,7 +51,12 @@ test('per ripartire dall\'inizio si chiude il lettore, non si complica il comand
   try {
     await playVideo('finto:5555', '/sdcard/Movies/Tra Borghi e Natura.mp4');
     const comandi = visore.comandi();
-    assert.match(comandi, /am force-stop com\.pvr\.filemanager/, 'il lettore aperto va chiuso');
+    // Si chiudono TUTTE le app di riproduzione, non una indovinata: chi apre
+    // il filmato e chi lo riproduce possono essere app diverse, e quella viva
+    // si terrebbe il suo «riprendi da dove eri».
+    assert.match(comandi, /am force-stop com\.pvr\.filemanager/, 'il lettore va chiuso');
+    assert.match(comandi, /am force-stop com\.pvr\.gallery/, 'e ogni altra app che riproduce video');
+    assert.ok(!comandi.includes('force-stop com.pvr.shortcut'), 'ma mai la schermata iniziale');
     const avvio = comandi.split('\n').find((r) => r.startsWith('am start'));
     assert.ok(!avvio.includes('clear-task'), 'il primo tentativo è quello nudo');
     // Il nome con gli spazi arriva codificato, o il lettore riceve «Tra».
@@ -70,25 +80,28 @@ test('il file va passato quando si chiede chi aprirà il filmato', async () => {
   }
 });
 
-test('a chiudere si va sul lettore già visto in azione, non su quello supposto', async () => {
+test('il lettore già visto in azione si chiude anche se il sistema non lo nomina', async () => {
   // Dalla seconda volta in poi sappiamo chi si è aperto davvero su questo
-  // visore: è più affidabile della risposta del sistema, che resta comunque
-  // utile perché fornisce l'activity per il tentativo esplicito.
-  const visore = visoreCheAnnota();
+  // visore: va chiuso anche lui, in aggiunta a quelli che il sistema elenca —
+  // è proprio quello che si terrebbe il «riprendi da dove eri».
+  const visore = visoreCheAnnota({ gestori: 'com.pvr.filemanager/.VideoActivity' });
   try {
     await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { player: 'com.altro.lettore' });
     const comandi = visore.comandi();
     assert.match(comandi, /am force-stop com\.altro\.lettore/);
-    assert.ok(!comandi.includes('force-stop com.pvr.filemanager'), 'non si chiude il supposto');
+    assert.match(comandi, /am force-stop com\.pvr\.filemanager/);
   } finally {
     visore.pulisci();
   }
 });
 
-test('il selettore «apri con» non viene mai scambiato per un lettore', async () => {
+test('il selettore «apri con» non viene mai chiuso, nemmeno quando è l\'unico nome', async () => {
   // Chiuderlo non ha senso, e chiederlo significherebbe fermare un pezzo del
   // sistema del visore.
-  const visore = visoreCheAnnota({ lettore: 'android/com.android.internal.app.ResolverActivity' });
+  const visore = visoreCheAnnota({
+    lettore: 'android/com.android.internal.app.ResolverActivity',
+    gestori: '',
+  });
   try {
     await playVideo('finto:5555', '/sdcard/Movies/tour.mp4');
     assert.ok(!visore.comandi().includes('force-stop'), 'niente da chiudere');
@@ -170,16 +183,3 @@ test('un lettore che rifiuta i flag non impedisce più l\'avvio', async () => {
   }
 });
 
-test('VLC scelto ma non installato lo dice, e dice come tornare indietro', async () => {
-  // Senza questo il comando non apriva niente in silenzio: lo schermo restava
-  // fermo e il registro vuoto.
-  const visore = visoreCheAnnota();
-  try {
-    await assert.rejects(
-      () => playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { lettore: 'vlc' }),
-      /VLC non è installato.*Lettore del visore/s,
-    );
-  } finally {
-    visore.pulisci();
-  }
-});

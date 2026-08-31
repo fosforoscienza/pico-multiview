@@ -39,11 +39,6 @@ export const DEFAULT_CONFIG = {
   // quelli «media» — gli unici standard — su molti non fanno proprio niente.
   // Si sceglie dalla barra del filmato, provandoli.
   playerKeys: 'media',
-  // Con quale lettore aprire i filmati sui visori:
-  // 'sistema' = quello del visore, che però da fuori è cieco e sordo
-  // 'vlc'     = VLC, che pubblica il suo stato e accetta la posizione di
-  //             partenza nel comando di avvio (va installato sui visori)
-  player: 'sistema',
   // Se un filmato mandato da qui debba ricominciare da capo. Si può spegnere:
   // farlo ripartire dall'inizio richiede di chiudere prima il lettore, e su un
   // visore che facesse storie è meglio un filmato che parte da metà che uno

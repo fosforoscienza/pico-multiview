@@ -613,8 +613,8 @@ export class Device extends EventEmitter {
     return apps.mediaKey(this.serial, azione, profilo);
   }
 
-  async seekTo(ms, { profilo = 'media', lettore = 'sistema' } = {}) {
-    return apps.seekTo(this.serial, ms, { profilo, lettore, percorso: this.playing?.path ?? null });
+  async seekTo(ms, { profilo = 'media' } = {}) {
+    return apps.seekTo(this.serial, ms, { profilo });
   }
 
   /** Guarda cosa si è aperto e se lo ricorda: sarà il lettore da chiudere. */

@@ -25,8 +25,6 @@ const state = {
   playerTimer: null,
   playerKeys: 'media', // con quali tasti si comanda il lettore del visore
   profiliLettore: {},
-  player: 'sistema', // con quale lettore aprire i filmati
-  lettori: {},
   fromStart: true, // se i filmati mandati da qui devono ricominciare da capo
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
@@ -1309,9 +1307,7 @@ async function boot() {
   state.unassigned = new Set(info.config.unassigned ?? []);
   state.playerKeys = info.config.playerKeys ?? 'media';
   state.profiliLettore = info.playerProfiles ?? {};
-  state.player = info.config.player ?? 'sistema';
   state.fromStart = info.config.fromStart !== false;
-  state.lettori = info.players ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
@@ -1492,56 +1488,6 @@ function wirePlaybar() {
     setTimeout(pollPlayers, 600);
   });
 
-  // Con quale lettore aprire i filmati. VLC va scelto solo se c'è davvero sui
-  // visori: sceglierlo dove manca vorrebbe dire un comando che non apre niente,
-  // e un pubblico davanti a uno schermo fermo.
-  const daCapo = $('from-start');
-  daCapo.checked = state.fromStart;
-  daCapo.addEventListener('change', async () => {
-    state.fromStart = daCapo.checked;
-    await window.pico.config.patch({ fromStart: daCapo.checked }).catch((err) => log(err.message, 'error'));
-    log(
-      daCapo.checked
-        ? 'i filmati ripartiranno dall\'inizio'
-        : 'i filmati ripartiranno da dove erano rimasti (avvio più semplice, quello che ha sempre funzionato)',
-    );
-  });
-
-  const menuLettore = $('player-app');
-  for (const [id, lettore] of Object.entries(state.lettori)) {
-    const opzione = document.createElement('option');
-    opzione.value = id;
-    opzione.textContent = lettore.etichetta;
-    menuLettore.append(opzione);
-  }
-  menuLettore.value = state.player;
-  menuLettore.addEventListener('change', async () => {
-    state.player = menuLettore.value;
-    await window.pico.config.patch({ player: menuLettore.value }).catch((err) => log(err.message, 'error'));
-    if (menuLettore.value === 'vlc') {
-      await controllaVlc();
-      // VLC apre una sessione multimediale, quindi i tasti media lo
-      // raggiungono: è il modo giusto, ed è quello che quasi certamente non
-      // funzionava con il lettore del visore.
-      if (state.playerKeys !== 'media') log('con VLC conviene tornare ai «Tasti media».');
-    } else {
-      $('btn-install-vlc').classList.add('hidden');
-    }
-    log(`i filmati si apriranno con: ${menuLettore.options[menuLettore.selectedIndex].textContent}`);
-  });
-
-  $('btn-install-vlc').addEventListener('click', async () => {
-    const serials = state.slots.filter(Boolean);
-    setStatus('Scegli l\'apk di VLC scaricato da videolan.org…');
-    const esito = await run(window.pico.devices.installVlc(serials));
-    if (!esito || esito.annullato) {
-      setStatus('Installazione annullata.');
-      return;
-    }
-    reportBatch(esito.results, 'installazione di VLC');
-    await controllaVlc();
-  });
-
   const menu = $('player-keys');
   for (const [id, profilo] of Object.entries(state.profiliLettore ?? {})) {
     const opzione = document.createElement('option');
@@ -1566,37 +1512,11 @@ function wirePlaybar() {
     setTimeout(pollPlayers, 500);
   });
 
-  if (state.player === 'vlc') controllaVlc();
-
   // Due orologi: uno chiede al visore, l'altro fa scorrere la barra fra una
   // domanda e l'altra. Senza il secondo la barra andrebbe a scatti di due
   // secondi; senza il primo si allontanerebbe dal vero.
   setInterval(pollPlayers, 2000);
   setInterval(drawPlaybar, 250);
-}
-
-/**
- * Guarda su quali visori c'è VLC, e lo dice.
- *
- * Il pulsante per installarlo compare solo dove serve: un pulsante che c'è
- * sempre invita a premerlo anche quando non c'è niente da fare.
- */
-async function controllaVlc() {
-  const serials = state.slots.filter(Boolean);
-  if (!serials.length) return;
-  const esiti = await run(window.pico.devices.vlcStatus(serials));
-  if (!Array.isArray(esiti)) return;
-  const senza = esiti.filter((e) => e.ok && !e.value).map((e) => e.serial);
-  $('btn-install-vlc').classList.toggle('hidden', senza.length === 0);
-  if (senza.length) {
-    log(
-      `VLC manca su ${senza.length} visore/i (${senza.join(', ')}): scaricalo da videolan.org ` +
-        '(Android, arm64) e usa «Installa VLC…»',
-      'error',
-    );
-  } else {
-    setStatus('VLC c\'è su tutti i visori.');
-  }
 }
 
 /**

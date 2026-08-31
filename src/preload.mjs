@@ -42,8 +42,6 @@ contextBridge.exposeInMainWorld('pico', {
     media: (serials, action, profile) => invoke('devices:media', { serials, action, profile }),
     seek: (serials, ms) => invoke('devices:seek', { serials, ms }),
     replay: (serials) => invoke('devices:replay', { serials }),
-    vlcStatus: (serials) => invoke('devices:vlcStatus', { serials }),
-    installVlc: (serials) => invoke('devices:installVlc', { serials }),
     playVideo: (entries) => invoke('devices:playVideo', { entries }),
   },
   device: {
