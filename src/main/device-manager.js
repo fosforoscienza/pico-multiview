@@ -426,7 +426,11 @@ export class DeviceManager extends EventEmitter {
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
         try {
-          await apps.playVideo(serial, path, { fromStart, player: device?.playerPackage ?? null });
+          await apps.playVideo(serial, path, {
+            fromStart,
+            player: device?.playerPackage ?? null,
+            lettore: this.config.data.player,
+          });
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);
@@ -506,9 +510,44 @@ export class DeviceManager extends EventEmitter {
   /** Porta tutti i visori allo stesso punto del filmato. */
   async seekEverywhere(serials, ms) {
     return this.each(serials, async (d) => {
-      const stato = await d.seekTo(ms, this.config.data.playerKeys);
+      const stato = await d.seekTo(ms, {
+        profilo: this.config.data.playerKeys,
+        lettore: this.config.data.player,
+      });
       return stato?.positionMs ?? null;
     });
+  }
+
+  /**
+   * Chi ha VLC e chi no.
+   *
+   * Serve prima di scegliere VLC come lettore: sceglierlo su un visore che non
+   * ce l'ha vorrebbe dire un comando che non apre niente, e un pubblico davanti
+   * a uno schermo fermo.
+   */
+  async vlcStatus(serials) {
+    return this.each(serials, async (d) => apps.isInstalled(d.serial, apps.VLC.package), { quiet: true });
+  }
+
+  /**
+   * Installa un apk su più visori.
+   *
+   * Uno per volta, non tutti insieme: l'installazione scrive nella memoria del
+   * visore e passa dal cavo o dalla wifi: dieci copie in parallelo sulla stessa
+   * rete si rallentano a vicenda, e un'installazione a metà è peggio di una
+   * lenta.
+   */
+  async installApk(serials, apkPath) {
+    return this.each(
+      serials,
+      async (d) => {
+        d.log('info', `installo ${apkPath.split('/').pop()}…`);
+        await apps.installApk(d.serial, apkPath);
+        d.log('info', 'installato');
+        return true;
+      },
+      { concurrency: 2 },
+    );
   }
 
   /** Rimanda dall'inizio il filmato che ciascuno sta già guardando. */

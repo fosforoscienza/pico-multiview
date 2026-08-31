@@ -39,6 +39,11 @@ export const DEFAULT_CONFIG = {
   // quelli «media» — gli unici standard — su molti non fanno proprio niente.
   // Si sceglie dalla barra del filmato, provandoli.
   playerKeys: 'media',
+  // Con quale lettore aprire i filmati sui visori:
+  // 'sistema' = quello del visore, che però da fuori è cieco e sordo
+  // 'vlc'     = VLC, che pubblica il suo stato e accetta la posizione di
+  //             partenza nel comando di avvio (va installato sui visori)
+  player: 'sistema',
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

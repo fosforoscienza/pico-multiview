@@ -183,6 +183,7 @@ function registerHandlers() {
     config: config.data,
     keycodes: KEYCODE,
     playerProfiles: apps.PROFILI_LETTORE,
+    players: apps.LETTORI,
     remote: remote?.status ?? null,
     brand: brandForUi(),
   }));
@@ -279,6 +280,20 @@ function registerHandlers() {
   );
   handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
   handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
+  handle('devices:vlcStatus', ({ serials }) => manager.vlcStatus(serials));
+  handle('devices:installVlc', async ({ serials }) => {
+    // Il file lo sceglie l'operatore: l'app non scarica apk da internet per
+    // conto suo — è software che finisce dentro i visori, e chi lo mette
+    // dev'essere una persona, non un programma.
+    const scelta = await dialog.showOpenDialog(mainWindow, {
+      title: 'Scegli l\'apk di VLC da installare sui visori',
+      message: 'Scaricalo da videolan.org (versione Android, arm64)',
+      filters: [{ name: 'App Android', extensions: ['apk'] }],
+      properties: ['openFile'],
+    });
+    if (scelta.canceled || !scelta.filePaths.length) return { annullato: true };
+    return { annullato: false, results: await manager.installApk(serials, scelta.filePaths[0]) };
+  });
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),

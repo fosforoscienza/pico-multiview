@@ -336,6 +336,26 @@ avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app d�
 quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
 punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
 
+### Con quale lettore
+
+Nella barra si sceglie **con quale lettore** aprire i filmati.
+
+- **Lettore del visore** (predefinito): quello che c'è già, non va installato niente. Ma da fuori
+  è cieco e sordo — non pubblica a che punto è, e su molti visori non riceve nemmeno i tasti — per
+  cui timeline e pausa possono non funzionare.
+- **VLC**: va installato sui visori una volta sola, e in cambio funziona tutto. Pubblica il suo
+  stato (quindi la barra scorre davvero), riceve i tasti media (quindi la pausa ferma), e accetta
+  **la posizione dentro il comando di avvio**: «dall'inizio» è l'inizio, e un salto è un punto
+  esatto invece di un inseguimento a colpi di avanti e indietro — uguale su tutti i visori.
+
+**Installare VLC:** scaricalo da [videolan.org](https://www.videolan.org/vlc/download-android.html)
+(versione Android, **arm64-v8a**), poi nella barra scegli **VLC** e premi **Installa VLC…**: il
+pulsante compare solo sui visori che non ce l'hanno. L'apk lo scegli tu dal disco — l'app non
+scarica software da internet per conto suo, perché è roba che finisce dentro i visori e chi ce la
+mette dev'essere una persona.
+
+Tornare indietro è lo stesso menù: si rimette **Lettore del visore** e tutto torna com'era.
+
 **Con quali tasti si comanda il lettore.** I tasti «media» (play, pausa) sono gli unici standard
 di Android, e su molti visori non fanno **niente**: il sistema li consegna alla sessione
 multimediale, e un lettore che non ne apre una non li riceve mai. I lettori dei visori si

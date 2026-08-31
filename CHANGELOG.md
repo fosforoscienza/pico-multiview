@@ -9,6 +9,25 @@ della guida PDF.
 
 ---
 
+## 2.9 — agosto 2026
+
+**VLC come lettore dei visori**, in alternativa a quello di sistema.
+
+Il lettore del visore, da fuori, è cieco e sordo: non pubblica a che punto è e non riceve i tasti
+media. VLC fa entrambe le cose, e in più accetta **la posizione dentro il comando di avvio**.
+
+- **La timeline funziona davvero**: VLC apre una sessione multimediale, quindi la barra sa dove si
+  trova il filmato e la pausa lo ferma.
+- **Il salto diventa un punto, non un inseguimento.** Col lettore di sistema si danno colpi di
+  avanti e indietro finché non si arriva «lì attorno»; con VLC si riapre il filmato al
+  millisecondo voluto, uguale su tutti i visori.
+- **«Dall'inizio» smette di dipendere da chi chiude cosa**: con VLC non si chiude niente e non si
+  chiede niente al sistema — `from_start` sta nel comando.
+- **Installazione dai visori**: si sceglie l'apk scaricato da videolan.org e si installa su tutti
+  in un colpo. Il pulsante compare solo dove VLC manca. L'app non scarica apk da internet per
+  conto suo: è software che finisce dentro i visori, e chi ce lo mette dev'essere una persona.
+- **Si torna indietro dallo stesso menù**: «Lettore del visore» e tutto è com'era.
+
 ## 2.8 — agosto 2026
 
 Tre difetti della barra del filmato, tutti trovati usandola davvero.
