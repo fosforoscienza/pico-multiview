@@ -209,11 +209,20 @@ export const RADICE_PREFISSO = 'radice: ';
  * dall'elenco. L'unica esclusa è `Android` — i dati privati delle app, decine
  * di migliaia di file dove un filmato dell'operatore non sta comunque.
  *
- * Le radici si provano in fila e ci si ferma alla prima che dà risultati: sono
- * tre nomi della stessa memoria, e cercarle tutte vorrebbe dire trovare ogni
- * filmato tre volte, con tre percorsi diversi.
+ * Due giri. Il primo prova i nomi della memoria interna e si ferma al primo
+ * che dà risultati: sono tre nomi della **stessa** memoria, e cercarli tutti
+ * vorrebbe dire trovare ogni filmato tre volte, con tre percorsi diversi. Il
+ * secondo guarda le memorie **davvero** separate montate sotto `/storage` — una
+ * microSD, una chiavetta — che sono altri posti, non altri nomi, e vanno
+ * guardati tutti.
  */
-export function findVideosCommand(roots = VIDEO_ROOTS, extensions = VIDEO_EXTENSIONS) {
+export function findVideosCommand(
+  roots = VIDEO_ROOTS,
+  extensions = VIDEO_EXTENSIONS,
+  // Dove stanno le memorie removibili. Parametro perché è l'unico modo di
+  // provare questo giro su una macchina che non è un visore.
+  { montaggi = '/storage/*' } = {},
+) {
   const radici = (Array.isArray(roots) ? roots : [roots]).join(' ');
   const nomi = extensions.map((e) => `-iname '*.${e}'`).join(' -o ');
   // 2>/dev/null: le cartelle senza permesso sono la norma, non un errore da
@@ -223,11 +232,17 @@ export function findVideosCommand(roots = VIDEO_ROOTS, extensions = VIDEO_EXTENS
     `-type f \\( ${nomi} \\) -print 2>/dev/null`;
   // La radice viene annunciata comunque, anche quando non trova niente: se
   // l'elenco esce vuoto, la prima cosa da sapere è dove ha guardato.
-  return (
+  const annuncia = `echo "${RADICE_PREFISSO}$d"`;
+  const interna =
     `for d in ${radici}; do [ -d "$d" ] || continue; ` +
-    `echo "${RADICE_PREFISSO}$d"; t=$(${find}); ` +
-    `[ -z "$t" ] || { echo "$t"; break; }; done`
-  );
+    `${annuncia}; t=$(${find}); [ -z "$t" ] || { echo "$t"; break; }; done`;
+  // `emulated`, `self` e `primary` sono la memoria interna, già guardata sopra:
+  // ripassarci significherebbe elencare ogni filmato due volte.
+  if (!montaggi) return interna;
+  const esterne =
+    `for d in ${montaggi}; do case "$d" in */emulated|*/self|*/primary|*/container*) continue;; esac; ` +
+    `[ -d "$d" ] || continue; ${annuncia}; ${find}; done`;
+  return `${interna}; ${esterne}`;
 }
 
 /** Nome del file senza percorso. */
@@ -250,9 +265,9 @@ export function fileUri(percorso) {
 /**
  * Elenco dei video presenti sul visore.
  *
- * Torna anche la radice in cui ha cercato: «nessun filmato in /sdcard» e
- * «nessuna memoria condivisa da guardare» sono due guasti diversi, e senza
- * questo dato si somigliano troppo.
+ * Torna anche le memorie in cui ha cercato: «nessun filmato in /sdcard» e
+ * «nessuna memoria da guardare» sono due guasti diversi, e senza questo dato
+ * si somigliano troppo.
  */
 export async function listVideos(serial) {
   const res = await adbTry(['-s', serial, 'shell', findVideosCommand()], { timeout: 60000 });
@@ -260,11 +275,11 @@ export async function listVideos(serial) {
   // sono due risposte diverse e chi cerca ha bisogno di sapere quale delle due.
   if (!res.ok) throw new Error(res.err?.message ?? 'ricerca fallita');
   const righe = (res.out || '').split('\n').map((r) => r.trim());
-  const radici = righe.filter((r) => r.startsWith(RADICE_PREFISSO)).map((r) => r.slice(RADICE_PREFISSO.length));
+  const roots = righe.filter((r) => r.startsWith(RADICE_PREFISSO)).map((r) => r.slice(RADICE_PREFISSO.length));
   const paths = righe
     .filter((r) => r.startsWith('/'))
     .sort((a, b) => fileName(a).localeCompare(fileName(b), 'it'));
-  return { root: radici[radici.length - 1] ?? null, paths };
+  return { roots, paths };
 }
 
 /**

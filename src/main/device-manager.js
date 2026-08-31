@@ -385,7 +385,9 @@ export class DeviceManager extends EventEmitter {
       }
       // La cartella in cui ha cercato va detta insieme al numero: «0 file» è
       // una risposta che si capisce solo sapendo dove ha guardato.
-      const dove = r.value.root ? ` in ${r.value.root}` : ' (nessuna memoria condivisa raggiungibile)';
+      const dove = r.value.roots.length
+        ? ` in ${r.value.roots.join(', ')}`
+        : ' (nessuna memoria da guardare: il visore non espone /sdcard)';
       device?.log('info', `ricerca video: ${r.value.paths.length} file trovati${dove}`);
     }
     for (const r of perDevice) {

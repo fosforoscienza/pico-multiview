@@ -9,6 +9,17 @@ della guida PDF.
 
 ---
 
+## 2.5 — agosto 2026
+
+Una difesa in più sulla ricerca dei video, per il caso che la 2.3 non copriva.
+
+- **Si guardano anche le memorie separate montate sotto `/storage`** — una microSD, una
+  chiavetta: sono altri posti, non altri nomi della memoria interna, e un filmato copiato lì
+  restava invisibile. La memoria interna resta guardata una volta sola: `emulated`, `self` e
+  `primary` sotto `/storage` sono lei, e ripassarci vorrebbe dire elencare ogni filmato due
+  volte.
+- Il registro elenca **tutte** le memorie in cui ha cercato, non solo la prima.
+
 ## 2.4 — agosto 2026
 
 «Non si connette, né via cavo né via wifi»: il registro mostrava solo tentativi verso indirizzi
