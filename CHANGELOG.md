@@ -9,6 +9,19 @@ della guida PDF.
 
 ---
 
+## 2.2 — agosto 2026
+
+«Non trova il file nel visore»: due difetti nella ricerca dei video, uno dei quali la rendeva
+anche muta.
+
+- **La ricerca ora guarda in tutta la memoria condivisa**, non in sei cartelle indovinate: i
+  filmati stavano altrove, e l'elenco usciva vuoto. L'unica cartella esclusa è `Android` — i
+  dati privati delle app, decine di migliaia di file dove un filmato non sta comunque.
+- **Una ricerca fallita non si traveste più da «nessun filmato trovato»**: sono due risposte
+  diverse. Ogni visore ora scrive nel registro quanti file ha trovato, o perché ha fallito.
+- Il tipo `video/*` nel comando di avvio va tra virgolette: nudo, la shell del visore lo
+  trattava come un glob da espandere.
+
 ## 2.1 — agosto 2026
 
 Il registro mostrava il server morire con «Aborted» (SIGABRT) a ogni avvio, in un cerchio che si

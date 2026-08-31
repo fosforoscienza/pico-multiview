@@ -183,30 +183,23 @@ export async function listDisplays(serial) {
 export const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', '3gp', 'insv'];
 
 /**
- * Cartelle in cui cercare. Sono quelle dove finiscono i file copiati via USB o
- * scaricati: cercare in tutta la memoria su un visore pieno significherebbe
- * decine di secondi per visore, per dieci visori.
- */
-export const VIDEO_DIRS = [
-  '/sdcard/Movies',
-  '/sdcard/Download',
-  '/sdcard/DCIM',
-  '/sdcard/Video',
-  '/sdcard/Videos',
-  '/sdcard/Pictures',
-];
-
-/**
  * Costruisce il comando di ricerca. Sta a parte perché è la parte con la
- * sintassi delicata — virgolette, `-iname`, `-o` — ed è quella che vale la
+ * sintassi delicata — virgolette, `-prune`, `-o` — ed è quella che vale la
  * pena provare senza un visore attaccato.
+ *
+ * Si cerca in TUTTA la memoria condivisa: indovinare le cartelle giuste era
+ * già costato un «non trova il file», con i filmati in una cartella fuori
+ * dall'elenco. L'unica esclusa è `Android` — i dati privati delle app, decine
+ * di migliaia di file dove un filmato dell'operatore non sta comunque.
  */
-export function findVideosCommand(dirs = VIDEO_DIRS, extensions = VIDEO_EXTENSIONS) {
+export function findVideosCommand(root = '/sdcard', extensions = VIDEO_EXTENSIONS) {
   const nomi = extensions.map((e) => `-iname '*.${e}'`).join(' -o ');
-  // 2>/dev/null: le cartelle che non esistono sono la norma, non un errore da
-  // mostrare all'operatore. -maxdepth tiene la ricerca rapida anche su una
-  // memoria piena.
-  return `find ${dirs.join(' ')} -maxdepth 4 -type f \\( ${nomi} \\) 2>/dev/null`;
+  // 2>/dev/null: le cartelle senza permesso sono la norma, non un errore da
+  // mostrare all'operatore. -maxdepth 6 evita di sprofondare in alberi strani.
+  return (
+    `find ${root} -maxdepth 6 -type d -name Android -prune -o ` +
+    `-type f \\( ${nomi} \\) -print 2>/dev/null`
+  );
 }
 
 /** Nome del file senza percorso. */
@@ -216,8 +209,10 @@ export function fileName(percorso) {
 
 /** Elenco dei video presenti sul visore, come percorsi assoluti. */
 export async function listVideos(serial) {
-  const res = await adbTry(['-s', serial, 'shell', findVideosCommand()], { timeout: 30000 });
-  if (!res.ok) return [];
+  const res = await adbTry(['-s', serial, 'shell', findVideosCommand()], { timeout: 60000 });
+  // Un fallimento deve fallire, non travestirsi da "nessun video trovato":
+  // sono due risposte diverse e chi cerca ha bisogno di sapere quale delle due.
+  if (!res.ok) throw new Error(res.err?.message ?? 'ricerca fallita');
   return (res.out || '')
     .split('\n')
     .map((r) => r.trim())
@@ -234,9 +229,11 @@ export async function listVideos(serial) {
  */
 export async function playVideo(serial, percorso) {
   const escaped = String(percorso).replace(/'/g, `'\\''`);
+  // 'video/*' fra virgolette: nudo, la shell del visore lo tratterebbe come un
+  // glob da espandere.
   return shell(
     serial,
-    `am start -a android.intent.action.VIEW -t video/* -d 'file://${escaped}'`,
+    `am start -a android.intent.action.VIEW -t 'video/*' -d 'file://${escaped}'`,
     { timeout: 20000 },
   );
 }

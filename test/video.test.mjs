@@ -1,22 +1,28 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { VIDEO_DIRS, VIDEO_EXTENSIONS, fileName, findVideosCommand } from '../src/main/apps.js';
+import { VIDEO_EXTENSIONS, fileName, findVideosCommand } from '../src/main/apps.js';
 
 // La ricerca gira dentro `adb shell`: la sintassi è il punto delicato, ed è
 // l'unica parte che si può provare senza un visore attaccato.
 
-test('il comando cerca in tutte le cartelle e per tutte le estensioni', () => {
+test('il comando cerca in tutta la memoria, per tutte le estensioni', () => {
+  // Indovinare le cartelle giuste era già costato un "non trova il file":
+  // i filmati stavano fuori dall'elenco delle cartelle previste.
   const cmd = findVideosCommand();
-  for (const dir of VIDEO_DIRS) assert.ok(cmd.includes(dir), `manca ${dir}`);
+  assert.ok(cmd.includes('find /sdcard '), 'deve partire dalla radice della memoria condivisa');
   for (const ext of VIDEO_EXTENSIONS) assert.ok(cmd.includes(`'*.${ext}'`), `manca ${ext}`);
 });
 
-test('le estensioni sono in "o" fra loro, dentro parentesi', () => {
-  // Senza le parentesi, "find A -o B" applica il tipo file solo al primo ramo
-  // e torna anche cartelle: l'elenco si riempirebbe di roba non riproducibile.
-  const cmd = findVideosCommand(['/sdcard/Movies'], ['mp4', 'mkv']);
-  assert.equal(cmd, "find /sdcard/Movies -maxdepth 4 -type f \\( -iname '*.mp4' -o -iname '*.mkv' \\) 2>/dev/null");
+test('la cartella Android viene potata, non attraversata', () => {
+  // Sono i dati privati delle app: decine di migliaia di file dove un filmato
+  // dell'operatore non sta comunque. Attraversarla costerebbe minuti.
+  const cmd = findVideosCommand('/sdcard', ['mp4', 'mkv']);
+  assert.equal(
+    cmd,
+    "find /sdcard -maxdepth 6 -type d -name Android -prune -o " +
+      "-type f \\( -iname '*.mp4' -o -iname '*.mkv' \\) -print 2>/dev/null",
+  );
 });
 
 test('gli errori delle cartelle mancanti non finiscono nell\'elenco', () => {
