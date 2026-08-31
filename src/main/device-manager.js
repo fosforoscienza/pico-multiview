@@ -284,11 +284,14 @@ export class DeviceManager extends EventEmitter {
         device?.log('error', `ricerca video fallita: ${r.error}`);
         continue;
       }
-      device?.log('info', `ricerca video: ${r.value.length} file trovati`);
+      // La cartella in cui ha cercato va detta insieme al numero: «0 file» è
+      // una risposta che si capisce solo sapendo dove ha guardato.
+      const dove = r.value.root ? ` in ${r.value.root}` : ' (nessuna memoria condivisa raggiungibile)';
+      device?.log('info', `ricerca video: ${r.value.paths.length} file trovati${dove}`);
     }
     for (const r of perDevice) {
       if (!r.ok) continue;
-      for (const percorso of r.value) {
+      for (const percorso of r.value.paths) {
         const nome = apps.fileName(percorso);
         if (!nome) continue;
         if (!perNome.has(nome)) perNome.set(nome, { name: nome, on: [] });

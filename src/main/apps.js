@@ -183,22 +183,50 @@ export async function listDisplays(serial) {
 export const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', '3gp', 'insv'];
 
 /**
+ * Le radici da provare, in ordine.
+ *
+ * `/sdcard` **non è una cartella**: è un collegamento a
+ * `/storage/self/primary`, e `find` non attraversa i collegamenti se non glielo
+ * si chiede. `find /sdcard …` visitava quindi il solo collegamento, che non è
+ * un file video, e usciva senza risultati e senza errori: la ricerca diceva
+ * «0 file trovati» su un visore pieno di filmati.
+ *
+ * Da qui le due difese: `-L` per seguire il collegamento, e più radici da
+ * provare in fila per i visori dove `/sdcard` non c'è.
+ */
+export const VIDEO_ROOTS = ['/sdcard', '/storage/emulated/0', '/storage/self/primary'];
+
+/** Riga con cui il visore dichiara in quale cartella ha cercato. */
+export const RADICE_PREFISSO = 'radice: ';
+
+/**
  * Costruisce il comando di ricerca. Sta a parte perché è la parte con la
- * sintassi delicata — virgolette, `-prune`, `-o` — ed è quella che vale la
- * pena provare senza un visore attaccato.
+ * sintassi delicata — virgolette, `-prune`, `-o`, `-L` — ed è quella che vale
+ * la pena provare senza un visore attaccato.
  *
  * Si cerca in TUTTA la memoria condivisa: indovinare le cartelle giuste era
  * già costato un «non trova il file», con i filmati in una cartella fuori
  * dall'elenco. L'unica esclusa è `Android` — i dati privati delle app, decine
  * di migliaia di file dove un filmato dell'operatore non sta comunque.
+ *
+ * Le radici si provano in fila e ci si ferma alla prima che dà risultati: sono
+ * tre nomi della stessa memoria, e cercarle tutte vorrebbe dire trovare ogni
+ * filmato tre volte, con tre percorsi diversi.
  */
-export function findVideosCommand(root = '/sdcard', extensions = VIDEO_EXTENSIONS) {
+export function findVideosCommand(roots = VIDEO_ROOTS, extensions = VIDEO_EXTENSIONS) {
+  const radici = (Array.isArray(roots) ? roots : [roots]).join(' ');
   const nomi = extensions.map((e) => `-iname '*.${e}'`).join(' -o ');
   // 2>/dev/null: le cartelle senza permesso sono la norma, non un errore da
   // mostrare all'operatore. -maxdepth 6 evita di sprofondare in alberi strani.
+  const find =
+    `find -L "$d" -maxdepth 6 -type d -name Android -prune -o ` +
+    `-type f \\( ${nomi} \\) -print 2>/dev/null`;
+  // La radice viene annunciata comunque, anche quando non trova niente: se
+  // l'elenco esce vuoto, la prima cosa da sapere è dove ha guardato.
   return (
-    `find ${root} -maxdepth 6 -type d -name Android -prune -o ` +
-    `-type f \\( ${nomi} \\) -print 2>/dev/null`
+    `for d in ${radici}; do [ -d "$d" ] || continue; ` +
+    `echo "${RADICE_PREFISSO}$d"; t=$(${find}); ` +
+    `[ -z "$t" ] || { echo "$t"; break; }; done`
   );
 }
 
@@ -207,17 +235,36 @@ export function fileName(percorso) {
   return String(percorso ?? '').split('/').filter(Boolean).pop() ?? '';
 }
 
-/** Elenco dei video presenti sul visore, come percorsi assoluti. */
+/**
+ * L'indirizzo `file://` di un percorso, con i caratteri speciali codificati.
+ *
+ * Uno spazio nudo dentro l'indirizzo tronca il nome del file — «Tra Borghi e
+ * Natura.mp4» diventerebbe «Tra» — e lo stesso vale per `#`, `?` e `%`. Le
+ * barre restano barre: sono la struttura del percorso, non testo da codificare.
+ */
+export function fileUri(percorso) {
+  const parti = String(percorso ?? '').split('/').map((p) => encodeURIComponent(p));
+  return `file://${parti.join('/')}`;
+}
+
+/**
+ * Elenco dei video presenti sul visore.
+ *
+ * Torna anche la radice in cui ha cercato: «nessun filmato in /sdcard» e
+ * «nessuna memoria condivisa da guardare» sono due guasti diversi, e senza
+ * questo dato si somigliano troppo.
+ */
 export async function listVideos(serial) {
   const res = await adbTry(['-s', serial, 'shell', findVideosCommand()], { timeout: 60000 });
   // Un fallimento deve fallire, non travestirsi da "nessun video trovato":
   // sono due risposte diverse e chi cerca ha bisogno di sapere quale delle due.
   if (!res.ok) throw new Error(res.err?.message ?? 'ricerca fallita');
-  return (res.out || '')
-    .split('\n')
-    .map((r) => r.trim())
+  const righe = (res.out || '').split('\n').map((r) => r.trim());
+  const radici = righe.filter((r) => r.startsWith(RADICE_PREFISSO)).map((r) => r.slice(RADICE_PREFISSO.length));
+  const paths = righe
     .filter((r) => r.startsWith('/'))
     .sort((a, b) => fileName(a).localeCompare(fileName(b), 'it'));
+  return { root: radici[radici.length - 1] ?? null, paths };
 }
 
 /**
@@ -228,12 +275,14 @@ export async function listVideos(serial) {
  * indovinare il nome del pacchetto, che cambia da modello a modello.
  */
 export async function playVideo(serial, percorso) {
-  const escaped = String(percorso).replace(/'/g, `'\\''`);
+  // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
+  // stringa del comando: va protetto qui, dopo.
+  const escaped = fileUri(percorso).replace(/'/g, `'\\''`);
   // 'video/*' fra virgolette: nudo, la shell del visore lo tratterebbe come un
   // glob da espandere.
   return shell(
     serial,
-    `am start -a android.intent.action.VIEW -t 'video/*' -d 'file://${escaped}'`,
+    `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'`,
     { timeout: 20000 },
   );
 }

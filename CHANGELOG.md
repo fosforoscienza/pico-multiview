@@ -9,6 +9,23 @@ della guida PDF.
 
 ---
 
+## 2.3 — agosto 2026
+
+«Il video lo vedo nel visore, ma dal computer non lo trova»: la ricerca guardava nel posto
+giusto e non ci entrava.
+
+- **La ricerca ora attraversa la radice della memoria.** `/sdcard` non è una cartella: è un
+  collegamento a `/storage/self/primary`, e `find` non attraversa i collegamenti se non glielo
+  si chiede. Guardava quindi il solo collegamento — che non è un filmato — e finiva senza
+  risultati **e senza errori**: «0 file trovati» su un visore pieno di video. Ora il
+  collegamento viene seguito, e se `/sdcard` mancasse si provano gli altri due nomi della
+  stessa memoria.
+- **Il registro dice anche dove ha cercato**, non solo quanti file ha trovato: «0 file trovati
+  in /sdcard» si legge, «0 file trovati» lascia il dubbio fra un visore vuoto e una ricerca
+  cieca — ed era proprio quel dubbio a nascondere questo difetto.
+- **Gli spazi nel nome non troncano più il filmato da riprodurre**: «Tra Borghi e Natura.mp4»
+  arrivava al lettore come «Tra». Lo stesso valeva per `#` e `?`.
+
 ## 2.2 — agosto 2026
 
 «Non trova il file nel visore»: due difetti nella ricerca dei video, uno dei quali la rendeva
