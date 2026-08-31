@@ -310,43 +310,68 @@ export async function playVideo(serial, percorso, { fromStart = true, player = n
     }
     return eseguiAvvio(serial, vlcStartCommand(percorso, { fromStart }));
   }
-  // Il lettore lasciato aperto riprenderebbe da dov'era: chi manda un filmato
-  // da qui lo sta mostrando a una sala, e vuole l'inizio. Chiuderlo prima è il
-  // modo che non dipende da quali extra questo lettore capisce.
-  //
-  // `player` è il lettore già visto in azione la volta scorsa: è il dato più
-  // affidabile che abbiamo — meglio di qualunque domanda al sistema, perché è
-  // il pacchetto che si è davvero aperto su questo visore.
-  if (fromStart) {
-    const daChiudere = player ?? (await resolveVideoPlayer(serial, percorso))?.package ?? null;
-    if (daChiudere && !NON_LETTORI.has(daChiudere)) await stopApp(serial, daChiudere).catch(() => {});
+
+  const risolto = await resolveVideoPlayer(serial, percorso).catch(() => null);
+  const daChiudere = player ?? risolto?.package ?? null;
+
+  // Il lettore lasciato aperto riprenderebbe da dov'era: chiuderlo prima è il
+  // modo che non dipende da quali extra questo lettore capisce. Resta però un
+  // tentativo, non un requisito — sotto, l'avvio si difende da solo.
+  if (fromStart && daChiudere && !NON_LETTORI.has(daChiudere)) {
+    await stopApp(serial, daChiudere).catch(() => {});
   }
+
   // L'apostrofo sopravvive alla codifica dell'indirizzo, e nudo chiuderebbe la
   // stringa del comando: va protetto qui, dopo.
   const escaped = fileUri(percorso).replace(/'/g, `'\\''`);
   // 'video/*' fra virgolette: nudo, la shell del visore lo tratterebbe come un
-  // glob da espandere. `--ei position 0` lo capiscono solo certi lettori: per
-  // gli altri è innocuo, e la chiusura di sopra ha già fatto il lavoro.
-  //
-  // I flag contano quanto la chiusura: senza, un lettore già aperto sullo
-  // stesso filmato riceve il nuovo comando **dentro** la schermata di prima e
-  // riprende da dov'era, invece di ricominciare. Con `clear-task` la schermata
-  // viene rifatta da capo.
+  // glob da espandere.
   const base = `am start -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'`;
-  const daCapo = fromStart ? ' --activity-clear-task --activity-new-task --ei position 0' : '';
-  try {
-    return await eseguiAvvio(serial, `${base}${daCapo}`);
-  } catch (err) {
-    // I flag servono a far ripartire il filmato da capo, ma non a tutti i costi:
-    // se un lettore li rifiuta, meglio un filmato che parte da metà di uno
-    // schermo fermo davanti al pubblico. Il ripiego però va detto.
-    if (!daCapo) throw err;
-    const out = await eseguiAvvio(serial, base);
-    throw Object.assign(
-      new Error(`avviato, ma non da capo: questo lettore rifiuta il riavvio pulito (${err.message})`),
-      { partito: true, out },
-    );
+
+  // **L'ordine dei tentativi è il punto di questa funzione.**
+  //
+  // Il comando nudo è quello che ha sempre funzionato: va provato per primo,
+  // sempre. Poi viene quello esplicito, che nomina l'activity invece di
+  // lasciarla scegliere ad Android: serve proprio dopo una chiusura forzata,
+  // perché un'app appena fermata può restare fuori dalla scelta automatica.
+  // Ultimi i flag che rifanno la schermata da capo: aiutano a ripartire
+  // dall'inizio, ma su certi lettori impediscono l'avvio — e un filmato che
+  // parte da metà vale infinitamente più di uno che non parte.
+  const tentativi = [
+    { descrizione: 'comando semplice', comando: base },
+    risolto && { descrizione: `lettore esplicito (${risolto.package})`, comando: `am start -n ${risolto.activity} -a android.intent.action.VIEW -t 'video/*' -d '${escaped}'` },
+    { descrizione: 'con riavvio pulito', comando: `${base} --activity-clear-task --activity-new-task --ei position 0` },
+  ].filter(Boolean);
+
+  const motivi = [];
+  for (const tentativo of tentativi) {
+    try {
+      const out = await eseguiAvvio(serial, tentativo.comando);
+      // Non basta che `am` non protesti: bisogna vedere qualcosa aperto. È la
+      // differenza fra «il comando è stato accettato» e «il filmato è partito»,
+      // ed è quella che finora l'app non sapeva fare.
+      if (await qualcosaSiEAperto(serial)) return out;
+      motivi.push(`${tentativo.descrizione}: il visore non ha aperto niente`);
+    } catch (err) {
+      motivi.push(`${tentativo.descrizione}: ${err.message}`);
+    }
   }
+  throw new Error(motivi.join(' — '));
+}
+
+/**
+ * Dopo un avvio, c'è qualcosa davanti che non sia la schermata iniziale?
+ *
+ * Non chiede *quale* lettore: chiede se il visore ha aperto qualcosa. È il
+ * controllo più povero possibile, ed è apposta — dev'essere vero anche su un
+ * lettore che non conosciamo, e costare un solo comando.
+ */
+async function qualcosaSiEAperto(serial, { attesaMs = 1200 } = {}) {
+  await delay(attesaMs);
+  const fg = await foregroundPackage(serial).catch(() => null);
+  if (!fg) return true; // se non si riesce a guardare, non si accusa l'avvio
+  const home = await resolveHomePackage(serial).catch(() => null);
+  return fg !== home && !NON_LETTORI.has(fg);
 }
 
 /** Lancia e controlla: un avvio che non ha aperto niente dev'essere un errore. */

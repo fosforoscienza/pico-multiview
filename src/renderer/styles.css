@@ -1122,3 +1122,18 @@ body.is-remote .desktop-only {
   cursor: default;
   opacity: 0.45;
 }
+
+/* La conferma sta sopra a tutto, compreso il pannello da cui è stata chiesta:
+   una domanda che compare dietro la finestra che l'ha fatta nascere è una
+   domanda che nessuno vede, e un comando che non parte senza dire perché. */
+#confirm-modal {
+  z-index: 80;
+}
+
+.playbar-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--muted, #94a3b8);
+}

@@ -27,6 +27,7 @@ const state = {
   profiliLettore: {},
   player: 'sistema', // con quale lettore aprire i filmati
   lettori: {},
+  fromStart: true, // se i filmati mandati da qui devono ricominciare da capo
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -275,7 +276,9 @@ async function playVideo(video) {
   const quanti = video.on.length;
   const ok = await chiediConferma({
     titolo: `Avviare «${video.name}»?`,
-    testo: `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}, dall'inizio, nello stesso momento.`,
+    testo:
+      `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}, nello stesso momento` +
+      (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.'),
     conferma: 'Avvia',
   });
   if (!ok) return;
@@ -1307,6 +1310,7 @@ async function boot() {
   state.playerKeys = info.config.playerKeys ?? 'media';
   state.profiliLettore = info.playerProfiles ?? {};
   state.player = info.config.player ?? 'sistema';
+  state.fromStart = info.config.fromStart !== false;
   state.lettori = info.players ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
@@ -1491,6 +1495,18 @@ function wirePlaybar() {
   // Con quale lettore aprire i filmati. VLC va scelto solo se c'è davvero sui
   // visori: sceglierlo dove manca vorrebbe dire un comando che non apre niente,
   // e un pubblico davanti a uno schermo fermo.
+  const daCapo = $('from-start');
+  daCapo.checked = state.fromStart;
+  daCapo.addEventListener('change', async () => {
+    state.fromStart = daCapo.checked;
+    await window.pico.config.patch({ fromStart: daCapo.checked }).catch((err) => log(err.message, 'error'));
+    log(
+      daCapo.checked
+        ? 'i filmati ripartiranno dall\'inizio'
+        : 'i filmati ripartiranno da dove erano rimasti (avvio più semplice, quello che ha sempre funzionato)',
+    );
+  });
+
   const menuLettore = $('player-app');
   for (const [id, lettore] of Object.entries(state.lettori)) {
     const opzione = document.createElement('option');

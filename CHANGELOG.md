@@ -9,6 +9,25 @@ della guida PDF.
 
 ---
 
+## 2.11 — agosto 2026
+
+Un passo indietro dove serviva, e le difese perché non succeda più.
+
+- **L'avvio riparte dal comando che ha sempre funzionato.** Dalla 2.8 il filmato veniva lanciato
+  con dei flag che rifanno la schermata da capo: aiutano a ripartire dall'inizio, ma su certi
+  lettori impediscono l'avvio — e un filmato che parte da metà vale infinitamente più di uno che
+  non parte. Ora il comando nudo è il **primo** tentativo, sempre.
+- **Ogni tentativo viene verificato.** Dopo il comando, l'app guarda se il visore ha davvero
+  aperto qualcosa. Se no, prova a chiamare il lettore **per nome** — che è ciò che serve subito
+  dopo averlo chiuso, perché un'app appena fermata può restare fuori dalla scelta automatica di
+  Android — e solo per ultimo prova i flag. Se non apre niente in nessun modo, lo dice elencando
+  cosa ha provato.
+- **La conferma finiva dietro la finestra da cui l'avevi chiesta**, quindi bisognava chiudere
+  quella per poterla approvare. Ora sta sopra a tutto.
+- **Interruttore «dall'inizio»** nella barra: spegnendolo l'avvio è esattamente quello che
+  funzionava prima di tutte queste aggiunte — nessun lettore chiuso, nessun flag. Il filmato
+  riparte da dov'era, ma parte.
+
 ## 2.10 — agosto 2026
 
 «Il video non parte più»: due difetti introdotti dalle due versioni precedenti, e la ragione per

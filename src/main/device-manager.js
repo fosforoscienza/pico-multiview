@@ -421,7 +421,7 @@ export class DeviceManager extends EventEmitter {
    * Resta comunque un avvio simultaneo, non una sincronia fotogramma per
    * fotogramma: per quella servirebbe un'app dentro il visore.
    */
-  async playVideoEverywhere(voci, { fromStart = true } = {}) {
+  async playVideoEverywhere(voci, { fromStart = this.config.data.fromStart !== false } = {}) {
     const results = await Promise.all(
       voci.map(async ({ serial, path }) => {
         const device = this.devices.get(serial);
@@ -442,14 +442,6 @@ export class DeviceManager extends EventEmitter {
           if (fromStart && device) this.#verificaPartenza(device).catch(() => {});
           return { serial, ok: true, value: path };
         } catch (err) {
-          // Un filmato partito «ma non da capo» è partito: va segnalato, non
-          // contato fra i fallimenti — davanti al pubblico la differenza fra
-          // «da metà» e «niente» è tutta.
-          if (err.partito) {
-            device?.setPlaying({ path, name: apps.fileName(path), durationMs: null, startedAt: Date.now() });
-            device?.log('error', err.message);
-            return { serial, ok: true, value: path };
-          }
           device?.log('error', `non riesco ad avviare ${apps.fileName(path)}: ${err.message}`);
           return { serial, ok: false, error: err.message };
         }

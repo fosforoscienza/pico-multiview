@@ -37,21 +37,20 @@ exit 0
   };
 }
 
-test('mandare un filmato lo fa ripartire dall\'inizio', async () => {
+test('per ripartire dall\'inizio si chiude il lettore, non si complica il comando', async () => {
+  // Chiudere il lettore è il mezzo che non tocca l'avvio: il comando che parte
+  // resta quello semplice, cioè quello che ha sempre funzionato. I flag che
+  // rifanno la schermata restano disponibili, ma solo come ripiego — provarli
+  // per primi aveva smesso di far partire i filmati.
   const visore = visoreCheAnnota();
   try {
     await playVideo('finto:5555', '/sdcard/Movies/Tra Borghi e Natura.mp4');
     const comandi = visore.comandi();
-    // 1. il lettore aperto viene chiuso: riaperto, riprenderebbe da dov'era.
-    assert.match(comandi, /am force-stop com\.pvr\.filemanager/);
-    // 2. la schermata viene rifatta da capo: senza questo, un lettore già
-    //    aperto sullo stesso filmato riceve il comando dentro la schermata di
-    //    prima, e riprende invece di ricominciare.
-    assert.match(comandi, /--activity-clear-task/);
-    // 3. e a chi la capisce si dice anche la posizione.
-    assert.match(comandi, /--ei position 0/);
+    assert.match(comandi, /am force-stop com\.pvr\.filemanager/, 'il lettore aperto va chiuso');
+    const avvio = comandi.split('\n').find((r) => r.startsWith('am start'));
+    assert.ok(!avvio.includes('clear-task'), 'il primo tentativo è quello nudo');
     // Il nome con gli spazi arriva codificato, o il lettore riceve «Tra».
-    assert.match(comandi, /Tra%20Borghi%20e%20Natura\.mp4/);
+    assert.match(avvio, /Tra%20Borghi%20e%20Natura\.mp4/);
   } finally {
     visore.pulisci();
   }
@@ -71,15 +70,16 @@ test('il file va passato quando si chiede chi aprirà il filmato', async () => {
   }
 });
 
-test('il lettore già conosciuto si chiude senza chiedere niente a nessuno', async () => {
+test('a chiudere si va sul lettore già visto in azione, non su quello supposto', async () => {
   // Dalla seconda volta in poi sappiamo chi si è aperto davvero su questo
-  // visore: è più affidabile di qualunque domanda al sistema.
+  // visore: è più affidabile della risposta del sistema, che resta comunque
+  // utile perché fornisce l'activity per il tentativo esplicito.
   const visore = visoreCheAnnota();
   try {
     await playVideo('finto:5555', '/sdcard/Movies/tour.mp4', { player: 'com.altro.lettore' });
     const comandi = visore.comandi();
     assert.match(comandi, /am force-stop com\.altro\.lettore/);
-    assert.ok(!comandi.includes('resolve-activity'), 'niente domanda inutile');
+    assert.ok(!comandi.includes('force-stop com.pvr.filemanager'), 'non si chiude il supposto');
   } finally {
     visore.pulisci();
   }
@@ -155,21 +155,16 @@ exit 0
   };
 }
 
-test('se il lettore rifiuta il riavvio pulito, il filmato parte lo stesso', async () => {
-  // Davanti al pubblico la differenza fra «parte da metà» e «non parte» è
-  // tutta. Il ripiego però va detto, non nascosto.
+test('un lettore che rifiuta i flag non impedisce più l\'avvio', async () => {
+  // Era il guasto: i flag venivano per primi, il lettore li rifiutava, e non
+  // partiva niente. Ora il filmato parte al primo colpo e quei flag non
+  // entrano nemmeno in scena.
   const visore = visoreCheRifiutaIFlag();
   try {
-    const err = await playVideo('finto:5555', '/sdcard/Movies/tour.mp4').then(
-      () => null,
-      (e) => e,
-    );
-    assert.ok(err, 'l\'esito non è un successo pieno');
-    assert.equal(err.partito, true, 'ma il filmato è partito');
-    assert.match(err.message, /non da capo/);
+    await playVideo('finto:5555', '/sdcard/Movies/tour.mp4');
     const comandi = visore.comandi().split('\n').filter((r) => r.startsWith('am start'));
-    assert.equal(comandi.length, 2, 'prima col riavvio pulito, poi senza');
-    assert.ok(!comandi[1].includes('clear-task'), 'il secondo tentativo è quello semplice');
+    assert.equal(comandi.length, 1, 'un solo tentativo: quello semplice è bastato');
+    assert.ok(!comandi[0].includes('clear-task'));
   } finally {
     visore.pulisci();
   }

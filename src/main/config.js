@@ -44,6 +44,11 @@ export const DEFAULT_CONFIG = {
   // 'vlc'     = VLC, che pubblica il suo stato e accetta la posizione di
   //             partenza nel comando di avvio (va installato sui visori)
   player: 'sistema',
+  // Se un filmato mandato da qui debba ricominciare da capo. Si può spegnere:
+  // farlo ripartire dall'inizio richiede di chiudere prima il lettore, e su un
+  // visore che facesse storie è meglio un filmato che parte da metà che uno
+  // che non parte.
+  fromStart: true,
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,
