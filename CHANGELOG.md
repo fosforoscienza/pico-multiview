@@ -9,6 +9,16 @@ della guida PDF.
 
 ---
 
+## 2.7 — agosto 2026
+
+- **La barra del filmato c'è sempre**, finché c'è un visore in postazione. Prima compariva solo
+  quando qualcuno rispondeva: una riga che a volte c'è e a volte no, per chi guarda, è un guasto
+  — non una scelta di stile. Ora quando manca qualcosa lo scrive: «nessun filmato in corso»,
+  «durata sconosciuta», «il lettore non dice a che punto è».
+- **Pausa e «Da capo» restano attivi anche con un lettore che non pubblica il suo stato**: sono
+  tasti da mandare, non domande da fare. È il salto che, senza posizione, non ha un bersaglio —
+  e infatti è quello che si spegne.
+
 ## 2.6 — agosto 2026
 
 I filmati si comandano dal computer: si vede a che punto sono, si fermano insieme, si spostano

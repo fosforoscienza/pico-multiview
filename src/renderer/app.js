@@ -1,7 +1,7 @@
 // UI: postazioni (slot) nella schermata principale, anteprima grande a metà
 // schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
-import { formattaTempo, riepilogo, stimaPosizione } from '../shared/playback.js';
+import { formattaTempo, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
 import { TileRenderer } from './decoder.js';
 import { Viewport } from './viewport.js';
 import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
@@ -1360,44 +1360,56 @@ function lettureCorrenti() {
   return state.slots.filter(Boolean).map((s) => state.players.get(s)).filter(Boolean);
 }
 
+/** I filmati che abbiamo mandato noi e che risultano ancora in corso. */
+function filmatiMandati() {
+  return state.slots
+    .filter(Boolean)
+    .map((s) => state.devices.get(s)?.playing)
+    .filter(Boolean);
+}
+
+/**
+ * Disegna la barra.
+ *
+ * La barra c'è **sempre**, finché c'è un visore in postazione. Nascondere una
+ * riga che a volte compare e a volte no non è discrezione: è un guasto, per chi
+ * guarda. Quando manca qualcosa — il filmato, la durata, un lettore che si
+ * lasci seguire — la barra resta e lo scrive. Cosa dire lo decide `statoBarra`,
+ * qui si scrive soltanto.
+ */
 function drawPlaybar() {
   const barra = $('playbar');
-  const sintesi = riepilogo(lettureCorrenti());
-  if (!sintesi) {
+  const visori = state.slots.filter(Boolean);
+  if (!visori.length) {
     barra.classList.add('hidden');
     return;
   }
   barra.classList.remove('hidden');
 
-  $('playbar-name').textContent = sintesi.name ?? 'Filmato in corso';
-  $('btn-play-pause').textContent = sintesi.inRiproduzione ? 'Pausa a tutti' : 'Riprendi tutti';
+  const sintesi = riepilogo(lettureCorrenti());
+  const b = statoBarra(sintesi, filmatiMandati());
 
-  const durata = sintesi.durationMs;
-  $('playbar-time').textContent = durata
-    ? `${formattaTempo(sintesi.positionMs)} / ${formattaTempo(durata)}`
-    : formattaTempo(sintesi.positionMs);
-
-  const quota = (ms) => (durata ? Math.max(0, Math.min(100, (ms / durata) * 100)) : 0);
-  $('playbar-fill').style.width = `${quota(sintesi.positionMs)}%`;
+  $('playbar-name').textContent = b.nome;
+  $('playbar-time').textContent = b.tempo;
+  $('playbar-note').textContent = b.nota;
+  $('playbar-fill').style.width = `${b.quota}%`;
+  $('btn-play-pause').textContent = b.etichettaPausa;
+  $('btn-play-pause').disabled = !b.pausaAttiva;
+  $('btn-replay').disabled = !b.pausaAttiva;
+  $('playbar-track').classList.toggle('is-off', !b.saltoAttivo);
 
   // La fascia rossa è la distanza fra il visore più avanti e quello più
   // indietro: mezzo secondo non si vede, mezzo minuto sì, ed è quello che
   // conta sapere prima di entrare in sala.
   const spread = $('playbar-spread');
-  const distanti = durata && sintesi.spreadMs > 1500 && sintesi.quanti > 1;
-  spread.classList.toggle('hidden', !distanti);
-  if (distanti) {
+  spread.classList.toggle('hidden', !b.distanti);
+  if (b.distanti) {
+    const quota = (ms) => Math.max(0, Math.min(100, (ms / sintesi.durationMs) * 100));
     spread.style.left = `${quota(sintesi.minMs)}%`;
     spread.style.width = `${Math.max(1, quota(sintesi.maxMs) - quota(sintesi.minMs))}%`;
   }
 
-  $('playbar-note').textContent = durata
-    ? distanti
-      ? `${sintesi.quanti} visori, ${formattaTempo(sintesi.spreadMs)} di scarto`
-      : `${sintesi.quanti} visori allineati`
-    : 'durata sconosciuta: il filmato non è ancora nell\'indice del visore';
-
-  for (const serial of state.slots.filter(Boolean)) aggiornaRigaLettore(serial);
+  for (const serial of visori) aggiornaRigaLettore(serial);
 }
 
 /** La posizione del singolo visore, sotto la sua miniatura. */

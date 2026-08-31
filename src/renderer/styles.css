@@ -1115,3 +1115,10 @@ body.is-remote .desktop-only {
   color: var(--muted, #94a3b8);
   font-variant-numeric: tabular-nums;
 }
+
+/* Barra non cliccabile: manca la durata, quindi un punto sulla riga non
+   corrisponde a nessun istante del filmato. Si vede che è spenta. */
+.playbar-track.is-off {
+  cursor: default;
+  opacity: 0.45;
+}

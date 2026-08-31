@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formattaTempo, riepilogo, stimaPosizione } from '../src/shared/playback.js';
+import { formattaTempo, riepilogo, statoBarra, stimaPosizione } from '../src/shared/playback.js';
 
 // La barra del filmato si muove fra una lettura e l'altra: questi conti sono
 // la parte che, sbagliata, si vedrebbe come una barra a scatti o bugiarda.
@@ -63,4 +63,61 @@ test('basta un visore fermo perché il gruppo non sia «in riproduzione»', () =
 test('senza letture non c\'è barra da mostrare', () => {
   assert.equal(riepilogo([]), null);
   assert.equal(riepilogo([{ positionMs: null }]), null);
+});
+
+test('senza filmato la barra resta, e dice cosa fare', () => {
+  // Nasconderla sarebbe la cosa peggiore: una riga che a volte c'è e a volte
+  // no, per chi guarda, è un guasto — non una scelta di stile.
+  const b = statoBarra(null, []);
+  assert.equal(b.nome, 'Nessun filmato in corso');
+  assert.match(b.nota, /Video…/);
+  assert.equal(b.pausaAttiva, false, 'non c\'è niente da fermare');
+  assert.equal(b.saltoAttivo, false);
+});
+
+test('un lettore muto non spegne pausa e «da capo»', () => {
+  // Mandare i tasti del lettore non richiede di sapere dove sia il filmato:
+  // è solo il salto che, senza posizione, non ha un bersaglio.
+  const b = statoBarra(null, [{ name: 'tour.mp4' }]);
+  assert.equal(b.nome, 'tour.mp4');
+  assert.equal(b.pausaAttiva, true);
+  assert.equal(b.saltoAttivo, false);
+  assert.match(b.nota, /pausa e «da capo» funzionano lo stesso/);
+});
+
+test('senza durata la barra non è cliccabile, e lo dice', () => {
+  // Un punto sulla riga non corrisponde a nessun istante finché non si sa
+  // quanto dura il filmato: cliccarlo manderebbe i visori a caso.
+  const sintesi = riepilogo([{ positionMs: 5000, state: 'in pausa', letto: 0 }], 0);
+  const b = statoBarra(sintesi, []);
+  assert.equal(b.saltoAttivo, false);
+  assert.equal(b.tempo, '0:05');
+  assert.match(b.nota, /durata sconosciuta/);
+});
+
+test('con tutto al suo posto la barra è viva', () => {
+  const sintesi = riepilogo(
+    [{ positionMs: 30000, durationMs: 120000, state: 'in riproduzione', speed: 1, letto: 0, name: 'tour.mp4' }],
+    0,
+  );
+  const b = statoBarra(sintesi, []);
+  assert.equal(b.tempo, '0:30 / 2:00');
+  assert.equal(b.quota, 25);
+  assert.equal(b.etichettaPausa, 'Pausa a tutti');
+  assert.equal(b.saltoAttivo, true);
+  assert.match(b.nota, /allineati/);
+});
+
+test('se i visori sono sparpagliati il pulsante propone di riprenderli', () => {
+  const sintesi = riepilogo(
+    [
+      { positionMs: 10000, durationMs: 120000, state: 'in pausa', letto: 0 },
+      { positionMs: 40000, durationMs: 120000, state: 'in riproduzione', speed: 1, letto: 0 },
+    ],
+    0,
+  );
+  const b = statoBarra(sintesi, []);
+  assert.equal(b.etichettaPausa, 'Riprendi tutti');
+  assert.equal(b.distanti, true);
+  assert.match(b.nota, /di scarto/);
 });

@@ -60,3 +60,50 @@ export function riepilogo(letture, adesso = Date.now()) {
     inRiproduzione: posizioni.every((p) => p.state === 'in riproduzione'),
   };
 }
+
+/**
+ * Cosa deve dire la barra, viste le letture arrivate.
+ *
+ * Sta qui, e non nella finestra, perché è una decisione — quando un pulsante
+ * serve, quando una spiegazione va data — e le decisioni si provano. Nella
+ * finestra resta il mestiere di scriverla a schermo.
+ *
+ * @param sintesi   riepilogo delle letture, o null se nessuno ha risposto
+ * @param mandati   i filmati che abbiamo mandato noi e risultano in corso
+ */
+export function statoBarra(sintesi, mandati = []) {
+  if (!sintesi) {
+    return {
+      nome: mandati[0]?.name ?? 'Nessun filmato in corso',
+      tempo: '–',
+      quota: 0,
+      etichettaPausa: 'Pausa a tutti',
+      // I tasti del lettore si mandano anche senza sapere dove sia il filmato:
+      // è il salto che, senza posizione, non ha un bersaglio.
+      pausaAttiva: mandati.length > 0,
+      saltoAttivo: false,
+      nota: mandati.length
+        ? 'il lettore del visore non dice a che punto è: pausa e «da capo» funzionano lo stesso, il salto no'
+        : 'mandane uno da «Video…»',
+    };
+  }
+  const durata = sintesi.durationMs;
+  const distanti = Boolean(durata) && sintesi.spreadMs > 1500 && sintesi.quanti > 1;
+  return {
+    nome: sintesi.name ?? mandati[0]?.name ?? 'Filmato in corso',
+    tempo: durata
+      ? `${formattaTempo(sintesi.positionMs)} / ${formattaTempo(durata)}`
+      : formattaTempo(sintesi.positionMs),
+    quota: durata ? Math.max(0, Math.min(100, (sintesi.positionMs / durata) * 100)) : 0,
+    etichettaPausa: sintesi.inRiproduzione ? 'Pausa a tutti' : 'Riprendi tutti',
+    pausaAttiva: true,
+    // Senza durata non si sa a quale istante corrisponda il punto cliccato.
+    saltoAttivo: Boolean(durata),
+    distanti,
+    nota: durata
+      ? distanti
+        ? `${sintesi.quanti} visori, ${formattaTempo(sintesi.spreadMs)} di scarto`
+        : `${sintesi.quanti} visori allineati`
+      : 'durata sconosciuta: il filmato non è ancora nell\'indice del visore',
+  };
+}

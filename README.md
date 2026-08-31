@@ -322,8 +322,9 @@ guardare quando qualcosa non va.
 
 ### La barra del filmato
 
-Compare da sola quando un filmato è in corso, e sparisce quando finisce. Mostra il punto in cui
-sono i visori, e sotto ogni miniatura il punto di quel visore.
+C'è sempre, finché c'è un visore in postazione: mostra il punto in cui sono i visori, e sotto ogni
+miniatura il punto di quel visore. Quando manca qualcosa — nessun filmato, nessuna durata, un
+lettore che non si lascia seguire — la barra resta e lo scrive, invece di sparire.
 
 La **fascia rossa** è la distanza fra il visore più avanti e quello più indietro. I comandi
 partono insieme, ma un visore che ha impiegato mezzo secondo in più ad aprire il file resta
@@ -335,9 +336,17 @@ avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app d�
 quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
 punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
 
-**Se la barra non compare** mentre un filmato sta andando, il lettore di quel visore non pubblica
-il proprio stato: nessuno da fuori può sapere a che punto è, e il registro lo scrive. Pausa e
-salto in quel caso potrebbero non rispondere.
+**Se la barra dice «il lettore non dice a che punto è»**, quel lettore non pubblica il proprio
+stato: da fuori nessuno può sapere dove sia arrivato. **Pausa** e **Da capo** funzionano lo
+stesso — sono tasti da mandare, non domande da fare — mentre il salto no, perché senza posizione
+non ha un bersaglio. Per sapere in anticipo se il tuo lettore si lascia seguire, con un filmato in
+riproduzione:
+
+```
+vendor/platform-tools/adb -s <indirizzo>:5555 shell dumpsys media_session | grep -i playbackstate
+```
+
+Una riga `PlaybackState {state=3, position=…}` vuol dire che la barra funzionerà.
 
 ## Impostazioni per visore (icona ⚙︎)
 
