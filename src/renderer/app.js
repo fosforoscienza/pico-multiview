@@ -1,7 +1,7 @@
 // UI: postazioni (slot) nella schermata principale, anteprima grande a metà
 // schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
-import { formattaTempo, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
+import { formattaTempo, letturaStimata, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
 import { TileRenderer } from './decoder.js';
 import { Viewport } from './viewport.js';
 import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
@@ -294,20 +294,29 @@ async function playVideo(video) {
   // Un clic su un nome non è un ordine di far partire il filmato in sala: la
   // riga dell'elenco serve a scegliere, la conferma a lanciare. Senza, basta
   // sfiorare la voce sbagliata davanti al pubblico.
-  const quanti = video.on.length;
+  //
+  // La selezione delle postazioni vale anche qui: spuntato qualcuno, il
+  // filmato parte solo da loro. Nessuna spunta = tutti, come per i comandi.
+  const scelti = state.selected.size ? state.selected : null;
+  const destinatari = scelti ? video.on.filter((v) => scelti.has(v.serial)) : video.on;
+  if (!destinatari.length) {
+    log('nessuno dei visori selezionati ha questo filmato', 'error');
+    return;
+  }
+  const quanti = destinatari.length;
   const modo = state.videoModes[state.videoMode];
   const comeProiettato = modo?.code != null ? ` Proiettato: ${modo.etichetta}.` : '';
   const ok = await chiediConferma({
     titolo: `Avviare «${video.name}»?`,
     testo:
-      `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}, nello stesso momento` +
+      `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}${scelti ? ' (solo i selezionati)' : ''}, nello stesso momento` +
       (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.') +
       comeProiettato,
     conferma: 'Avvia',
   });
   if (!ok) return;
   const results = await run(
-    window.pico.devices.playVideo(video.on, { fromStart: state.fromStart, videoType: modo?.code ?? null }),
+    window.pico.devices.playVideo(destinatari, { fromStart: state.fromStart, videoType: modo?.code ?? null }),
   );
   if (results === null) return;
   reportBatch(results, `«${video.name}»`);
@@ -944,6 +953,17 @@ function wireEvents() {
     updateSummary();
   });
 
+  window.pico.on('config', (data) => {
+    // Il processo principale può cambiare da solo il canale dei comandi (lo fa
+    // quando scopre che ad aprire il filmato è stato il lettore PICO): il menù
+    // deve seguirlo, o il prossimo clic partirebbe col canale vecchio.
+    if (data.playerKeys && data.playerKeys !== state.playerKeys) {
+      state.playerKeys = data.playerKeys;
+      const menu = $('player-keys');
+      if (menu && menu.options.length) menu.value = data.playerKeys;
+    }
+  });
+
   window.pico.on('device-status', ({ serial, status }) => {
     const device = state.devices.get(serial);
     if (!device) return;
@@ -1404,7 +1424,12 @@ async function pollPlayers() {
 
 /** Le letture dei soli visori ancora in postazione. */
 function lettureCorrenti() {
-  return state.slots.filter(Boolean).map((s) => state.players.get(s)).filter(Boolean);
+  // La parola del lettore quando c'è; l'orologio di bordo quando il lettore
+  // tace ma il filmato gliel'abbiamo mandato noi, con la sua durata.
+  return state.slots
+    .filter(Boolean)
+    .map((s) => state.players.get(s) ?? letturaStimata(state.devices.get(s)?.playing))
+    .filter(Boolean);
 }
 
 /** I filmati che abbiamo mandato noi e che risultano ancora in corso. */
@@ -1434,7 +1459,10 @@ function drawPlaybar() {
   barra.classList.remove('hidden');
 
   const sintesi = riepilogo(lettureCorrenti());
-  const b = statoBarra(sintesi, filmatiMandati(), { prossimaAzione: state.prossimaAzioneMedia });
+  const b = statoBarra(sintesi, filmatiMandati(), {
+    prossimaAzione: state.prossimaAzioneMedia,
+    scelti: state.selected.size,
+  });
 
   $('playbar-name').textContent = b.nome;
   $('playbar-time').textContent = b.tempo;
@@ -1443,6 +1471,7 @@ function drawPlaybar() {
   $('btn-play-pause').textContent = b.etichettaPausa;
   $('btn-play-pause').disabled = !b.pausaAttiva;
   $('btn-replay').disabled = !b.pausaAttiva;
+  $('btn-stop-video').disabled = !b.pausaAttiva;
   $('playbar-track').classList.toggle('is-off', !b.saltoAttivo);
 
   // La fascia rossa è la distanza fra il visore più avanti e quello più
@@ -1464,7 +1493,7 @@ function aggiornaRigaLettore(serial) {
   const card = state.cards.get(serial);
   if (!card) return;
   let riga = card.el.querySelector('.card-player');
-  const lettura = state.players.get(serial);
+  const lettura = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
   if (!lettura) {
     riga?.remove();
     return;
@@ -1504,6 +1533,12 @@ function wirePlaybar() {
     const results = await run(window.pico.devices.replay(targetSerials()));
     reportBatch(results, 'da capo');
     setTimeout(pollPlayers, 1500);
+  });
+
+  $('btn-stop-video').addEventListener('click', async () => {
+    const results = await run(window.pico.devices.stopVideo(targetSerials()));
+    reportBatch(results, 'stop');
+    setTimeout(pollPlayers, 800);
   });
 
   $('playbar-track').addEventListener('click', async (evento) => {

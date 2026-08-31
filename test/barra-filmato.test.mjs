@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formattaTempo, riepilogo, statoBarra, stimaPosizione } from '../src/shared/playback.js';
+import { formattaTempo, letturaStimata, riepilogo, statoBarra, stimaPosizione } from '../src/shared/playback.js';
 
 // La barra del filmato si muove fra una lettura e l'altra: questi conti sono
 // la parte che, sbagliata, si vedrebbe come una barra a scatti o bugiarda.
@@ -101,7 +101,9 @@ test('con tutto al suo posto la barra è viva', () => {
     0,
   );
   const b = statoBarra(sintesi, []);
-  assert.equal(b.tempo, '0:30 / 2:00');
+  // Il conto alla rovescia sta accanto al tempo: in sala la domanda vera è
+  // «quanto manca», non «a che punto siamo».
+  assert.equal(b.tempo, '0:30 / 2:00 · −1:30');
   assert.equal(b.quota, 25);
   assert.equal(b.etichettaPausa, 'Pausa a tutti');
   assert.equal(b.saltoAttivo, true);
@@ -130,4 +132,58 @@ test('quando il lettore non si legge, il pulsante alterna e ricorda', () => {
   assert.equal(fermo.etichettaPausa, 'Pausa a tutti');
   const riparti = statoBarra(null, [{ name: 'tour.mp4' }], { prossimaAzione: 'play' });
   assert.equal(riparti.etichettaPausa, 'Riprendi tutti');
+});
+
+test('quando il lettore tace, l\'orologio di bordo tiene la barra viva', () => {
+  // Il lettore PICO non dice a che punto è, ma l\'avvio e le pause li
+  // ordiniamo noi: la posizione è il tempo passato in moto. È una stima, e la
+  // barra lo scrive — mai spacciarla per la parola del lettore.
+  const playing = { name: 'tour.mp4', durationMs: 600000, startedAt: 1000, pausedAt: null, pausedMs: 0 };
+  const lettura = letturaStimata(playing, 61000);
+  assert.equal(lettura.positionMs, 60000);
+  assert.equal(lettura.state, 'in riproduzione');
+  assert.equal(lettura.stimata, true);
+
+  const sintesi = riepilogo([lettura], 61000);
+  const b = statoBarra(sintesi, []);
+  assert.match(b.tempo, /1:00 \/ 10:00 · −9:00/, 'posizione, durata e conto alla rovescia');
+  assert.match(b.nota, /stimato/);
+  assert.equal(b.saltoAttivo, true);
+});
+
+test('l\'orologio di bordo conta solo il tempo in moto', () => {
+  // Due minuti di filmato, di cui trenta secondi passati in pausa: la
+  // posizione è un minuto e mezzo. Le pause ordinate da qui si sottraggono.
+  const playing = { name: 'tour.mp4', durationMs: 600000, startedAt: 0, pausedAt: null, pausedMs: 30000 };
+  assert.equal(letturaStimata(playing, 120000).positionMs, 90000);
+  // In pausa adesso: la posizione è ferma all\'istante della pausa.
+  const fermo = { ...playing, pausedAt: 100000 };
+  const lettura = letturaStimata(fermo, 999000);
+  assert.equal(lettura.positionMs, 70000);
+  assert.equal(lettura.state, 'in pausa');
+});
+
+test('a filmato finito il conto si ferma a zero, non va sotto', () => {
+  const playing = { name: 'tour.mp4', durationMs: 60000, startedAt: 0, pausedAt: null, pausedMs: 0 };
+  const lettura = letturaStimata(playing, 300000);
+  assert.equal(lettura.positionMs, 60000, 'la barra si ferma alla fine');
+  assert.equal(lettura.state, 'in pausa');
+  const b = statoBarra(riepilogo([lettura], 300000), []);
+  assert.match(b.tempo, /−0:00/);
+});
+
+test('senza durata l\'orologio di bordo non inventa una barra', () => {
+  assert.equal(letturaStimata({ name: 'x', startedAt: 0, durationMs: null }), null);
+  assert.equal(letturaStimata(null), null);
+});
+
+test('le etichette dicono su chi agiranno i pulsanti', () => {
+  // Di default su tutti; con una selezione, solo sugli scelti — e va scritto
+  // sul pulsante, non lasciato indovinare.
+  const sintesi = riepilogo(
+    [{ positionMs: 1000, durationMs: 60000, state: 'in riproduzione', speed: 1, letto: 0 }],
+    0,
+  );
+  assert.equal(statoBarra(sintesi, []).etichettaPausa, 'Pausa a tutti');
+  assert.equal(statoBarra(sintesi, [], { scelti: 2 }).etichettaPausa, 'Pausa sui 2 scelti');
 });

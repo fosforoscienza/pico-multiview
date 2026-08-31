@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('pico', {
     media: (serials, action, profile) => invoke('devices:media', { serials, action, profile }),
     seek: (serials, ms) => invoke('devices:seek', { serials, ms }),
     replay: (serials) => invoke('devices:replay', { serials }),
+    stopVideo: (serials) => invoke('devices:stopVideo', { serials }),
     playVideo: (entries, opts) => invoke('devices:playVideo', { entries, ...(opts ?? {}) }),
   },
   device: {

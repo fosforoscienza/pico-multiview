@@ -124,6 +124,7 @@ function wireManager() {
   manager.on('device-codec', (payload) => broadcast('device-codec', payload));
   manager.on('log', (payload) => broadcast('log', payload));
   manager.on('scan-progress', (payload) => broadcast('scan-progress', payload));
+  manager.on('config-changed', (data) => broadcast('config', data));
   manager.on('frame', broadcastFrame);
 }
 
@@ -285,6 +286,7 @@ function registerHandlers() {
   );
   handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
   handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
+  handle('devices:stopVideo', ({ serials }) => manager.stopVideoEverywhere(serials));
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),

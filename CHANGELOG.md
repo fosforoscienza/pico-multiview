@@ -9,6 +9,27 @@ della guida PDF.
 
 ---
 
+## 2.16 — agosto 2026
+
+La timeline anche col lettore muto, lo Stop, e i comandi mirati.
+
+- **La barra ora scorre anche col lettore PICO**, che non dice a che punto è: la durata la
+  conosce l'indice del visore, l'avvio e le pause li ordiniamo noi, e la posizione è il tempo
+  passato in moto — un **orologio di bordo**. Accanto al tempo c'è il **conto alla rovescia**
+  («−8:37»): in sala la domanda vera è quanto manca, non a che punto siamo. È una stima e la
+  barra lo scrive: una pausa messa dal controller dentro il visore qui non si vede.
+- **Pulsante Stop**: chiude il filmato — prima con l'annuncio d'uscita che il lettore PICO
+  ascolta, poi chiudendo le app di riproduzione, che vale su qualunque visore.
+- **Tutti i comandi del filmato rispettano la selezione delle postazioni**: nessuna spunta =
+  tutti (come per gli altri comandi), con le spunte solo gli scelti — vale per pausa, riprendi,
+  da capo, stop **e per l'avvio di un filmato**. Le etichette lo dicono («Pausa sui 2 scelti»).
+- **La pausa parla al ricevitore per nome.** Da Android 8 un annuncio «a chi interessa» non
+  arriva ai ricevitori dichiarati nel manifest: il nome lo sa il visore, e glielo si chiede una
+  volta sola. Ed è il probabile motivo per cui l'annuncio anonimo non fermava niente.
+- **Quando ad aprire il filmato è il lettore PICO, i comandi passano da soli al canale diretto**
+  («Lettore PICO (comando diretto)»): coi tasti resterebbe sordo. Scritto nel registro,
+  reversibile dal menù.
+
 ## 2.15 — agosto 2026
 
 Due strumenti per i due sintomi rimasti: il 360 che parte «al cinema», e la pausa che non fa

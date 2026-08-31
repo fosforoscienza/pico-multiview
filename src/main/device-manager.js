@@ -444,6 +444,19 @@ export class DeviceManager extends EventEmitter {
           // aperto il filmato, e quali sono state saltate e perché.
           for (const saltato of esito?.saltati ?? []) device?.log('error', saltato);
           if (esito?.via) device?.log('info', `avviato con: ${esito.via}`);
+          // Se ha aperto il lettore PICO, è al lettore PICO che vanno parlati
+          // anche pausa e ripresa: coi tasti resterebbe sordo. Il passaggio è
+          // automatico perché la coppia giusta è una sola, ma resta scritto e
+          // reversibile dal menù della barra.
+          if (esito?.via?.includes('lettore PICO') && this.config.data.playerKeys !== 'pico') {
+            this.config.patch({ playerKeys: 'pico' });
+            this.emit('config-changed', this.config.data);
+            this.emit('log', {
+              serial,
+              level: 'info',
+              message: 'comandi del lettore: passo a «Lettore PICO (comando diretto)» — è lui che ha aperto il filmato',
+            });
+          }
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);
@@ -519,7 +532,23 @@ export class DeviceManager extends EventEmitter {
   async mediaEverywhere(serials, azione, profilo = this.config.data.playerKeys) {
     return this.each(serials, async (d) => {
       await d.mediaKey(azione, profilo);
+      // L'orologio di bordo conta da questi ordini: è ciò che fa muovere la
+      // barra quando il lettore non si lascia leggere.
+      d.segnaOrdineMedia(azione);
       return azione;
+    });
+  }
+
+  /**
+   * Ferma il filmato: prima l'annuncio d'uscita che il lettore PICO ascolta,
+   * poi la chiusura delle app di riproduzione, che vale ovunque.
+   */
+  async stopVideoEverywhere(serials) {
+    return this.each(serials, async (d) => {
+      await apps.stopPlayback(d.serial, { player: d.playerPackage });
+      d.setPlaying(null);
+      d.log('info', 'filmato fermato');
+      return true;
     });
   }
 

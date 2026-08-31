@@ -595,7 +595,26 @@ export class Device extends EventEmitter {
 
   /** Segna quale filmato gli abbiamo mandato, con la sua durata. */
   setPlaying(playing) {
-    this.playing = playing;
+    // startedAt/pausedAt/pausedMs sono l'orologio di bordo: il lettore PICO
+    // non dice a che punto è, ma gli ordini di moto e di pausa glieli diamo
+    // noi, e contando il tempo fra un ordine e l'altro la posizione si stima.
+    this.playing = playing ? { pausedAt: null, pausedMs: 0, ...playing } : null;
+    this.emit('state', this.toJSON());
+  }
+
+  /** L'orologio di bordo segna la pausa (o la ripresa) ordinata da qui. */
+  segnaOrdineMedia(azione) {
+    if (!this.playing) return;
+    const now = Date.now();
+    if (azione === 'pause' && !this.playing.pausedAt) {
+      this.playing = { ...this.playing, pausedAt: now };
+    } else if (azione === 'play' && this.playing.pausedAt) {
+      this.playing = {
+        ...this.playing,
+        pausedAt: null,
+        pausedMs: this.playing.pausedMs + (now - this.playing.pausedAt),
+      };
+    }
     this.emit('state', this.toJSON());
   }
 

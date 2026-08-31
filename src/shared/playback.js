@@ -55,6 +55,7 @@ export function riepilogo(letture, adesso = Date.now()) {
     durationMs: durate.length ? Math.max(...durate) : null,
     name: posizioni.find((p) => p.name)?.name ?? null,
     quanti: posizioni.length,
+    stimata: posizioni.every((p) => p.stimata === true),
     // «In riproduzione» solo se lo sono tutti: basta un visore fermo perché il
     // pulsante debba proporre di farli ripartire.
     inRiproduzione: posizioni.every((p) => p.state === 'in riproduzione'),
@@ -71,7 +72,9 @@ export function riepilogo(letture, adesso = Date.now()) {
  * @param sintesi   riepilogo delle letture, o null se nessuno ha risposto
  * @param mandati   i filmati che abbiamo mandato noi e risultano in corso
  */
-export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause' } = {}) {
+export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause', scelti = 0 } = {}) {
+  // Su chi agiranno i pulsanti: la selezione delle postazioni, o tutti.
+  const destino = scelti ? `sui ${scelti} scelti` : 'a tutti';
   if (!sintesi) {
     return {
       nome: mandati[0]?.name ?? 'Nessun filmato in corso',
@@ -80,7 +83,7 @@ export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause' } =
       // Il lettore non si legge, quindi lo stato non si sa: il pulsante
       // alterna, ricordando l'ultimo ordine dato. Non è elegante, è onesto —
       // e senza, chi ferma non può più riprendere.
-      etichettaPausa: prossimaAzione === 'play' ? 'Riprendi tutti' : 'Pausa a tutti',
+      etichettaPausa: prossimaAzione === 'play' ? `Riprendi ${scelti ? destino : 'tutti'}` : `Pausa ${destino}`,
       // I tasti del lettore si mandano anche senza sapere dove sia il filmato:
       // è il salto che, senza posizione, non ha un bersaglio.
       pausaAttiva: mandati.length > 0,
@@ -94,19 +97,52 @@ export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause' } =
   const distanti = Boolean(durata) && sintesi.spreadMs > 1500 && sintesi.quanti > 1;
   return {
     nome: sintesi.name ?? mandati[0]?.name ?? 'Filmato in corso',
+    // Il conto alla rovescia sta accanto al tempo: in sala la domanda vera è
+    // «quanto manca», non «a che punto siamo».
     tempo: durata
-      ? `${formattaTempo(sintesi.positionMs)} / ${formattaTempo(durata)}`
+      ? `${formattaTempo(sintesi.positionMs)} / ${formattaTempo(durata)} · −${formattaTempo(Math.max(0, durata - sintesi.positionMs))}`
       : formattaTempo(sintesi.positionMs),
     quota: durata ? Math.max(0, Math.min(100, (sintesi.positionMs / durata) * 100)) : 0,
-    etichettaPausa: sintesi.inRiproduzione ? 'Pausa a tutti' : 'Riprendi tutti',
+    etichettaPausa: sintesi.inRiproduzione ? `Pausa ${destino}` : `Riprendi ${scelti ? destino : 'tutti'}`,
     pausaAttiva: true,
     // Senza durata non si sa a quale istante corrisponda il punto cliccato.
     saltoAttivo: Boolean(durata),
     distanti,
     nota: durata
-      ? distanti
-        ? `${sintesi.quanti} visori, ${formattaTempo(sintesi.spreadMs)} di scarto`
-        : `${sintesi.quanti} visori allineati`
+      ? (sintesi.stimata ? 'avanzamento stimato dagli ordini dati — il lettore non si lascia leggere' : null) ??
+        (distanti
+          ? `${sintesi.quanti} visori, ${formattaTempo(sintesi.spreadMs)} di scarto`
+          : `${sintesi.quanti} visori allineati`)
       : 'durata sconosciuta: il filmato non è ancora nell\'indice del visore',
+  };
+}
+
+/**
+ * La lettura stimata dall'orologio di bordo, quando il lettore tace.
+ *
+ * Il lettore PICO non dice a che punto è. Ma la durata la conosce l'indice del
+ * visore, l'istante di avvio lo conosciamo noi, e le pause le ordiniamo noi:
+ * la posizione è il tempo passato in moto. È una stima — se qualcuno mette
+ * pausa dal controller del visore, qui non si vede — e va presentata come
+ * tale, mai spacciata per la parola del lettore.
+ */
+export function letturaStimata(playing, adesso = Date.now()) {
+  // `startedAt` può essere 0 nei conti a tavolino: si controlla che ci sia,
+  // non che sia "vero".
+  if (playing?.startedAt == null || !playing?.durationMs) return null;
+  const inPausa = playing.pausedAt != null;
+  const fermo = inPausa ? playing.pausedAt : adesso;
+  const posizione = Math.max(0, fermo - playing.startedAt - (playing.pausedMs ?? 0));
+  const finita = posizione >= playing.durationMs;
+  return {
+    positionMs: Math.min(posizione, playing.durationMs),
+    durationMs: playing.durationMs,
+    name: playing.name ?? null,
+    speed: 1,
+    // Da qui in poi per riepilogo/stima è una lettura come le altre; `letto`
+    // all'istante del calcolo dice «già aggiornata, non estrapolare oltre».
+    state: inPausa || finita ? 'in pausa' : 'in riproduzione',
+    letto: adesso,
+    stimata: true,
   };
 }

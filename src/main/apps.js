@@ -542,16 +542,67 @@ export async function playerState(serial) {
   return { ...playback, positionMs: posizioneOra(playback, parseUptimeMs(res.out)) };
 }
 
+export const PLAY_CONTROL_ACTION = 'com.picovr.wing.player.PLAY_CONTROL';
+export const PLAYER_EXIT_ACTION = 'com.picovr.wing.player.exit';
+
+// serial+action -> componente del ricevitore, o null se sul visore non ce n'è
+// uno dichiarato. Si chiede una volta: il lettore non cambia durante la serata.
+const ricevitoriPico = new Map();
+
+/**
+ * A chi va consegnato un annuncio del lettore PICO.
+ *
+ * Da Android 8 un annuncio «a chi interessa» non arriva più ai ricevitori
+ * dichiarati nel manifest: va consegnato **per nome**. Il nome lo sa il
+ * visore, e glielo si chiede una volta sola. Se non c'è nessun nome, il
+ * ricevitore è di quelli registrati a lettore acceso, e l'annuncio anonimo
+ * funziona: si tenta quello.
+ */
+async function ricevitorePico(serial, action) {
+  const chiave = `${serial} ${action}`;
+  if (ricevitoriPico.has(chiave)) return ricevitoriPico.get(chiave);
+  const res = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    `cmd package query-receivers --components -a ${action}`,
+  ]);
+  const componente = res.ok
+    ? (String(res.out ?? '').match(/[A-Za-z][A-Za-z0-9_.]*\/[A-Za-z0-9_.$]+/)?.[0] ?? null)
+    : null;
+  ricevitoriPico.set(chiave, componente);
+  return componente;
+}
+
+/** Manda un annuncio del lettore PICO, per nome se il visore ne conosce uno. */
+async function annuncioPico(serial, action, extra = '') {
+  const componente = await ricevitorePico(serial, action).catch(() => null);
+  const destinatario = componente ? `-n ${componente} ` : '';
+  return shell(serial, `am broadcast ${destinatario}-a ${action}${extra}`, { timeout: 8000 });
+}
+
+/**
+ * Chiude il filmato in corso.
+ *
+ * Prima con le buone — l'annuncio di uscita che il lettore PICO ascolta — e
+ * poi con la chiusura delle app di riproduzione, che vale su qualunque visore:
+ * l'annuncio lascia il lettore in ordine, la chiusura garantisce il risultato.
+ */
+export async function stopPlayback(serial, { player = null } = {}) {
+  await annuncioPico(serial, PLAYER_EXIT_ACTION).catch(() => {});
+  const home = await resolveHomePackage(serial).catch(() => null);
+  return stopVideoApps(serial, { extra: [player], home });
+}
+
 export async function mediaKey(serial, azione, profilo = 'media') {
   const tasti = profiloLettore(profilo);
   if (tasti.broadcast && (azione === 'play' || azione === 'pause')) {
     // L'annuncio del lettore PICO: arriva anche dove nessun tasto arriva,
     // perché non passa dalla finestra a fuoco né dalla sessione multimediale.
-    return shell(
+    return annuncioPico(
       serial,
-      `am broadcast -a com.picovr.wing.player.PLAY_CONTROL ` +
-        `--es controltype playcommand --es mediatype video --es operation ${azione === 'play' ? 'play' : 'pause'}`,
-      { timeout: 8000 },
+      PLAY_CONTROL_ACTION,
+      ` --es controltype playcommand --es mediatype video --es operation ${azione === 'play' ? 'play' : 'pause'}`,
     );
   }
   const keycode = tasti[azione] ?? MEDIA_KEYS[azione];
