@@ -13,6 +13,7 @@ import crypto from 'node:crypto';
 
 import {
   adbSpawn,
+  adbTry,
   delay,
   findFreePort,
   forward,
@@ -127,6 +128,14 @@ export class ScrcpySession extends EventEmitter {
 
   async start() {
     this.stopped = false;
+
+    // Un server rimasto da una sessione precedente tiene occupati lo schermo e
+    // l'encoder: il nuovo morirebbe subito, con un SIGABRT che nel registro si
+    // legge solo come "Aborted". Succede perché fermare il nostro processo adb
+    // locale non ferma il processo remoto: quello va chiuso sul visore.
+    await adbTry(['-s', this.serial, 'shell', 'pkill -f com.genymobile.scrcpy.Server'], {
+      timeout: 5000,
+    });
 
     if (!jarCopiato.has(this.serial)) {
       try {
