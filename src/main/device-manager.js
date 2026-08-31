@@ -277,6 +277,16 @@ export class DeviceManager extends EventEmitter {
     const perDevice = await this.each(serials, (d) => apps.listVideos(d.serial));
     const perNome = new Map();
     for (const r of perDevice) {
+      const device = this.devices.get(r.serial);
+      // L'esito va scritto per ogni visore: "nessun filmato" e "la ricerca è
+      // fallita" sono due risposte diverse, e senza il registro si confondono.
+      if (!r.ok) {
+        device?.log('error', `ricerca video fallita: ${r.error}`);
+        continue;
+      }
+      device?.log('info', `ricerca video: ${r.value.length} file trovati`);
+    }
+    for (const r of perDevice) {
       if (!r.ok) continue;
       for (const percorso of r.value) {
         const nome = apps.fileName(percorso);
