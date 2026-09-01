@@ -9,6 +9,26 @@ della guida PDF.
 
 ---
 
+## 3.0 — settembre 2026
+
+La versione che chiude un ciclo: da «mando un filmato e speriamo» a una regia. Nessuna modifica
+di codice rispetto alla 2.24 — il numero riconosce quello che le venti versioni precedenti hanno
+costruito, un difetto vero alla volta:
+
+- **I filmati si trovano** (la ricerca attraversa i collegamenti, le memorie esterne, ignora le
+  maiuscole) **e partono davvero**: dall'inizio, nella proiezione scelta (3D 360° compreso),
+  con conferma e scelta dei visori.
+- **La riproduzione si comanda**: pausa e ripresa, da capo, stop — su tutti, sui selezionati, o
+  sul singolo visore, dalla scheda o dall'anteprima grande. La barra mostra miniatura, tempo e
+  conto alla rovescia, stimati dall'orologio di bordo quando il lettore non si lascia leggere.
+- **Il telecomando è alla pari col Mac** (un'API sola per entrambi), si apre **inquadrando un
+  QR**, e ha schermo intero e aggiornamento a un tocco.
+- **Il collegamento si spiega da solo**: gli indirizzi morti non bloccano più niente, «Adotta
+  USB» dice in faccia se il cavo servirà ancora, e il wifi — dove il visore lo permette —
+  sopravvive al riavvio. Internet non serve: basta una rete locale.
+- **Il software si racconta**: tutorial guidato passo passo, registro che scrive il perché di
+  ogni esito, e un CHANGELOG che è la memoria di come ci si è arrivati.
+
 ## 2.24 — settembre 2026
 
 - **«Adotta USB» risponde con un avviso sullo schermo**, non con una riga nel registro: chi ha
