@@ -543,6 +543,7 @@ export async function playerState(serial) {
 }
 
 export const PLAY_CONTROL_ACTION = 'com.picovr.wing.player.PLAY_CONTROL';
+export const PLAYER_TOGGLE_ACTION = 'com.picovr.wing.player.playorpause';
 export const PLAYER_EXIT_ACTION = 'com.picovr.wing.player.exit';
 
 // serial+action -> componente del ricevitore, o null se sul visore non ce n'è
@@ -578,7 +579,11 @@ async function ricevitorePico(serial, action) {
 async function annuncioPico(serial, action, extra = '') {
   const componente = await ricevitorePico(serial, action).catch(() => null);
   const destinatario = componente ? `-n ${componente} ` : '';
-  return shell(serial, `am broadcast ${destinatario}-a ${action}${extra}`, { timeout: 8000 });
+  await shell(serial, `am broadcast ${destinatario}-a ${action}${extra}`, { timeout: 8000 });
+  // Chi l'ha ricevuto è il dato che serve quando «non succede niente»: un
+  // annuncio consegnato per nome che non ferma il filmato dice che il nome è
+  // giusto e l'ordine sbagliato; uno mandato a tutti può non arrivare affatto.
+  return { consegnato: componente ?? 'a chiunque ascolti (nessun ricevitore dichiarato)' };
 }
 
 /**
@@ -599,11 +604,12 @@ export async function mediaKey(serial, azione, profilo = 'media') {
   if (tasti.broadcast && (azione === 'play' || azione === 'pause')) {
     // L'annuncio del lettore PICO: arriva anche dove nessun tasto arriva,
     // perché non passa dalla finestra a fuoco né dalla sessione multimediale.
-    return annuncioPico(
-      serial,
-      PLAY_CONTROL_ACTION,
-      ` --es controltype playcommand --es mediatype video --es operation ${azione === 'play' ? 'play' : 'pause'}`,
-    );
+    //
+    // È un **interruttore** (playorpause): l'unico comando di pausa che i
+    // kiosk su questi visori usano davvero. Un interruttore su dieci visori
+    // richiede che siano allineati — ed è per questo che tutto il resto
+    // dell'app lavora per tenerli allineati.
+    return annuncioPico(serial, PLAYER_TOGGLE_ACTION);
   }
   const keycode = tasti[azione] ?? MEDIA_KEYS[azione];
   if (!keycode) throw new Error(`comando lettore sconosciuto: ${azione}`);

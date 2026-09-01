@@ -9,6 +9,17 @@ della guida PDF.
 
 ---
 
+## 2.17 — agosto 2026
+
+- **La pausa passa all'interruttore del lettore PICO** (`playorpause`): è l'unico comando di
+  pausa che i kiosk su questi visori usano davvero, e l'ordine col nome dell'operazione scritto
+  per esteso veniva ignorato. È un interruttore, quindi conta che i visori siano allineati — ed è
+  quello per cui il resto dell'app già lavora. Ogni ordine ora scrive nel registro **a chi è
+  stato consegnato**: la differenza fra «nome giusto, ordine sbagliato» e «mai arrivato» è tutta
+  la diagnosi.
+- **«Da capo» ripartiva «al cinema»**: rifaceva l'avvio senza la modalità di proiezione. Ora la
+  modalità viene ricordata insieme al filmato, e il riavvio la ripete.
+
 ## 2.16 — agosto 2026
 
 La timeline anche col lettore muto, lo Stop, e i comandi mirati.

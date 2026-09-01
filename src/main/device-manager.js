@@ -424,12 +424,13 @@ export class DeviceManager extends EventEmitter {
    */
   async playVideoEverywhere(voci, { fromStart = true, videoType = null } = {}) {
     const results = await Promise.all(
-      voci.map(async ({ serial, path }) => {
+      voci.map(async (voce) => {
+        const { serial, path } = voce;
         const device = this.devices.get(serial);
         try {
           const esito = await apps.playVideo(serial, path, {
             fromStart,
-            videoType,
+            videoType: voce.videoType ?? videoType,
             player: device?.playerPackage ?? null,
           });
           // Quali lettori sono stati azzerati va scritto: se un giorno un
@@ -460,7 +461,15 @@ export class DeviceManager extends EventEmitter {
           // La durata la conosce l'indice del visore, e serve alla barra: senza,
           // si vedrebbe il tempo trascorso senza sapere quanto manca.
           const durationMs = await apps.videoDuration(serial, path).catch(() => null);
-          device?.setPlaying({ path, name: apps.fileName(path), durationMs, startedAt: Date.now() });
+          device?.setPlaying({
+            path,
+            name: apps.fileName(path),
+            durationMs,
+            startedAt: Date.now(),
+            // La modalità va ricordata col filmato: «Da capo» rifà lo stesso
+            // avvio, e senza questa un 360 ripartiva «al cinema».
+            videoType: voce.videoType ?? videoType ?? null,
+          });
           device?.log('info', `riproduco ${apps.fileName(path)}${fromStart ? ' dall\'inizio' : ''}`);
           // La verifica non fa aspettare chi ha premuto: parte per conto suo e
           // finisce nel registro. Serve perché «riparte dall'inizio» non può
@@ -531,10 +540,14 @@ export class DeviceManager extends EventEmitter {
    */
   async mediaEverywhere(serials, azione, profilo = this.config.data.playerKeys) {
     return this.each(serials, async (d) => {
-      await d.mediaKey(azione, profilo);
+      const esito = await d.mediaKey(azione, profilo);
       // L'orologio di bordo conta da questi ordini: è ciò che fa muovere la
       // barra quando il lettore non si lascia leggere.
       d.segnaOrdineMedia(azione);
+      // Un ordine esplicito merita una riga: quando «non succede niente», la
+      // differenza fra un annuncio consegnato per nome e uno lanciato nel
+      // vuoto è tutta la diagnosi.
+      if (esito?.consegnato) d.log('info', `ordine ${azione} consegnato: ${esito.consegnato}`);
       return azione;
     });
   }
@@ -564,7 +577,7 @@ export class DeviceManager extends EventEmitter {
   async replayEverywhere(serials) {
     const voci = this.targets(serials)
       .filter((d) => d.playing?.path)
-      .map((d) => ({ serial: d.serial, path: d.playing.path }));
+      .map((d) => ({ serial: d.serial, path: d.playing.path, videoType: d.playing.videoType ?? null }));
     if (!voci.length) throw new Error('nessun filmato in corso: mandane uno dalla finestra «Video…»');
     return this.playVideoEverywhere(voci, { fromStart: true });
   }

@@ -149,13 +149,15 @@ test('il profilo del lettore PICO manda l\'annuncio, non un tasto', async () => 
   process.env.PICO_ADB = path.join(base, 'adb');
   try {
     const { mediaKey } = await import('../src/main/apps.js');
-    await mediaKey('finto:5555', 'pause', 'pico');
-    await mediaKey('finto:5555', 'play', 'pico');
+    const esito = await mediaKey('finto:5555', 'pause', 'pico');
     const comandi = fs.readFileSync(registro, 'utf8');
-    assert.match(comandi, /am broadcast -a com\.picovr\.wing\.player\.PLAY_CONTROL/);
-    assert.match(comandi, /--es operation pause/);
-    assert.match(comandi, /--es operation play/);
+    // L'interruttore playorpause: l'unico comando di pausa che i kiosk su
+    // questi visori usano davvero.
+    assert.match(comandi, /am broadcast .*-a com\.picovr\.wing\.player\.playorpause/);
     assert.ok(!comandi.includes('input keyevent'), 'nessun tasto: non arriverebbe');
+    // E l'esito dice a chi è stato consegnato: è la riga che distingue «nome
+    // giusto, ordine sbagliato» da «mai arrivato».
+    assert.ok(esito.consegnato, 'la consegna va raccontata');
   } finally {
     delete process.env.PICO_ADB;
     fs.rmSync(base, { recursive: true, force: true });
