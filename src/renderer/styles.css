@@ -1291,3 +1291,17 @@ body.is-remote .remote-only {
   opacity: 0.45;
   pointer-events: none;
 }
+
+/* Le icone «3D» nei pulsanti: il rilievo viene dal gradiente e dal riflesso
+   (nell'SVG), la stacca da terra quest'ombra morbida. */
+.btn-ico {
+  flex: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.45));
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}

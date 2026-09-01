@@ -9,6 +9,14 @@ della guida PDF.
 
 ---
 
+## 3.2 — settembre 2026
+
+- **Icone nei pulsanti principali** (Cerca in rete, Adotta USB, Aggiorna, Un occhio,
+  Telecomando, Video…, Apri app…, Home, Indietro, Riavvia), disegnate in stile «3D morbido»:
+  gradiente per la luce dall'alto, riflesso in cima, ombra sotto — il linguaggio dell'icona del
+  telecomando, in scala bottone. Sono SVG dentro la pagina: nessun file da scaricare, e valgono
+  anche sull'iPad.
+
 ## 3.1 — settembre 2026
 
 - **Il visore è l'icona dell'app**: la foto del PICO sostituisce il pallino in alto a sinistra,

@@ -191,7 +191,8 @@ function renderEyeMode() {
   const left = state.eyeMode === 'left';
   const button = $('btn-eye');
   button.classList.toggle('is-active', left);
-  button.textContent = left ? 'Immagine intera' : 'Un occhio';
+  // Si tocca solo l'etichetta: il testo intero cancellerebbe l'icona accanto.
+  $('btn-eye-label').textContent = left ? 'Immagine intera' : 'Un occhio';
 }
 
 // ---------------------------------------------------------------------------
