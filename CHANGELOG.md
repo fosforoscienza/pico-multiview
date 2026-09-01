@@ -9,6 +9,12 @@ della guida PDF.
 
 ---
 
+## 3.1 — settembre 2026
+
+- **Il visore è l'icona dell'app**: la foto del PICO sostituisce il pallino in alto a sinistra,
+  e compare in filigrana nelle postazioni libere sopra «Aggiungi visore» — dice cosa ci va, il
+  testo dice come. L'immagine vive in `src/renderer`, così arriva anche al telecomando.
+
 ## 3.0 — settembre 2026
 
 La versione che chiude un ciclo: da «mando un filmato e speriamo» a una regia. Nessuna modifica

@@ -68,11 +68,6 @@ h3 {
   gap: 10px;
 }
 
-.logo {
-  font-size: 22px;
-  color: var(--accent);
-}
-
 .brand h1 {
   font-size: 15px;
   letter-spacing: 0.2px;
@@ -1279,4 +1274,20 @@ body.is-remote .remote-only {
 /* Gli avvisi elencano un visore per riga: gli a-capo vanno rispettati. */
 #confirm-text {
   white-space: pre-line;
+}
+
+/* Il visore al posto del pallino: è di lui che parla tutta la finestra. */
+.logo-visore {
+  width: 44px;
+  height: auto;
+  flex: none;
+}
+
+/* Il visore in filigrana nelle postazioni libere: dice cosa ci va, il testo
+   dice come. Tutto il riquadro resta cliccabile come prima. */
+.slot-visore {
+  width: 72px;
+  height: auto;
+  opacity: 0.45;
+  pointer-events: none;
 }

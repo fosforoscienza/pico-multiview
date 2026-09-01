@@ -495,6 +495,7 @@ function renderSlots() {
       if (wrapper.firstElementChild?.classList.contains('slot-empty')) return;
       wrapper.innerHTML = `
         <button class="slot-empty">
+          <img class="slot-visore" src="visore.png" alt="" />
           <span class="plus">+</span>
           <span>Aggiungi visore</span>
           <span class="slot-index">Postazione ${index + 1}</span>
