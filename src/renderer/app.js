@@ -1489,7 +1489,15 @@ function drawPlaybar() {
   for (const serial of visori) aggiornaRigaLettore(serial);
 }
 
-/** La posizione del singolo visore, sotto la sua miniatura. */
+/**
+ * La riga del filmato sotto la miniatura del visore: posizione, e i comandi
+ * per **questo** visore soltanto.
+ *
+ * I comandi della barra agiscono su tutti (o sui selezionati); questi sul
+ * singolo, senza dover selezionare niente. È la differenza fra «fermate la
+ * sala» e «ferma la postazione 3» — e la seconda serve mentre si cammina fra
+ * le postazioni, quando aprire menù è l'ultima cosa che si vuole fare.
+ */
 function aggiornaRigaLettore(serial) {
   const card = state.cards.get(serial);
   if (!card) return;
@@ -1502,10 +1510,43 @@ function aggiornaRigaLettore(serial) {
   if (!riga) {
     riga = document.createElement('div');
     riga.className = 'card-player';
+    const tempo = document.createElement('span');
+    tempo.className = 'card-player-time';
+    // I bottoni si costruiscono una volta sola: rifarli a ogni giro della
+    // barra vorrebbe dire ricrearli sotto il mouse mentre uno li clicca.
+    const bottone = (testo, title, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card-player-btn';
+      b.textContent = testo;
+      b.title = title;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fn();
+      });
+      return b;
+    };
+    riga.append(
+      tempo,
+      bottone('⏯', 'Ferma o riprende solo questo visore', async () => {
+        const ora = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
+        const azione = ora?.state === 'in pausa' ? 'play' : 'pause';
+        await run(window.pico.devices.media([serial], azione, state.playerKeys));
+        setTimeout(pollPlayers, 400);
+      }),
+      bottone('↺', 'Rimanda dall\'inizio solo questo visore', async () => {
+        await run(window.pico.devices.replay([serial]));
+        setTimeout(pollPlayers, 1500);
+      }),
+      bottone('⏹', 'Chiude il filmato solo su questo visore', async () => {
+        await run(window.pico.devices.stopVideo([serial]));
+        setTimeout(pollPlayers, 800);
+      }),
+    );
     card.el.append(riga);
   }
   const posizione = formattaTempo(stimaPosizione(lettura));
-  riga.textContent = lettura.durationMs
+  riga.querySelector('.card-player-time').textContent = lettura.durationMs
     ? `${posizione} / ${formattaTempo(lettura.durationMs)} · ${lettura.state}`
     : `${posizione} · ${lettura.state}`;
 }

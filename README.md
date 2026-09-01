@@ -317,6 +317,8 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | fermare tutti insieme | **Pausa a tutti** sulla barra del filmato |
 | portare tutti a un punto | clicca quel punto sulla barra del filmato |
 | far ripartire da capo | **Da capo** sulla barra del filmato |
+| pausa/stop/da capo su UN visore | i bottoncini ⏯ ↺ ⏹ nella riga del filmato, sotto la sua miniatura |
+| avviare un filmato su alcuni soltanto | spunta le loro caselle → **Video…** → il filmato parte solo da loro |
 | se un visore fa storie all'avvio | togli la spunta **dall'inizio**: il filmato riparte da dov'era, ma parte |
 
 Il pannello **Log** in basso mostra cosa è successo, visore per visore: è la prima cosa da

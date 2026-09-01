@@ -9,6 +9,14 @@ della guida PDF.
 
 ---
 
+## 2.19 — settembre 2026
+
+- **Comandi del filmato sul singolo visore**, nella riga sotto la sua miniatura: ⏯ ferma o
+  riprende, ↺ rimanda dall'inizio, ⏹ chiude — **quel** visore soltanto, senza selezionare
+  niente. È la differenza fra «fermate la sala» e «ferma la postazione 3», e la seconda serve
+  mentre si cammina fra le postazioni. Per avviare un filmato su alcuni soltanto: spunta le loro
+  caselle e passa da «Video…» — la conferma dice su quanti parte.
+
 ## 2.18 — settembre 2026
 
 La pausa funziona (l'interruttore dei kiosk era la strada giusta), e la barra diventa un posto

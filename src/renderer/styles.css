@@ -1161,3 +1161,33 @@ body.is-remote .desktop-only {
   text-align: left;
   min-width: 0;
 }
+
+/* I comandi del singolo visore, nella sua riga del filmato: agiscono su lui
+   solo, senza selezionare niente. */
+.card-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-player-time {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-player-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 5px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.card-player-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
