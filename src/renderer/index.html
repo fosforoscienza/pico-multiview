@@ -160,6 +160,20 @@
           <button id="preview-vol-down" class="btn">Vol −</button>
           <button id="preview-vol-up" class="btn">Vol +</button>
         </div>
+
+        <!--
+          I comandi del filmato per il visore in anteprima: compaiono solo
+          quando un filmato è in corso su di lui, e agiscono su lui soltanto.
+          Stessa logica dei bottoncini sulla scheda, ma a portata di mano
+          mentre si guarda cosa vede il visitatore.
+        -->
+        <div id="preview-player" class="preview-foot preview-player hidden">
+          <span id="preview-player-time" class="mono"></span>
+          <div class="spacer"></div>
+          <button id="preview-play-pause" class="btn" title="Ferma o riprende solo questo visore">Pausa</button>
+          <button id="preview-replay" class="btn" title="Rimanda dall'inizio solo questo visore">Da capo</button>
+          <button id="preview-stop" class="btn" title="Chiude il filmato solo su questo visore">Stop</button>
+        </div>
       </section>
 
       <!-- Metà destra (o schermo intero): le postazioni -->

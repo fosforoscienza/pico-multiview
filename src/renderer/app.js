@@ -1399,6 +1399,7 @@ async function boot() {
 
   renderDevices(await window.pico.devices.list());
   wirePlaybar();
+  wirePreviewPlayer();
   setStatus('Pronto.');
 }
 
@@ -1513,6 +1514,7 @@ function drawPlaybar() {
   }
 
   for (const serial of visori) aggiornaRigaLettore(serial);
+  aggiornaPreviewPlayer();
 }
 
 /**
@@ -1712,4 +1714,49 @@ async function aggiornaMiniatura() {
   } else {
     img.classList.add('hidden');
   }
+}
+
+/**
+ * I comandi del filmato per il visore in anteprima.
+ *
+ * Stessa logica dei bottoncini sulla scheda — agiscono su questo visore
+ * soltanto — ma a portata di mano mentre si guarda cosa vede il visitatore:
+ * è lì che ci si accorge che a QUESTA persona il filmato va fermato.
+ */
+function aggiornaPreviewPlayer() {
+  const riga = $('preview-player');
+  const serial = state.previewSerial;
+  const lettura = serial
+    ? state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing)
+    : null;
+  if (!serial || !lettura) {
+    riga.classList.add('hidden');
+    return;
+  }
+  riga.classList.remove('hidden');
+  const posizione = formattaTempo(stimaPosizione(lettura));
+  $('preview-player-time').textContent = lettura.durationMs
+    ? `${posizione} / ${formattaTempo(lettura.durationMs)} · ${lettura.state}`
+    : `${posizione} · ${lettura.state}`;
+  $('preview-play-pause').textContent = lettura.state === 'in pausa' ? 'Riprendi' : 'Pausa';
+}
+
+function wirePreviewPlayer() {
+  $('preview-play-pause').addEventListener('click', async () => {
+    const serial = state.previewSerial;
+    if (!serial) return;
+    const ora = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
+    await run(window.pico.devices.media([serial], ora?.state === 'in pausa' ? 'play' : 'pause', state.playerKeys));
+    setTimeout(pollPlayers, 400);
+  });
+  $('preview-replay').addEventListener('click', async () => {
+    if (!state.previewSerial) return;
+    await run(window.pico.devices.replay([state.previewSerial]));
+    setTimeout(pollPlayers, 1500);
+  });
+  $('preview-stop').addEventListener('click', async () => {
+    if (!state.previewSerial) return;
+    await run(window.pico.devices.stopVideo([state.previewSerial]));
+    setTimeout(pollPlayers, 800);
+  });
 }

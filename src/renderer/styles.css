@@ -1219,3 +1219,13 @@ body.is-remote .remote-only {
 .remote-qr-row .apps-list {
   flex: 1;
 }
+
+/* I comandi del filmato nell'anteprima grande: sotto la riga dei comandi del
+   visore, solo quando un filmato è in corso su di lui. */
+.preview-player {
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.preview-player .mono {
+  font-variant-numeric: tabular-nums;
+}

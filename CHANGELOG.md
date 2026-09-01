@@ -9,6 +9,13 @@ della guida PDF.
 
 ---
 
+## 2.21 — settembre 2026
+
+- **I comandi del filmato anche nell'anteprima grande**: sotto la riga di Home/Indietro/volume,
+  quando un filmato è in corso sul visore in anteprima — tempo, **Pausa/Riprendi**, **Da capo**,
+  **Stop**, per quel visore soltanto. È lì che ci si accorge che a *questa* persona il filmato va
+  fermato, ed è lì che ora c'è il pulsante.
+
 ## 2.20 — settembre 2026
 
 Il telecomando raggiunge l'app: era rimasto **otto versioni indietro**, e nessun errore lo diceva.
