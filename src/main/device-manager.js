@@ -336,7 +336,7 @@ export class DeviceManager extends EventEmitter {
         // postazioni per lo stesso visore.
         if (this.devices.has(d.serial)) await this.remove(d.serial, { forget: true });
         this.add(serial);
-        results.push({ usb: d.serial, wifi: serial, ok: true });
+        results.push({ usb: d.serial, wifi: serial, ok: true, persistente });
       } catch (err) {
         results.push({ usb: d.serial, ok: false, error: err.message });
       }
@@ -411,8 +411,13 @@ export class DeviceManager extends EventEmitter {
       for (const percorso of r.value.paths) {
         const nome = apps.fileName(percorso);
         if (!nome) continue;
-        if (!perNome.has(nome)) perNome.set(nome, { name: nome, on: [] });
-        perNome.get(nome).on.push({ serial: r.serial, path: percorso });
+        // La chiave ignora maiuscole e minuscole: «Tra Borghi e Natura.mp4»
+        // e «tra borghi e natura.mp4» sono lo stesso filmato copiato da mani
+        // diverse, e mostrarli come due righe vorrebbe dire mandarlo a metà
+        // sala per volta. Il nome mostrato è il primo incontrato.
+        const chiave = nome.toLowerCase();
+        if (!perNome.has(chiave)) perNome.set(chiave, { name: nome, on: [] });
+        perNome.get(chiave).on.push({ serial: r.serial, path: percorso });
       }
     }
     const totale = perDevice.filter((r) => r.ok).length;

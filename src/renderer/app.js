@@ -1033,6 +1033,31 @@ async function doAdoptUsb() {
   $('add-progress').textContent = text;
   for (const r of res.filter((x) => !x.ok)) log(`${r.usb}: ${r.error}`, 'error');
   renderAvailable();
+  // L'esito va detto in faccia, non nel registro: chi ha appena attaccato un
+  // cavo sta guardando lo schermo, e la cosa che vuole sapere — «posso
+  // staccarlo? e al prossimo riavvio?» — merita più di una riga in fondo.
+  if (!res.length) {
+    await mostraAvviso({
+      titolo: 'Nessun visore via cavo',
+      testo: 'Non vedo visori collegati via USB. Attacca il cavo, accetta «Consenti debug USB» dentro il visore, e riprova.',
+    });
+    return;
+  }
+  const righe = res.map((r) => {
+    if (!r.ok) return `✗ ${r.usb}: ${r.error}`;
+    return r.persistente
+      ? `✓ ${r.wifi} — wifi fissato: raggiungibile anche dopo un riavvio, senza cavo`
+      : `✓ ${r.wifi} — wifi attivo fino al prossimo riavvio del visore: dopo, servirà di nuovo il cavo`;
+  });
+  await mostraAvviso({
+    titolo: ok.length === res.length ? 'Visori passati al wifi' : 'Adozione completata a metà',
+    testo: `${righe.join('\n')}\n\nPuoi staccare il cavo dei visori passati al wifi.`,
+  });
+}
+
+/** Un avviso da leggere e chiudere: il modale di conferma, senza domanda. */
+function mostraAvviso({ titolo, testo }) {
+  return chiediConferma({ titolo, testo, conferma: 'Ok', soloOk: true });
 }
 
 function wireUi() {
@@ -1059,8 +1084,8 @@ function wireUi() {
         selettore: '#btn-usb',
         titolo: 'Adotta USB',
         testo:
-          'La prima volta un visore va collegato col cavo: questo pulsante lo autorizza a lavorare via wifi ' +
-          'e poi il cavo si stacca. Se il visore lo permette, resta raggiungibile anche dopo un riavvio.',
+          'La prima volta un visore va collegato col cavo: questo pulsante lo autorizza a lavorare via wifi. ' +
+          'L\'esito compare in un avviso: dice se puoi staccare il cavo e se servirà di nuovo al prossimo riavvio.',
       },
       {
         selettore: '#btn-sync',
@@ -1740,11 +1765,12 @@ function wirePlaybar() {
  * non parte e non lascia traccia, che è il modo peggiore in cui una cosa possa
  * non funzionare.
  */
-function chiediConferma({ titolo, testo, conferma = 'Avvia', scelte = null }) {
+function chiediConferma({ titolo, testo, conferma = 'Avvia', scelte = null, soloOk = false }) {
   const modale = $('confirm-modal');
   $('confirm-title').textContent = titolo;
   $('confirm-text').textContent = testo;
   $('confirm-yes').textContent = conferma;
+  $('confirm-no').classList.toggle('hidden', soloOk);
 
   // L'elenco delle scelte: caselle tutte gestibili col pollice, e la risposta
   // sono i valori spuntati (o true/false quando l'elenco non c'è).

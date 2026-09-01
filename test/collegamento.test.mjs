@@ -204,3 +204,29 @@ test('cambiando rete si riprova subito, senza aspettare il tetto', async () => {
     pulisci();
   }
 });
+
+test('maiuscole e minuscole non spezzano un filmato in due', async () => {
+  // «Tra Borghi e Natura.mp4» su un visore e «tra borghi e natura.mp4»
+  // sull'altro sono lo stesso filmato copiato da mani diverse: due righe in
+  // elenco vorrebbero dire mandarlo a metà sala per volta.
+  const manager = new DeviceManager(configFinta());
+  const letture = {
+    'a:5555': ['/sdcard/Movies/Tra Borghi e Natura.mp4'],
+    'b:5555': ['/sdcard/Download/tra borghi e natura.mp4'],
+  };
+  for (const serial of Object.keys(letture)) {
+    manager.devices.set(serial, {
+      serial,
+      playerState: async () => null,
+      dispose: async () => {},
+      log: () => {},
+    });
+  }
+  manager.each = async (serials, fn) =>
+    Object.entries(letture).map(([serial, paths]) => ({ serial, ok: true, value: { roots: ['/sdcard'], paths } }));
+  const elenco = await manager.videoLibrary('all');
+  assert.equal(elenco.length, 1, 'una riga sola');
+  assert.equal(elenco[0].count, 2, 'presente su entrambi i visori');
+  assert.equal(elenco[0].onAll, true);
+  assert.equal(elenco[0].name, 'Tra Borghi e Natura.mp4', 'si mostra il primo nome incontrato');
+});

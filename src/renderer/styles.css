@@ -1275,3 +1275,8 @@ body.is-remote .remote-only {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* Gli avvisi elencano un visore per riga: gli a-capo vanno rispettati. */
+#confirm-text {
+  white-space: pre-line;
+}
