@@ -323,8 +323,15 @@ export class DeviceManager extends EventEmitter {
         // L'identità va letta ora, finché il cavo c'è: serve a riconoscere
         // questo stesso visore quando si ripresenterà come "indirizzo:porta".
         const hardwareId = await this.#hardwareId(d.serial);
-        const serial = await adb.enableWifiAdb(d.serial);
+        const { serial, persistente } = await adb.enableWifiAdb(d.serial);
         if (hardwareId) this.hardwareIds.set(serial, hardwareId);
+        this.emit('log', {
+          serial,
+          level: 'info',
+          message: persistente
+            ? 'wifi fissato: questo visore resterà raggiungibile anche dopo un riavvio, senza cavo'
+            : 'wifi attivo fino al prossimo riavvio del visore: dopo, servirà di nuovo il cavo («Adotta USB»)',
+        });
         // Il nome del cavo non serve più, e lasciarlo significherebbe due
         // postazioni per lo stesso visore.
         if (this.devices.has(d.serial)) await this.remove(d.serial, { forget: true });

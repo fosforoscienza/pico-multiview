@@ -261,6 +261,14 @@ vera): utile per prendere confidenza con l'anteprima, la visuale libera e il pul
 La procedura completa, passo passo e con le schermate del visore, è in
 **[docs/SETUP-PICO.md](docs/SETUP-PICO.md)**. Qui la versione breve.
 
+### La rete: serve il wifi, non serve internet
+
+Il collegamento è fra il computer e i visori, dentro la stessa rete locale: **internet non
+serve a niente**. Una wifi interna senza connessione — anche il solo router in una stanza — è
+anzi la configurazione migliore per un evento. Due condizioni sole: computer e visori sulla
+**stessa rete**, e una rete che lasci parlare i dispositivi fra loro (le reti «ospiti» che
+isolano i client non vanno).
+
 ### Una volta sola, per ogni visore
 
 1. **Stessa rete.** Mac e visori sulla stessa wifi. Sul router disattiva l'*isolamento client*

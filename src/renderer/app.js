@@ -3,6 +3,7 @@
 
 import { formattaTempo, letturaStimata, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
 import { TileRenderer } from './decoder.js';
+import { avviaTutorial } from './tutorial.js';
 import { Viewport } from './viewport.js';
 import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
 
@@ -1041,6 +1042,83 @@ function wireUi() {
   $('btn-eye').addEventListener('click', toggleEyeMode);
   $('btn-pointer-mode').addEventListener('click', togglePointerMode);
   $('btn-diagnose').addEventListener('click', diagnosePointer);
+
+  // Il giro guidato: i passi stanno qui, accanto ai pulsanti che raccontano,
+  // così quando un pulsante cambia si vede subito che va cambiato anche il
+  // suo racconto.
+  $('btn-tutorial').addEventListener('click', () =>
+    avviaTutorial([
+      {
+        selettore: '#btn-scan',
+        titolo: 'Cerca in rete',
+        testo:
+          'Cerca i visori sulla rete wifi a cui è collegato il computer e aggiunge quelli che rispondono. ' +
+          'Serve la stessa rete, non serve internet.',
+      },
+      {
+        selettore: '#btn-usb',
+        titolo: 'Adotta USB',
+        testo:
+          'La prima volta un visore va collegato col cavo: questo pulsante lo autorizza a lavorare via wifi ' +
+          'e poi il cavo si stacca. Se il visore lo permette, resta raggiungibile anche dopo un riavvio.',
+      },
+      {
+        selettore: '#btn-sync',
+        titolo: 'Aggiorna',
+        testo: 'Rilegge l\'elenco dei visori: quelli nuovi compaiono, quelli salvati vengono ricollegati.',
+      },
+      {
+        selettore: '.selection',
+        titolo: 'Su chi agiscono i comandi',
+        testo:
+          'Nessuna selezione = i comandi valgono per tutti i visori. Spuntando le caselle sulle postazioni, ' +
+          'valgono solo per quelle. «Tutti» e «Nessuno» fanno in fretta.',
+      },
+      {
+        selettore: '#btn-video',
+        titolo: 'Video…',
+        testo:
+          'Il mestiere principale: cerca i filmati nei file dei visori e li manda in riproduzione, ' +
+          'dall\'inizio, tutti nello stesso momento. Nella conferma scegli su quali visori partire ' +
+          'e la modalità di proiezione (per i 360 immersivi: «3D 360° sopra-sotto»).',
+      },
+      {
+        selettore: '#playbar',
+        titolo: 'La barra del filmato',
+        testo:
+          'Il filmato in corso: miniatura, tempo e conto alla rovescia, pausa e ripresa per tutti, ' +
+          '«Da capo», «Stop». La spunta «dall\'inizio» governa se un filmato riparte da zero.',
+      },
+      {
+        selettore: '#btn-open-apps',
+        titolo: 'Apri app…',
+        testo:
+          'Le app installate sui visori: si scelgono dalla libreria, si avviano e si chiudono da qui. ' +
+          'Niente da scaricare sul computer: sono già dentro i visori.',
+      },
+      {
+        selettore: '#slots',
+        titolo: 'Le postazioni',
+        testo:
+          'Ogni visore ha la sua scheda: batteria, anteprima, e — con un filmato in corso — tempo e ' +
+          'comandi per quel visore soltanto. Clic sulla miniatura per l\'anteprima grande.',
+      },
+      {
+        selettore: '#btn-remote',
+        titolo: 'Telecomando',
+        testo:
+          'La stessa interfaccia su iPad, via wifi: accendi, inquadra il QR con la fotocamera ' +
+          'dell\'iPad, e comandi la sala camminando fra le postazioni.',
+      },
+      {
+        selettore: '#btn-log',
+        titolo: 'Il registro',
+        testo:
+          'Cosa è successo, visore per visore: è la prima cosa da guardare quando qualcosa non va, ' +
+          'e la prima cosa da copiare quando chiedi aiuto.',
+      },
+    ]),
+  );
 
   $('btn-open-apps').addEventListener('click', () => $('apps-command-modal').classList.remove('hidden'));
   $('apps-command-close').addEventListener('click', () => $('apps-command-modal').classList.add('hidden'));

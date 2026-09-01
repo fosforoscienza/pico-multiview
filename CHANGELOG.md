@@ -9,6 +9,17 @@ della guida PDF.
 
 ---
 
+## 2.23 — settembre 2026
+
+- **Tutorial guidato**: pulsante «Tutorial» nel footer. Un riflettore illumina un pezzo
+  dell'interfaccia alla volta — il resto in penombra — con un testo che spiega, «Avanti» e
+  «Termina tutorial». I passi che in quel momento non sono a schermo si saltano da soli.
+- **«Adotta USB» prova a fissare il wifi per sempre**: su molti visori a uso aziendale la
+  proprietà persistente si lascia scrivere, e da lì in poi il visore resta raggiungibile via
+  wifi **anche dopo un riavvio**, senza cavo. Il registro dice com'è andata: «wifi fissato» o
+  «attivo fino al prossimo riavvio».
+- Nel README: la rete necessaria è la wifi locale, **internet non serve**.
+
 ## 2.22 — settembre 2026
 
 L'app assume il suo mestiere: prima i filmati, poi le app.

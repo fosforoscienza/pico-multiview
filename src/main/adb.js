@@ -194,11 +194,17 @@ export async function deviceIp(serial) {
 export async function enableWifiAdb(serial, port = 5555) {
   const ip = await deviceIp(serial);
   if (!ip) throw new Error(`Non riesco a leggere l'IP wifi di ${serial}: il visore è connesso alla rete?`);
+  // `adb tcpip` si spegne quando il visore si riavvia: da lì in poi servirebbe
+  // di nuovo il cavo. La proprietà persistente lo evita — ma solo i visori
+  // che la lasciano scrivere (molti a uso aziendale sì): si prova, si
+  // controlla se ha attecchito, e non si promette niente che non sia vero.
+  await adbTry(['-s', serial, 'shell', `setprop persist.adb.tcp.port ${port}`]);
+  const fissata = (await adbTry(['-s', serial, 'shell', 'getprop persist.adb.tcp.port'])).out?.trim();
   await adb(['-s', serial, 'tcpip', String(port)], { timeout: 15000 });
   await delay(1500);
   const res = await connect(ip, port);
   if (!res.ok) throw new Error(`adb connect ${ip}:${port} fallito: ${res.message}`);
-  return `${ip}:${port}`;
+  return { serial: `${ip}:${port}`, persistente: fissata === String(port) };
 }
 
 export function delay(ms) {

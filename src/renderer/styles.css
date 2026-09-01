@@ -1229,3 +1229,49 @@ body.is-remote .remote-only {
 .preview-player .mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Tutorial: il riflettore e la scheda che spiega.
+   --------------------------------------------------------------------------- */
+
+.tutorial-hole {
+  position: fixed;
+  z-index: 200;
+  border-radius: 10px;
+  /* L'ombra sterminata È la penombra: un solo elemento scurisce tutto il
+     resto e lascia in luce il pezzo di cui si parla. */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72);
+  border: 2px solid var(--accent, #3b82f6);
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+.tutorial-card {
+  position: fixed;
+  z-index: 201;
+  width: min(420px, calc(100vw - 20px));
+  background: var(--bg-elev, #1c2333);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  transition: top 0.25s ease, left 0.25s ease;
+}
+
+.tutorial-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tutorial-card .tutorial-text {
+  margin: 8px 0 12px;
+  line-height: 1.45;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
