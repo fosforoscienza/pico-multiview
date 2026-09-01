@@ -9,6 +9,18 @@ della guida PDF.
 
 ---
 
+## 2.24 — settembre 2026
+
+- **«Adotta USB» risponde con un avviso sullo schermo**, non con una riga nel registro: chi ha
+  appena attaccato un cavo sta guardando lo schermo, e la cosa che vuole sapere — posso
+  staccarlo? e al prossimo riavvio? — non va cercata in fondo. Una riga per visore, e il caso
+  «nessun visore via cavo» spiegato con cosa fare.
+- **I filmati si raggruppano ignorando maiuscole e minuscole**: «Tra Borghi e Natura.mp4» e
+  «tra borghi e natura.mp4» sono lo stesso filmato copiato da mani diverse, e due righe in
+  elenco vorrebbero dire mandarlo a metà sala per volta.
+- Le regole di manutenzione (il tutorial segue l'interfaccia, una versione per consegna, le due
+  interfacce sono una) ora stanno in `CLAUDE.md`.
+
 ## 2.23 — settembre 2026
 
 - **Tutorial guidato**: pulsante «Tutorial» nel footer. Un riflettore illumina un pezzo
