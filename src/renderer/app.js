@@ -986,6 +986,14 @@ function wireEvents() {
 
   window.pico.on('remote-status', renderRemoteStatus);
 
+  // Schermo intero e ricarica esistono solo sull'iPad: sul Mac c'è la
+  // finestra, e l'interfaccia nuova arriva col riavvio dell'app.
+  $('btn-fullscreen').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => setStatus('Questo browser non permette lo schermo intero.'));
+  });
+  $('btn-reload').addEventListener('click', () => location.reload());
+
   // Solo da browser: il collegamento al Mac può cadere e va ripreso.
   if (window.pico.isRemote) {
     window.pico.on('connection', async ({ connected }) => {
@@ -1285,11 +1293,29 @@ function renderRemoteStatus(status) {
     list.innerHTML = '<li class="muted">Il Mac non risulta collegato a nessuna rete.</li>';
     return;
   }
-  for (const url of status.urls) {
+  for (const [i, url] of status.urls.entries()) {
+    const completo = `${url}/?k=${status.pin}`;
     const li = document.createElement('li');
-    li.innerHTML = '<span class="pkg"></span><span class="muted">apre già sbloccato</span>';
-    li.querySelector('.pkg').textContent = `${url}/?k=${status.pin}`;
+    li.innerHTML = '<span class="pkg"></span><span class="muted">clicca per il QR</span>';
+    li.querySelector('.pkg').textContent = completo;
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => mostraQr(completo));
     list.append(li);
+    // Il primo indirizzo è la rete locale, quella dell'iPad in sala: il suo
+    // QR compare da solo, gli altri con un clic.
+    if (i === 0) mostraQr(completo);
+  }
+}
+
+/** Il QR dell'indirizzo col PIN dentro: la fotocamera dell'iPad lo apre già sbloccato. */
+async function mostraQr(url) {
+  const img = $('remote-qr');
+  const dataUrl = await window.pico.remoteQr?.(url).catch(() => null);
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove('hidden');
+  } else {
+    img.classList.add('hidden');
   }
 }
 

@@ -9,6 +9,27 @@ della guida PDF.
 
 ---
 
+## 2.20 — settembre 2026
+
+Il telecomando raggiunge l'app: era rimasto **otto versioni indietro**, e nessun errore lo diceva.
+
+- **L'elenco delle chiamate che l'interfaccia può fare al Mac ora vive in un posto solo**
+  (`shared/api.js`), usato sia dalla finestra sia dal telecomando. Erano due copie, e le copie
+  divergono: dall'iPad i filmati partivano senza modalità («al cinema») e senza «dall'inizio»,
+  in silenzio. Da un elenco solo non si diverge. Con questo, dall'iPad funziona tutto quello che
+  funziona dal Mac: modalità, dall'inizio, pausa, stop, da capo, comandi sul singolo visore.
+- **QR nel pannello Telecomando**: è l'indirizzo col PIN dentro — la fotocamera dell'iPad lo
+  apre già sbloccato. Il QR della rete locale compare da solo; clic su un altro indirizzo per il
+  suo. Chi vede il QR entra: va mostrato sullo schermo, non stampato e lasciato sul tavolo.
+- **Il «Non autorizzato» aprendo i link col PIN**: due cause. Il cookie era `SameSite=Strict`, e
+  per Strict una navigazione che arriva da fuori — un QR inquadrato, un link toccato in un'app —
+  è «di un altro sito»: cookie mai inviato. Ora è `Lax`. E il redirect dopo il PIN era un viaggio
+  in più in cui certi browser perdevano il cookie: ora la pagina arriva subito, col cookie nella
+  stessa risposta.
+- **Su iPad**: pulsante **Schermo intero**, pulsante **Aggiorna** (ricarica l'interfaccia dal
+  Mac — serve dopo un aggiornamento dell'app), e **niente più pannello Log**, che una volta
+  aperto non si riusciva a chiudere.
+
 ## 2.19 — settembre 2026
 
 - **Comandi del filmato sul singolo visore**, nella riga sotto la sua miniatura: ⏯ ferma o

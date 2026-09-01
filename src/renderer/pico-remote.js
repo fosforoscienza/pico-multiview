@@ -4,6 +4,8 @@
 // il resto dell'interfaccia — postazioni, anteprima, visuale libera, comandi —
 // gira identico sui due lati senza una riga di codice duplicata.
 
+import { costruisciApi } from '../shared/api.js';
+
 const RECONNECT_DELAYS = [500, 1000, 2000, 4000, 8000];
 
 const listeners = new Map(); // evento -> Set<handler>
@@ -102,45 +104,7 @@ function signal(type, payload) {
 }
 
 const pico = {
-  info: () => invoke('app:info'),
-  config: {
-    get: () => invoke('config:get'),
-    patch: (patch) => invoke('config:patch', patch),
-  },
-  devices: {
-    list: () => invoke('devices:list'),
-    sync: () => invoke('devices:sync'),
-    scan: (opts) => invoke('devices:scan', opts ?? {}),
-    adoptUsb: () => invoke('devices:adoptUsb'),
-    add: (host, port) => invoke('devices:add', { host, port }),
-    remove: (serial, forget) => invoke('devices:remove', { serial, forget }),
-    commonPackages: (serials) => invoke('devices:commonPackages', { serials }),
-    eye: (serials, mode) => invoke('devices:eye', { serials, mode }),
-    pointerMode: (serials, mode) => invoke('devices:pointerMode', { serials, mode }),
-    videos: (serials) => invoke('devices:videos', { serials }),
-    playVideo: (entries) => invoke('devices:playVideo', { entries }),
-  },
-  device: {
-    reconnect: (serial) => invoke('device:reconnect', { serial }),
-    setLabel: (serial, label) => invoke('device:label', { serial, label }),
-    setMirror: (serial, mode) => invoke('device:mirror', { serial, mode }),
-    setCrop: (serial, crop) => invoke('device:crop', { serial, crop }),
-    setDisplay: (serial, displayId) => invoke('device:display', { serial, displayId }),
-    preview: (serial) => invoke('device:preview', { serial }),
-    packages: (serial, includeSystem = false) => invoke('device:packages', { serial, includeSystem }),
-    displays: (serial) => invoke('device:displays', { serial }),
-    diagnosePointer: (serial, nx, ny) => invoke('device:diagnosePointer', { serial, nx, ny }),
-    status: (serial) => invoke('device:status', { serial }),
-  },
-  actions: {
-    launch: (serials, pkg, activity) => invoke('action:launch', { serials, package: pkg, activity }),
-    stop: (serials, pkg) => invoke('action:stop', { serials, package: pkg }),
-    closeForeground: (serials) => invoke('action:closeForeground', { serials }),
-    home: (serials) => invoke('action:home', { serials }),
-    key: (serials, keycode) => invoke('action:key', { serials, keycode }),
-    volume: (serials, steps) => invoke('action:volume', { serials, steps }),
-    reboot: (serials) => invoke('action:reboot', { serials }),
-  },
+  ...costruisciApi(invoke),
   remote: {
     status: () => invoke('remote:status'),
     // Il telecomando non spegne il server da cui è collegato: sarebbe come

@@ -1191,3 +1191,31 @@ body.is-remote .desktop-only {
 .card-player-btn:hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* Visibile solo sul telecomando (iPad): sul Mac non ha senso. */
+.remote-only {
+  display: none;
+}
+
+body.is-remote .remote-only {
+  display: inline-flex;
+}
+
+.remote-qr-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.remote-qr {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+  flex: none;
+}
+
+.remote-qr-row .apps-list {
+  flex: 1;
+}

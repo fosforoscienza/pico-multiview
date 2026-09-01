@@ -33,6 +33,8 @@
             Un occhio
           </button>
           <button id="btn-remote" class="btn desktop-only" title="Comanda i visori da iPad">Telecomando…</button>
+          <button id="btn-fullscreen" class="btn remote-only" title="Schermo intero">Schermo intero</button>
+          <button id="btn-reload" class="btn remote-only" title="Ricarica l'interfaccia dal Mac: serve dopo un aggiornamento">Aggiorna</button>
         </div>
       </div>
 
@@ -174,7 +176,7 @@
     </main>
 
     <footer class="statusbar">
-      <button id="btn-log" class="chip">Log</button>
+      <button id="btn-log" class="chip desktop-only">Log</button>
       <span id="status-line" class="muted"></span>
       <span class="spacer"></span>
       <span id="version" class="version"></span>
@@ -258,7 +260,12 @@
         </div>
 
         <h3>Indirizzo</h3>
-        <ul id="remote-urls" class="apps-list"></ul>
+        <!-- Il QR è l'indirizzo col PIN dentro: la fotocamera dell'iPad lo
+             apre già sbloccato. Clic su un indirizzo per il QR di quella rete. -->
+        <div class="remote-qr-row">
+          <img id="remote-qr" class="remote-qr hidden" alt="Inquadra con la fotocamera dell'iPad" />
+          <ul id="remote-urls" class="apps-list"></ul>
+        </div>
 
         <h3>PIN</h3>
         <div class="pin-row">

@@ -223,6 +223,9 @@ export class RemoteServer extends EventEmitter {
     if (url.pathname === '/login' && req.method === 'POST') return this.#handleLogin(req, res, url);
 
     // Accesso rapido: l'indirizzo con ?k=PIN entra senza passare dal modulo.
+    // La pagina si serve SUBITO, col cookie nella stessa risposta: con il
+    // redirect di prima c'era un viaggio in più in cui certi browser
+    // perdevano il cookie, e le risorse successive uscivano «Non autorizzato».
     const key = url.searchParams.get('k');
     if (key) {
       if (this.#locked(ip)) return this.#sendLogin(res, 'Troppi tentativi: riprova fra qualche minuto.');
@@ -230,7 +233,10 @@ export class RemoteServer extends EventEmitter {
         this.#registerFailure(ip);
         return this.#sendLogin(res, 'PIN non valido.');
       }
-      return this.#sendSessionRedirect(res, this.#createSession(ip));
+      this.attempts.delete(ip);
+      return this.#sendStatic('/index.html', res, {
+        'Set-Cookie': this.#cookieDiSessione(this.#createSession(ip)),
+      });
     }
 
     if (!this.#sessionOf(req)) {
@@ -261,15 +267,26 @@ export class RemoteServer extends EventEmitter {
     });
   }
 
+  /**
+   * `SameSite=Lax`, non Strict: il collegamento arriva da fuori — un QR
+   * inquadrato con la fotocamera, un link toccato in un'app — e per Strict
+   * quelle navigazioni sono «di un altro sito», cookie non inviato, pagina
+   * «Non autorizzato». Lax li ammette sulle navigazioni vere e nega il resto,
+   * che per un pannello in rete locale protetto da PIN è il punto giusto.
+   */
+  #cookieDiSessione(token) {
+    return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_S}`;
+  }
+
   #sendSessionRedirect(res, token, location = '/') {
     res.writeHead(302, {
-      'Set-Cookie': `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_MAX_AGE_S}`,
+      'Set-Cookie': this.#cookieDiSessione(token),
       Location: location,
     });
     res.end();
   }
 
-  #sendStatic(pathname, res) {
+  #sendStatic(pathname, res, extraHeaders = {}) {
     const { filePath, root } = this.resolveStatic(pathname);
     if (!filePath.startsWith(root)) {
       res.writeHead(403).end('Vietato');
@@ -283,6 +300,7 @@ export class RemoteServer extends EventEmitter {
       res.writeHead(200, {
         'Content-Type': MIME[path.extname(filePath)] ?? 'application/octet-stream',
         'Cache-Control': 'no-store',
+        ...extraHeaders,
       });
       res.end(data);
     });

@@ -118,8 +118,16 @@ test('il PIN sbagliato non apre niente', async () => {
 test('con il PIN giusto si entra e si ottiene l\'interfaccia', async () => {
   await withServer(async (server) => {
     const { res, cookie } = await login(server.port);
-    assert.equal(res.status, 302);
+    // La pagina arriva subito, col cookie nella stessa risposta: il redirect
+    // era il viaggio in più in cui certi browser perdevano il cookie, e le
+    // risorse successive uscivano «Non autorizzato».
+    assert.equal(res.status, 200);
+    assert.match(res.body, /interfaccia/);
     assert.ok(cookie, 'manca il cookie di sessione');
+    // Lax, non Strict: il collegamento arriva da fuori (un QR inquadrato, un
+    // link toccato in un'app) e per Strict quelle navigazioni sono «di un
+    // altro sito» — cookie mai inviato.
+    assert.match(res.headers['set-cookie'][0], /SameSite=Lax/);
 
     const page = await request(server.port, '/', { cookie });
     assert.equal(page.status, 200);

@@ -8,6 +8,8 @@ import { BrowserWindow, app, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import QRCode from 'qrcode';
+
 import * as adb from './adb.js';
 import * as apps from './apps.js';
 import { Config } from './config.js';
@@ -288,6 +290,14 @@ function registerHandlers() {
   handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
   handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
   handle('devices:stopVideo', ({ serials }) => manager.stopVideoEverywhere(serials));
+  // Il QR è l'indirizzo con il PIN dentro: la fotocamera dell'iPad lo apre
+  // già sbloccato, senza copiare niente a mano. Chi vede il QR entra: va
+  // mostrato sullo schermo del Mac, non stampato e lasciato sul tavolo.
+  handle('remote:qr', async ({ url }) => {
+    if (typeof url !== 'string' || !url.startsWith('http')) throw new Error('indirizzo non valido');
+    return QRCode.toDataURL(url, { margin: 1, width: 240 });
+  });
+
   handle('device:videoThumb', async ({ serial }) => {
     const device = manager.get(serial);
     const path = device?.playing?.path;
