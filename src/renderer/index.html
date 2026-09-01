@@ -46,12 +46,10 @@
         </div>
 
         <div class="command-group">
-          <select id="app-select" class="select"></select>
-          <button id="btn-launch" class="btn btn-primary">Avvia</button>
-          <button id="btn-stop" class="btn">Chiudi questa</button>
-          <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
-          <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
-          <button id="btn-video" class="btn" title="Cerca un video nei file dei visori e mandalo in riproduzione su tutti quelli che ce l'hanno">Video…</button>
+          <!-- Il mestiere principale è mandare filmati: il pulsante grande è
+               questo. Le app stanno dietro «Apri app…», dove non ingombrano. -->
+          <button id="btn-video" class="btn btn-primary" title="Cerca un filmato nei file dei visori e mandalo in riproduzione">Video…</button>
+          <button id="btn-open-apps" class="btn" title="Avvia o chiudi le app installate sui visori">Apri app…</button>
         </div>
 
         <div class="command-group">
@@ -205,10 +203,33 @@
       il dialogo del browser: quello, dentro Electron, può non comparire — e un
       dialogo che non compare è un «no» che nessuno ha detto.
     -->
+    <!-- I comandi delle app, raccolti: il mestiere principale è il filmato. -->
+    <div id="apps-command-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3>App sui visori</h3>
+        <p class="muted">
+          Avvia o chiudi un'app già installata sui visori. I comandi valgono per la selezione, o
+          per tutti se non c'è selezione.
+        </p>
+        <div class="video-bar">
+          <select id="app-select" class="select"></select>
+          <button id="btn-launch" class="btn btn-primary">Avvia</button>
+        </div>
+        <div class="video-bar">
+          <button id="btn-stop" class="btn">Chiudi questa</button>
+          <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
+          <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
+        </div>
+        <div class="modal-actions"><button id="apps-command-close" class="btn">Chiudi</button></div>
+      </div>
+    </div>
+
     <div id="confirm-modal" class="modal hidden">
       <div class="modal-card">
         <h3 id="confirm-title">Confermi?</h3>
         <p id="confirm-text" class="muted"></p>
+        <!-- Su quali visori: tutti spuntati di default, si toglie chi non deve. -->
+        <ul id="confirm-list" class="apps-list hidden"></ul>
         <div class="modal-actions">
           <button id="confirm-no" class="btn">Annulla</button>
           <button id="confirm-yes" class="btn btn-primary">Avvia</button>

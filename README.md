@@ -303,7 +303,7 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 
 | Voglio… | Come |
 |---|---|
-| lanciare l'esperienza su tutti | nessuna selezione → scegli l'app → **Avvia** |
+| lanciare l'esperienza su tutti | **Apri app…** → scegli l'app → **Avvia** |
 | lanciarla solo su alcuni | spunta le caselle delle postazioni → **Avvia** |
 | vedere bene cosa fa una persona | clicca la sua miniatura → anteprima grande |
 | guardarmi intorno nella sua visuale | trascina nell'anteprima, rotellina per zoomare |
@@ -318,7 +318,7 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | portare tutti a un punto | clicca quel punto sulla barra del filmato |
 | far ripartire da capo | **Da capo** sulla barra del filmato |
 | pausa/stop/da capo su UN visore | i bottoncini ⏯ ↺ ⏹ nella riga del filmato, sotto la sua miniatura |
-| avviare un filmato su alcuni soltanto | spunta le loro caselle → **Video…** → il filmato parte solo da loro |
+| avviare un filmato su alcuni soltanto | **Video…** → clic sul filmato → togli la spunta a chi non deve partire |
 | se un visore fa storie all'avvio | togli la spunta **dall'inizio**: il filmato riparte da dov'era, ma parte |
 
 Il pannello **Log** in basso mostra cosa è successo, visore per visore: è la prima cosa da

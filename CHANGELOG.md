@@ -9,6 +9,17 @@ della guida PDF.
 
 ---
 
+## 2.22 — settembre 2026
+
+L'app assume il suo mestiere: prima i filmati, poi le app.
+
+- **Nella conferma di avvio ora si scelgono i visori**: l'elenco di chi ha il filmato, tutti
+  spuntati di default — è il caso normale — e si toglie chi non deve partire. La selezione delle
+  postazioni, se c'è, pre-spunta le caselle: due modi di dire la stessa cosa non devono litigare.
+- **La barra dei comandi è video-prima**: «Video…» è il pulsante principale, e tutti i comandi
+  delle app — scelta, Avvia, Chiudi questa, Chiudi app attiva, Libreria… — stanno dietro
+  **«Apri app…»**, dove non ingombrano il lavoro di tutti i giorni.
+
 ## 2.21 — settembre 2026
 
 - **I comandi del filmato anche nell'anteprima grande**: sotto la riga di Home/Indietro/volume,

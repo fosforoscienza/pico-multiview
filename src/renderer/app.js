@@ -293,29 +293,29 @@ function renderVideoList() {
  */
 async function playVideo(video) {
   // Un clic su un nome non è un ordine di far partire il filmato in sala: la
-  // riga dell'elenco serve a scegliere, la conferma a lanciare. Senza, basta
-  // sfiorare la voce sbagliata davanti al pubblico.
-  //
-  // La selezione delle postazioni vale anche qui: spuntato qualcuno, il
-  // filmato parte solo da loro. Nessuna spunta = tutti, come per i comandi.
-  const scelti = state.selected.size ? state.selected : null;
-  const destinatari = scelti ? video.on.filter((v) => scelti.has(v.serial)) : video.on;
-  if (!destinatari.length) {
-    log('nessuno dei visori selezionati ha questo filmato', 'error');
-    return;
-  }
-  const quanti = destinatari.length;
+  // riga dell'elenco serve a scegliere, la conferma a lanciare. E nella
+  // conferma si scelgono i visori: tutti spuntati di default — è il caso
+  // normale — e si toglie chi non deve, senza dover sapere prima che esiste
+  // una selezione da qualche altra parte.
   const modo = state.videoModes[state.videoMode];
   const comeProiettato = modo?.code != null ? ` Proiettato: ${modo.etichetta}.` : '';
-  const ok = await chiediConferma({
+  // La selezione delle postazioni, se c'è, pre-spunta: due modi di dire la
+  // stessa cosa non devono litigare.
+  const preSelezione = state.selected.size ? state.selected : null;
+  const destinatari = await chiediConferma({
     titolo: `Avviare «${video.name}»?`,
     testo:
-      `Parte su ${quanti} visore${quanti > 1 ? 'i' : ''}${scelti ? ' (solo i selezionati)' : ''}, nello stesso momento` +
+      `Parte insieme sui visori spuntati` +
       (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.') +
       comeProiettato,
     conferma: 'Avvia',
+    scelte: video.on.map((voce) => ({
+      valore: voce,
+      etichetta: state.devices.get(voce.serial)?.displayName ?? voce.serial,
+      spuntato: preSelezione ? preSelezione.has(voce.serial) : true,
+    })),
   });
-  if (!ok) return;
+  if (!destinatari || !destinatari.length) return;
   const results = await run(
     window.pico.devices.playVideo(destinatari, { fromStart: state.fromStart, videoType: modo?.code ?? null }),
   );
@@ -1042,6 +1042,9 @@ function wireUi() {
   $('btn-pointer-mode').addEventListener('click', togglePointerMode);
   $('btn-diagnose').addEventListener('click', diagnosePointer);
 
+  $('btn-open-apps').addEventListener('click', () => $('apps-command-modal').classList.remove('hidden'));
+  $('apps-command-close').addEventListener('click', () => $('apps-command-modal').classList.add('hidden'));
+
   $('btn-video').addEventListener('click', openVideoModal);
   $('video-close').addEventListener('click', () => $('video-modal').classList.add('hidden'));
   $('video-refresh').addEventListener('click', loadVideos);
@@ -1659,11 +1662,33 @@ function wirePlaybar() {
  * non parte e non lascia traccia, che è il modo peggiore in cui una cosa possa
  * non funzionare.
  */
-function chiediConferma({ titolo, testo, conferma = 'Avvia' }) {
+function chiediConferma({ titolo, testo, conferma = 'Avvia', scelte = null }) {
   const modale = $('confirm-modal');
   $('confirm-title').textContent = titolo;
   $('confirm-text').textContent = testo;
   $('confirm-yes').textContent = conferma;
+
+  // L'elenco delle scelte: caselle tutte gestibili col pollice, e la risposta
+  // sono i valori spuntati (o true/false quando l'elenco non c'è).
+  const lista = $('confirm-list');
+  lista.replaceChildren();
+  lista.classList.toggle('hidden', !scelte);
+  const caselle = [];
+  for (const scelta of scelte ?? []) {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '8px';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = scelta.spuntato !== false;
+    caselle.push({ box, valore: scelta.valore });
+    label.append(box, document.createTextNode(scelta.etichetta));
+    li.append(label);
+    lista.append(li);
+  }
+
   modale.classList.remove('hidden');
   $('confirm-yes').focus();
 
@@ -1675,11 +1700,12 @@ function chiediConferma({ titolo, testo, conferma = 'Avvia' }) {
       document.removeEventListener('keydown', tasto);
       resolve(risposta);
     };
-    const si = () => chiudi(true);
-    const no = () => chiudi(false);
+    const esito = () => (scelte ? caselle.filter((c) => c.box.checked).map((c) => c.valore) : true);
+    const si = () => chiudi(esito());
+    const no = () => chiudi(scelte ? null : false);
     const tasto = (e) => {
-      if (e.key === 'Escape') chiudi(false);
-      if (e.key === 'Enter') chiudi(true);
+      if (e.key === 'Escape') chiudi(scelte ? null : false);
+      if (e.key === 'Enter') chiudi(esito());
     };
     $('confirm-yes').addEventListener('click', si);
     $('confirm-no').addEventListener('click', no);
