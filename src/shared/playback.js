@@ -128,15 +128,18 @@ export function statoBarra(sintesi, mandati = [], { prossimaAzione = 'pause', sc
  */
 export function letturaStimata(playing, adesso = Date.now()) {
   // `startedAt` può essere 0 nei conti a tavolino: si controlla che ci sia,
-  // non che sia "vero".
-  if (playing?.startedAt == null || !playing?.durationMs) return null;
+  // non che sia "vero". La durata invece può mancare — un file non ancora
+  // nell'indice del visore — e il tempo trascorso si mostra lo stesso: mezzo
+  // orologio è meglio di nessun orologio, purché non inventi il conto alla
+  // rovescia.
+  if (playing?.startedAt == null) return null;
   const inPausa = playing.pausedAt != null;
   const fermo = inPausa ? playing.pausedAt : adesso;
   const posizione = Math.max(0, fermo - playing.startedAt - (playing.pausedMs ?? 0));
-  const finita = posizione >= playing.durationMs;
+  const finita = playing.durationMs ? posizione >= playing.durationMs : false;
   return {
-    positionMs: Math.min(posizione, playing.durationMs),
-    durationMs: playing.durationMs,
+    positionMs: playing.durationMs ? Math.min(posizione, playing.durationMs) : posizione,
+    durationMs: playing.durationMs ?? null,
     name: playing.name ?? null,
     speed: 1,
     // Da qui in poi per riepilogo/stima è una lettura come le altre; `letto`

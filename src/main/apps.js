@@ -640,6 +640,39 @@ export async function videoDuration(serial, percorso) {
   return res.ok ? parseDurata(res.out) : null;
 }
 
+/**
+ * La miniatura del filmato, presa dall'indice del visore.
+ *
+ * È il fotogramma che il visore stesso usa nelle sue gallerie: non c'è da
+ * decodificare niente, solo chiedere l'id del file e leggere il jpeg della sua
+ * miniatura. Un file appena copiato può non averla ancora: allora niente
+ * immagine, che è meglio di un'immagine sbagliata.
+ */
+export async function videoThumbnail(serial, percorso) {
+  const dove = String(percorso).replace(/'/g, `'\\''`);
+  const id = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    `content query --uri content://media/external/video/media --projection _id --where "_data='${dove}'"`,
+  ]);
+  const videoId = id.ok ? /_id=(\d+)/.exec(id.out || '')?.[1] : null;
+  if (!videoId) return null;
+  const thumb = await adbTry([
+    '-s',
+    serial,
+    'shell',
+    `content query --uri content://media/external/video/thumbnails --projection _data --where "video_id=${videoId}"`,
+  ]);
+  const thumbPath = thumb.ok ? /_data=(\S+)/.exec(thumb.out || '')?.[1] : null;
+  if (!thumbPath) return null;
+  const jpeg = await adbTry(['-s', serial, 'exec-out', `cat '${thumbPath.replace(/'/g, `'\\''`)}'`], {
+    encoding: 'buffer',
+  });
+  if (!jpeg.ok || !jpeg.out?.length) return null;
+  return `data:image/jpeg;base64,${Buffer.from(jpeg.out).toString('base64')}`;
+}
+
 /** Il pacchetto che aprirebbe un filmato, secondo il visore stesso. */
 export function parseResolvedActivity(text) {
   const righe = String(text ?? '').split('\n').map((r) => r.trim()).filter(Boolean);

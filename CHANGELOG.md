@@ -9,6 +9,25 @@ della guida PDF.
 
 ---
 
+## 2.18 — settembre 2026
+
+La pausa funziona (l'interruttore dei kiosk era la strada giusta), e la barra diventa un posto
+dove si guarda, non solo si clicca.
+
+- **Miniatura del filmato in corso** nella barra: è il fotogramma che il visore stesso usa nelle
+  sue gallerie, chiesto una volta per filmato.
+- **Il tempo si legge da in piedi**: posizione, durata e conto alla rovescia in evidenza accanto
+  al nome. E quando la durata non c'è (file non ancora nell'indice del visore), **il tempo
+  trascorso scorre comunque** — mezzo orologio è meglio di nessun orologio, purché non inventi
+  quanto manca.
+- **Il segmento «Tocco» è nascosto di default**: sui visori dove il tocco non arriva era solo un
+  modo per cliccare a vuoto davanti al pubblico. `touchControls: true` in `config.json` lo
+  rimette.
+- **Via il menù dei tasti dalla barra** (tasti media, OK, pad, spazio, «Prova»): il canale giusto
+  l'app lo sceglie da sola — lettore PICO → canale diretto, altrimenti tasti media. Un menù di
+  tentativi era un esame a chi guarda, e la risposta la conosceva solo il codice. Le varianti
+  restano in `config.json` per i casi strani.
+
 ## 2.17 — agosto 2026
 
 - **La pausa passa all'interruttore del lettore PICO** (`playorpause`): è l'unico comando di

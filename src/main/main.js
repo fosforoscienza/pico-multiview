@@ -150,6 +150,7 @@ function applyQualityProfiles() {
 // Handler condivisi fra IPC (finestra) e WebSocket (telecomandi)
 // ---------------------------------------------------------------------------
 
+const thumbCache = new Map(); // percorso video -> data URL della miniatura
 const handlers = new Map(); // canale -> fn(payload, ctx) con risposta
 const signals = new Map(); // canale -> fn(payload, ctx) senza risposta
 
@@ -287,6 +288,17 @@ function registerHandlers() {
   handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
   handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
   handle('devices:stopVideo', ({ serials }) => manager.stopVideoEverywhere(serials));
+  handle('device:videoThumb', async ({ serial }) => {
+    const device = manager.get(serial);
+    const path = device?.playing?.path;
+    if (!path) return null;
+    // In cache per percorso: la miniatura non cambia, e leggerla dal visore a
+    // ogni giro della barra sarebbe un viaggio inutile.
+    if (!thumbCache.has(path)) {
+      thumbCache.set(path, await apps.videoThumbnail(serial, path).catch(() => null));
+    }
+    return thumbCache.get(path);
+  });
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),

@@ -32,6 +32,7 @@ const state = {
   videoMode: 'auto', // come proiettare i filmati (auto = lascia riconoscere)
   videoModes: {},
   prossimaAzioneMedia: 'pause', // quando il lettore non si legge, si alterna
+  thumbPer: null, // percorso del filmato di cui la barra mostra la miniatura
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -954,14 +955,10 @@ function wireEvents() {
   });
 
   window.pico.on('config', (data) => {
-    // Il processo principale può cambiare da solo il canale dei comandi (lo fa
-    // quando scopre che ad aprire il filmato è stato il lettore PICO): il menù
-    // deve seguirlo, o il prossimo clic partirebbe col canale vecchio.
-    if (data.playerKeys && data.playerKeys !== state.playerKeys) {
-      state.playerKeys = data.playerKeys;
-      const menu = $('player-keys');
-      if (menu && menu.options.length) menu.value = data.playerKeys;
-    }
+    // Il processo principale può cambiare da solo il canale dei comandi (lo
+    // fa quando scopre che ad aprire il filmato è il lettore PICO): lo stato
+    // locale deve seguirlo, o il prossimo clic partirebbe col canale vecchio.
+    if (data.playerKeys) state.playerKeys = data.playerKeys;
   });
 
   window.pico.on('device-status', ({ serial, status }) => {
@@ -1356,6 +1353,9 @@ async function boot() {
   state.playerKeys = info.config.playerKeys ?? 'media';
   state.profiliLettore = info.playerProfiles ?? {};
   state.videoMode = info.config.videoMode ?? 'auto';
+  // Sui visori dove il tocco non arriva, il segmento «Tocco» è solo un modo
+  // per cliccare a vuoto: si nasconde e resta la visuale.
+  if (!info.config.touchControls) $('mode-touch').classList.add('hidden');
   state.videoModes = info.videoModes ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
@@ -1466,6 +1466,7 @@ function drawPlaybar() {
 
   $('playbar-name').textContent = b.nome;
   $('playbar-time').textContent = b.tempo;
+  aggiornaMiniatura();
   $('playbar-note').textContent = b.nota;
   $('playbar-fill').style.width = `${b.quota}%`;
   $('btn-play-pause').textContent = b.etichettaPausa;
@@ -1569,29 +1570,10 @@ function wirePlaybar() {
     );
   });
 
-  const menu = $('player-keys');
-  for (const [id, profilo] of Object.entries(state.profiliLettore ?? {})) {
-    const opzione = document.createElement('option');
-    opzione.value = id;
-    opzione.textContent = profilo.etichetta;
-    menu.append(opzione);
-  }
-  menu.value = state.playerKeys;
-  menu.addEventListener('change', async () => {
-    state.playerKeys = menu.value;
-    await window.pico.config.patch({ playerKeys: menu.value }).catch((err) => log(err.message, 'error'));
-    log(`comando del lettore: ${menu.options[menu.selectedIndex].textContent}`);
-  });
-
-  // La prova manda il tasto e basta: se il filmato si ferma, è quello giusto.
-  // Nessuno può dirlo dal computer — il lettore non risponde — ma chi guarda
-  // il visore lo vede in un istante.
-  $('btn-try-keys').addEventListener('click', async () => {
-    const results = await run(window.pico.devices.media(targetSerials(), 'pause', menu.value));
-    reportBatch(results, 'prova del tasto');
-    setStatus('Tasto mandato: se il filmato si è fermato, è quello giusto. Altrimenti prova il prossimo.');
-    setTimeout(pollPlayers, 500);
-  });
+  // Niente menù dei tasti: il canale giusto per comandare il lettore lo
+  // scopre l'app da sola (quando ad aprire il filmato è il lettore PICO, i
+  // comandi passano al suo canale diretto). Un menù di tentativi era un esame
+  // a chi guarda, e la risposta la conosceva solo il codice.
 
   // Due orologi: uno chiede al visore, l'altro fa scorrere la barra fra una
   // domanda e l'altra. Senza il secondo la barra andrebbe a scatti di due
@@ -1634,4 +1616,33 @@ function chiediConferma({ titolo, testo, conferma = 'Avvia' }) {
     $('confirm-no').addEventListener('click', no);
     document.addEventListener('keydown', tasto);
   });
+}
+
+/**
+ * La miniatura del filmato in corso, chiesta al visore una volta per filmato.
+ *
+ * È il fotogramma che il visore usa nelle sue gallerie: si chiede al primo
+ * visore che ha il filmato, e si tiene finché il filmato non cambia.
+ */
+async function aggiornaMiniatura() {
+  const img = $('playbar-thumb');
+  const conFilmato = state.slots.filter(Boolean).find((s) => state.devices.get(s)?.playing?.path);
+  const path = conFilmato ? state.devices.get(conFilmato).playing.path : null;
+  if (!path) {
+    img.classList.add('hidden');
+    state.thumbPer = null;
+    return;
+  }
+  if (state.thumbPer === path) return;
+  state.thumbPer = path;
+  const dataUrl = await window.pico.devices.videoThumb(conFilmato).catch(() => null);
+  // Nel frattempo il filmato può essere cambiato: una miniatura vecchia su un
+  // filmato nuovo è peggio di nessuna miniatura.
+  if (state.thumbPer !== path) return;
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove('hidden');
+  } else {
+    img.classList.add('hidden');
+  }
 }

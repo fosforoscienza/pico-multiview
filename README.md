@@ -308,7 +308,7 @@ salva. Da quel momento lo lanci ovunque con **Avvia**.
 | vedere bene cosa fa una persona | clicca la sua miniatura → anteprima grande |
 | guardarmi intorno nella sua visuale | trascina nell'anteprima, rotellina per zoomare |
 | tornare a quello che vede lei | pulsante **Visuale visitatore** (o tasto `0`) |
-| aiutarla a cliccare | segmento **Tocco** → clicca al posto suo |
+| aiutarla a cliccare | segmento **Tocco** (nascosto di default: `touchControls: true` in `config.json` per mostrarlo) |
 | far uscire uno dall'app | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
@@ -338,12 +338,11 @@ avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app d�
 quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
 punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
 
-**Con quali tasti si comanda il lettore.** I tasti «media» (play, pausa) sono gli unici standard
-di Android, e su molti visori non fanno **niente**: il sistema li consegna alla sessione
-multimediale, e un lettore che non ne apre una non li riceve mai. I lettori dei visori si
-comandano invece come si comandano col telecomando in mano — **OK** per fermare, **frecce** per
-saltare. Nel menù a destra della barra scegli il modo, premi **Prova** e guarda il visore: se il
-filmato si ferma, è quello giusto. La scelta resta.
+**Come vengono comandati i lettori.** L'app sceglie da sola il canale giusto: quando ad aprire
+il filmato è il lettore PICO, pausa e ripresa viaggiano sul suo canale diretto (l'annuncio
+`playorpause` dei kiosk); sugli altri visori si usano i tasti media standard. Non c'è niente da
+configurare. (Per casi particolari, `playerKeys` in `config.json` accetta anche `ok`, `dpad`,
+`spazio`, `mediaToggle`.)
 
 **Se la barra dice «il lettore non dice a che punto è»**, quel lettore non pubblica il proprio
 stato: da fuori nessuno può sapere dove sia arrivato. **Pausa** e **Da capo** funzionano lo

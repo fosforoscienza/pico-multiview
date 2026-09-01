@@ -43,6 +43,10 @@ export const DEFAULT_CONFIG = {
   // Resta in configurazione perché in un evento i filmati sono tutti dello
   // stesso tipo: scelto una volta, vale per la giornata.
   videoMode: 'auto',
+  // Il segmento «Tocco» dell'anteprima. Sui visori dove il tocco non arriva è
+  // solo un modo per cliccare a vuoto davanti al pubblico: spento finché non
+  // si sceglie di mostrarlo (touchControls: true in questo file).
+  touchControls: false,
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

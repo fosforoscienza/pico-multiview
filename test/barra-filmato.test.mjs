@@ -172,8 +172,16 @@ test('a filmato finito il conto si ferma a zero, non va sotto', () => {
   assert.match(b.tempo, /−0:00/);
 });
 
-test('senza durata l\'orologio di bordo non inventa una barra', () => {
-  assert.equal(letturaStimata({ name: 'x', startedAt: 0, durationMs: null }), null);
+test('senza durata il tempo scorre, ma il conto alla rovescia no', () => {
+  // Un file non ancora nell'indice del visore non ha durata: mezzo orologio —
+  // il tempo trascorso — è meglio di nessun orologio, purché non inventi
+  // quanto manca.
+  const lettura = letturaStimata({ name: 'x', startedAt: 0, durationMs: null, pausedAt: null, pausedMs: 0 }, 65000);
+  assert.equal(lettura.positionMs, 65000);
+  assert.equal(lettura.durationMs, null);
+  const b = statoBarra(riepilogo([lettura], 65000), []);
+  assert.equal(b.tempo, '1:05', 'solo il trascorso, nessun countdown inventato');
+  assert.equal(b.saltoAttivo, false);
   assert.equal(letturaStimata(null), null);
 });
 

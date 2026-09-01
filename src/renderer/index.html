@@ -67,7 +67,13 @@
         visori sono davvero allo stesso punto.
       -->
       <div id="playbar" class="playbar hidden">
-        <span id="playbar-name" class="playbar-name"></span>
+        <!-- La miniatura viene dall'indice del visore: è il fotogramma che il
+             visore stesso usa nelle sue gallerie. -->
+        <img id="playbar-thumb" class="playbar-thumb hidden" alt="" />
+        <div class="playbar-info">
+          <span id="playbar-name" class="playbar-name"></span>
+          <span id="playbar-time" class="playbar-time mono">–</span>
+        </div>
         <button id="btn-play-pause" class="btn btn-primary" title="Ferma o riprende su tutti i visori">Pausa a tutti</button>
         <button id="btn-replay" class="btn" title="Rimanda dall'inizio il filmato in corso">Da capo</button>
         <button id="btn-stop-video" class="btn" title="Chiude il filmato e riporta il visore com'era">Stop</button>
@@ -75,15 +81,7 @@
           <div id="playbar-fill" class="playbar-fill"></div>
           <div id="playbar-spread" class="playbar-spread hidden" title="Quanto sono distanti fra loro i visori"></div>
         </div>
-        <span id="playbar-time" class="playbar-time mono">–</span>
         <span id="playbar-note" class="muted"></span>
-        <!--
-          Con quali tasti si comanda il lettore. Non è una preferenza di gusto:
-          i tasti «media» su molti visori non fanno niente, e quale funzioni si
-          scopre solo provandolo su quel lettore.
-        -->
-        <select id="player-keys" class="select" title="Con quali tasti si comanda il lettore di questo visore"></select>
-        <button id="btn-try-keys" class="btn btn-ghost" title="Manda il tasto scelto ai visori: guarda se il filmato si ferma">Prova</button>
         <label class="playbar-check" title="Chiude il lettore prima di lanciare, così il filmato ricomincia da capo. Se un visore facesse storie, spegnilo: il filmato parte comunque, da dov'era rimasto">
           <input type="checkbox" id="from-start" checked /> dall'inizio
         </label>
