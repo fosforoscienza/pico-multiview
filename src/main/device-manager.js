@@ -39,13 +39,61 @@ export function decideAdd(candidate, registered) {
   return { action: 'skip', twin: twin.serial };
 }
 
+/**
+ * Quanto aspettare prima di ribussare a un indirizzo che non risponde.
+ *
+ * Ritentarlo a ogni aggiornamento significava pagarne l'attesa ogni volta; non
+ * ritentarlo mai significava non accorgersi del visore che torna acceso. Le
+ * attese crescono, con un tetto: mezzo minuto, poi uno, poi due, fino a cinque.
+ */
+export function attesaRiprova(tentativi) {
+  return Math.min(30000 * 2 ** Math.max(0, tentativi - 1), 300000);
+}
+
+/**
+ * Gli indirizzi salvati a cui vale la pena ribussare adesso.
+ *
+ * Fuori restano quelli già collegati e quelli in attesa dopo un buco nell'acqua.
+ */
+export function daRiconnettere({ salvati = [], online = new Set(), irraggiungibili = new Map(), now = Date.now() } = {}) {
+  return salvati
+    .map((e) => e.serial)
+    .filter((serial) => isWifi(serial) && !online.has(serial))
+    .filter((serial) => (irraggiungibili.get(serial)?.prossimo ?? 0) <= now);
+}
+
+/**
+ * Cosa dire di un visore che adb vede ma non è pronto all'uso.
+ *
+ * Sono i due modi in cui un cavo attaccato non serve a niente, e finora non
+ * producevano **nessuna riga** nel registro: l'operatore vedeva un elenco
+ * vuoto e un cavo in mano, senza sapere che il visore era lì e cosa mancasse.
+ */
+export function diagnosiCollegamento(seen = []) {
+  const spiegazioni = {
+    unauthorized:
+      'collegato ma non ancora autorizzato: indossa il visore e accetta «Consenti debug USB» ' +
+      '(spunta «ricorda sempre», così non lo richiede più)',
+    offline:
+      'collegato ma adb lo vede «offline»: stacca e riattacca il cavo, oppure riavvia il visore',
+  };
+  return seen
+    .filter((d) => d.state !== 'device' && spiegazioni[d.state])
+    .map((d) => ({ serial: d.serial, level: 'error', message: spiegazioni[d.state] }));
+}
+
 export class DeviceManager extends EventEmitter {
   constructor(config) {
     super();
     this.config = config;
     this.devices = new Map(); // serial -> Device
     this.hardwareIds = new Map(); // serial -> ro.serialno, per riconoscere i doppioni
-    this.unreachable = new Set(); // indirizzi salvati che non rispondono: lo diciamo una volta sola
+    // indirizzo salvato -> {tentativi, prossimo}: quando ribussare, e da quante
+    // volte non risponde. Serve a non pagare l'attesa a ogni aggiornamento.
+    this.unreachable = new Map();
+    this.reti = null; // sottoreti locali dell'ultimo giro: se cambiano si riprova subito
+    this.statiDetti = new Map(); // serial -> stato già spiegato, per non ripeterlo
+    this.lettoriMuti = new Set(); // visori il cui lettore non pubblica lo stato
     this.statusTimer = null;
   }
 
@@ -88,6 +136,7 @@ export class DeviceManager extends EventEmitter {
     const entry = this.config.deviceEntry(serial) ?? {};
     device = new Device(serial, {
       label: label ?? entry.label ?? null,
+      playerPackage: entry.playerPackage ?? null,
       config: {
         mirror: entry.mirror ?? 'scrcpy',
         crop: entry.crop ?? null,
@@ -128,36 +177,46 @@ export class DeviceManager extends EventEmitter {
   /**
    * Allinea il registro a quello che vede adb: aggiunge i nuovi dispositivi
    * online e prova a ricollegare quelli salvati in configurazione.
+   *
+   * L'ordine conta. Prima i visori che adb già vede — il cavo, soprattutto —
+   * e solo dopo i tentativi verso la rete: quando le due cose stavano in fila,
+   * un indirizzo salvato che non risponde teneva fermo il giro per secondi, e
+   * se falliva con un errore lo interrompeva del tutto. Il visore attaccato al
+   * cavo non arrivava mai a essere aggiunto.
    */
   async sync({ autoConnect = this.config.data.autoConnect } = {}) {
     const seen = await adb.listDevices();
     const online = new Set(seen.filter((d) => d.state === 'device').map((d) => d.serial));
 
+    await this.#registra(online, autoConnect);
+
     if (autoConnect) {
-      for (const entry of this.config.data.devices) {
-        if (!online.has(entry.serial) && entry.serial.includes(':')) {
-          const [host, port] = entry.serial.split(':');
-          const res = await adb.connect(host, Number(port) || 5555);
-          if (res.ok) {
-            online.add(entry.serial);
-            this.unreachable.delete(entry.serial);
-          } else if (!this.unreachable.has(entry.serial)) {
-            // Un indirizzo salvato che non risponde più — tipico dopo un
-            // cambio di rete — verrebbe ritentato a ogni aggiornamento. Lo si
-            // dice una volta, con cosa fare, invece di riempire il registro.
-            this.unreachable.add(entry.serial);
-            this.emit('log', {
-              serial: entry.serial,
-              level: 'error',
-              message:
-                `${entry.serial} non risponde: è un visore salvato su un indirizzo che non esiste più ` +
-                '(succede cambiando rete). Toglilo dalla sua postazione, oppure riaggiungilo con l\'indirizzo nuovo.',
-            });
-          }
-        }
+      const tornati = await this.#riconnettiSalvati(online);
+      for (const serial of tornati) online.add(serial);
+      if (tornati.length) await this.#registra(new Set(tornati), autoConnect);
+    }
+
+    for (const avviso of diagnosiCollegamento(seen)) {
+      // Una volta sola per stato: chi non autorizza il visore al primo
+      // aggiornamento non lo autorizza nemmeno al decimo avviso uguale.
+      if (this.statiDetti.get(avviso.serial) === avviso.message) continue;
+      this.statiDetti.set(avviso.serial, avviso.message);
+      this.emit('log', avviso);
+    }
+    for (const d of seen) {
+      if (d.state === 'device') this.statiDetti.delete(d.serial);
+      const dev = this.devices.get(d.serial);
+      if (dev && d.state !== 'device' && dev.state === STATE.STREAMING) {
+        dev.log('error', `dispositivo in stato "${d.state}"`);
       }
     }
 
+    this.emit('devices', this.list());
+    return { seen, online: [...online] };
+  }
+
+  /** Mette in elenco i visori che adb vede pronti, saltando i doppioni. */
+  async #registra(online, autoConnect) {
     for (const serial of online) {
       if (this.devices.has(serial)) continue;
       const decision = decideAdd(
@@ -184,18 +243,60 @@ export class DeviceManager extends EventEmitter {
       }
       this.add(serial, { connect: autoConnect });
     }
+  }
 
-    // Aggiorna gli stati "non autorizzato / offline" per dare un feedback utile.
-    for (const d of seen) {
-      const dev = this.devices.get(d.serial);
-      if (!dev) continue;
-      if (d.state !== 'device' && dev.state === STATE.STREAMING) {
-        dev.log('error', `dispositivo in stato "${d.state}"`);
-      }
+  /**
+   * Ribussa agli indirizzi salvati che non sono già collegati.
+   *
+   * Tutti insieme, non in fila: sono attese di rete, e una decina di visori
+   * spenti metterebbe in coda un minuto buono di aggiornamento.
+   */
+  async #riconnettiSalvati(online) {
+    // Cambiare rete cambia gli indirizzi buoni: le attese accumulate finora
+    // non dicono più niente, e si riprova subito da capo.
+    const reti = adb.localSubnets().sort().join(' ');
+    if (this.reti !== null && this.reti !== reti) this.unreachable.clear();
+    this.reti = reti;
+
+    const now = Date.now();
+    const piano = daRiconnettere({
+      salvati: this.config.data.devices,
+      online,
+      irraggiungibili: this.unreachable,
+      now,
+    });
+    const esiti = await Promise.all(piano.map((serial) => this.#riconnetti(serial, now)));
+    return esiti.filter(Boolean);
+  }
+
+  async #riconnetti(serial, now) {
+    const [host, porta] = serial.split(':');
+    const port = Number(porta) || 5555;
+    // Si bussa alla porta prima di chiamare adb: un indirizzo morto si scopre
+    // in un attimo, mentre "adb connect" ci mette fino a otto secondi.
+    const raggiungibile = await adb.isPortOpen(host, port);
+    const res = raggiungibile
+      ? await adb.connect(host, port)
+      : { ok: false, message: 'non risponde sulla porta adb' };
+    if (res.ok) {
+      this.unreachable.delete(serial);
+      return serial;
     }
-
-    this.emit('devices', this.list());
-    return { seen, online: [...online] };
+    const tentativi = (this.unreachable.get(serial)?.tentativi ?? 0) + 1;
+    this.unreachable.set(serial, { tentativi, prossimo: now + attesaRiprova(tentativi) });
+    // Un indirizzo che non risponde più — tipico dopo un cambio di rete — lo si
+    // dice una volta, con cosa fare, invece di riempire il registro.
+    if (tentativi > 1) return null;
+    const dove = this.reti ? ` Il computer ora è sulla rete ${this.reti.split(' ').join(', ')}.` : '';
+    this.emit('log', {
+      serial,
+      level: 'error',
+      message:
+        `${serial} non risponde: è un visore salvato su un indirizzo che non esiste più ` +
+        `(succede cambiando rete).${dove} Toglilo dalla sua postazione, oppure riaggiungilo ` +
+        'con l\'indirizzo nuovo.',
+    });
+    return null;
   }
 
   /** Scansione della rete + aggiunta di tutto ciò che risponde. */
@@ -222,13 +323,20 @@ export class DeviceManager extends EventEmitter {
         // L'identità va letta ora, finché il cavo c'è: serve a riconoscere
         // questo stesso visore quando si ripresenterà come "indirizzo:porta".
         const hardwareId = await this.#hardwareId(d.serial);
-        const serial = await adb.enableWifiAdb(d.serial);
+        const { serial, persistente } = await adb.enableWifiAdb(d.serial);
         if (hardwareId) this.hardwareIds.set(serial, hardwareId);
+        this.emit('log', {
+          serial,
+          level: 'info',
+          message: persistente
+            ? 'wifi fissato: questo visore resterà raggiungibile anche dopo un riavvio, senza cavo'
+            : 'wifi attivo fino al prossimo riavvio del visore: dopo, servirà di nuovo il cavo («Adotta USB»)',
+        });
         // Il nome del cavo non serve più, e lasciarlo significherebbe due
         // postazioni per lo stesso visore.
         if (this.devices.has(d.serial)) await this.remove(d.serial, { forget: true });
         this.add(serial);
-        results.push({ usb: d.serial, wifi: serial, ok: true });
+        results.push({ usb: d.serial, wifi: serial, ok: true, persistente });
       } catch (err) {
         results.push({ usb: d.serial, ok: false, error: err.message });
       }
@@ -244,8 +352,15 @@ export class DeviceManager extends EventEmitter {
     return serials.map((s) => this.devices.get(s)).filter(Boolean);
   }
 
-  /** Esegue un'azione su più visori in parallelo, senza far fallire il gruppo. */
-  async each(serials, fn, { concurrency = 10 } = {}) {
+  /**
+   * Esegue un'azione su più visori in parallelo, senza far fallire il gruppo.
+   *
+   * `quiet` serve alle azioni ripetute da sole — leggere a che punto è il
+   * filmato, due volte al secondo — dove un visore che non risponde
+   * riempirebbe il registro della stessa riga per tutta la proiezione. L'esito
+   * torna comunque a chi ha chiesto: è solo il registro a restare pulito.
+   */
+  async each(serials, fn, { concurrency = 10, quiet = false } = {}) {
     const list = this.targets(serials);
     const results = [];
     let cursor = 0;
@@ -258,7 +373,7 @@ export class DeviceManager extends EventEmitter {
           results.push({ serial: device.serial, ok: true, value: await fn(device) });
         } catch (err) {
           results.push({ serial: device.serial, ok: false, error: err.message });
-          device.log('error', err.message);
+          if (!quiet) device.log('error', err.message);
         }
       }
     };
@@ -284,15 +399,25 @@ export class DeviceManager extends EventEmitter {
         device?.log('error', `ricerca video fallita: ${r.error}`);
         continue;
       }
-      device?.log('info', `ricerca video: ${r.value.length} file trovati`);
+      // La cartella in cui ha cercato va detta insieme al numero: «0 file» è
+      // una risposta che si capisce solo sapendo dove ha guardato.
+      const dove = r.value.roots.length
+        ? ` in ${r.value.roots.join(', ')}`
+        : ' (nessuna memoria da guardare: il visore non espone /sdcard)';
+      device?.log('info', `ricerca video: ${r.value.paths.length} file trovati${dove}`);
     }
     for (const r of perDevice) {
       if (!r.ok) continue;
-      for (const percorso of r.value) {
+      for (const percorso of r.value.paths) {
         const nome = apps.fileName(percorso);
         if (!nome) continue;
-        if (!perNome.has(nome)) perNome.set(nome, { name: nome, on: [] });
-        perNome.get(nome).on.push({ serial: r.serial, path: percorso });
+        // La chiave ignora maiuscole e minuscole: «Tra Borghi e Natura.mp4»
+        // e «tra borghi e natura.mp4» sono lo stesso filmato copiato da mani
+        // diverse, e mostrarli come due righe vorrebbe dire mandarlo a metà
+        // sala per volta. Il nome mostrato è il primo incontrato.
+        const chiave = nome.toLowerCase();
+        if (!perNome.has(chiave)) perNome.set(chiave, { name: nome, on: [] });
+        perNome.get(chiave).on.push({ serial: r.serial, path: percorso });
       }
     }
     const totale = perDevice.filter((r) => r.ok).length;
@@ -309,13 +434,59 @@ export class DeviceManager extends EventEmitter {
    * Resta comunque un avvio simultaneo, non una sincronia fotogramma per
    * fotogramma: per quella servirebbe un'app dentro il visore.
    */
-  async playVideoEverywhere(voci) {
+  async playVideoEverywhere(voci, { fromStart = true, videoType = null } = {}) {
     const results = await Promise.all(
-      voci.map(async ({ serial, path }) => {
+      voci.map(async (voce) => {
+        const { serial, path } = voce;
         const device = this.devices.get(serial);
         try {
-          await apps.playVideo(serial, path);
-          device?.log('info', `riproduco ${apps.fileName(path)}`);
+          const esito = await apps.playVideo(serial, path, {
+            fromStart,
+            videoType: voce.videoType ?? videoType,
+            player: device?.playerPackage ?? null,
+          });
+          // Quali lettori sono stati azzerati va scritto: se un giorno un
+          // lettore perdesse le sue impostazioni, questa è la riga che spiega
+          // il perché — e se il filmato riparte ancora da metà, la sua assenza
+          // dice che il lettore vero non è ancora stato visto in azione.
+          if (esito?.azzerati?.length) {
+            device?.log('info', `azzerata la memoria di: ${esito.azzerati.join(', ')}`);
+          }
+          // La strada con cui è partito va scritta: «parte ma in cinema» e
+          // «parte ma da metà» si diagnosticano solo sapendo quale chiamata ha
+          // aperto il filmato, e quali sono state saltate e perché.
+          for (const saltato of esito?.saltati ?? []) device?.log('error', saltato);
+          if (esito?.via) device?.log('info', `avviato con: ${esito.via}`);
+          // Se ha aperto il lettore PICO, è al lettore PICO che vanno parlati
+          // anche pausa e ripresa: coi tasti resterebbe sordo. Il passaggio è
+          // automatico perché la coppia giusta è una sola, ma resta scritto e
+          // reversibile dal menù della barra.
+          if (esito?.via?.includes('lettore PICO') && this.config.data.playerKeys !== 'pico') {
+            this.config.patch({ playerKeys: 'pico' });
+            this.emit('config-changed', this.config.data);
+            this.emit('log', {
+              serial,
+              level: 'info',
+              message: 'comandi del lettore: passo a «Lettore PICO (comando diretto)» — è lui che ha aperto il filmato',
+            });
+          }
+          // La durata la conosce l'indice del visore, e serve alla barra: senza,
+          // si vedrebbe il tempo trascorso senza sapere quanto manca.
+          const durationMs = await apps.videoDuration(serial, path).catch(() => null);
+          device?.setPlaying({
+            path,
+            name: apps.fileName(path),
+            durationMs,
+            startedAt: Date.now(),
+            // La modalità va ricordata col filmato: «Da capo» rifà lo stesso
+            // avvio, e senza questa un 360 ripartiva «al cinema».
+            videoType: voce.videoType ?? videoType ?? null,
+          });
+          device?.log('info', `riproduco ${apps.fileName(path)}${fromStart ? ' dall\'inizio' : ''}`);
+          // La verifica non fa aspettare chi ha premuto: parte per conto suo e
+          // finisce nel registro. Serve perché «riparte dall'inizio» non può
+          // essere una speranza — o il lettore l'ha fatto, o va detto.
+          if (fromStart && device) this.#verificaPartenza(device).catch(() => {});
           return { serial, ok: true, value: path };
         } catch (err) {
           device?.log('error', `non riesco ad avviare ${apps.fileName(path)}: ${err.message}`);
@@ -324,6 +495,103 @@ export class DeviceManager extends EventEmitter {
       }),
     );
     return results;
+  }
+
+  /**
+   * Controlla che il filmato sia partito davvero dall'inizio.
+   *
+   * Chiudere il lettore prima di lanciare basta quasi sempre, ma «quasi» non è
+   * una garanzia: certi lettori si riaprono dove erano rimasti. Allora si
+   * guarda, e se è ripartito da metà lo si riporta indietro.
+   *
+   * E se il lettore non pubblica il suo stato, non c'è niente da guardare: è
+   * un limite di quel lettore, e va detto una volta — altrimenti l'operatore
+   * aspetterebbe una barra che non arriverà mai.
+   */
+  async #verificaPartenza(device, { attesaMs = 2500, sogliaMs = 5000 } = {}) {
+    await adb.delay(attesaMs);
+    // Chi si è aperto davvero: è il lettore da chiudere e azzerare al prossimo
+    // avvio, ed è più affidabile di qualunque domanda al sistema. Si salva
+    // nella configurazione: al riavvio dell'app, saperlo già dal primo lancio
+    // fa la differenza fra un primo filmato che riparte da metà e uno no.
+    const imparato = await device.imparaLettore().catch(() => null);
+    if (imparato) this.config.upsertDevice({ serial: device.serial, playerPackage: imparato });
+    const stato = await device.playerState().catch(() => null);
+    if (!stato) {
+      if (this.lettoriMuti.has(device.serial)) return;
+      this.lettoriMuti.add(device.serial);
+      device.log(
+        'error',
+        'il lettore di questo visore non dice a che punto è il filmato: la barra non può ' +
+          'seguirlo, e pausa e salto potrebbero non rispondere',
+      );
+      return;
+    }
+    this.lettoriMuti.delete(device.serial);
+    if (stato.positionMs <= sogliaMs) return;
+    device.log('info', `era ripartito da ${Math.round(stato.positionMs / 1000)}s: lo riporto all'inizio`);
+    await device.seekTo(0).catch((err) => device.log('error', `non riesco a riportarlo all'inizio: ${err.message}`));
+  }
+
+  /**
+   * A che punto è il filmato su ogni visore.
+   *
+   * Le letture partono insieme: in fila, l'ultimo visore risponderebbe con una
+   * fotografia più vecchia di quella del primo, e la barra li mostrerebbe
+   * sfasati anche quando sono allineati davvero.
+   */
+  async playersState(serials) {
+    return this.each(serials, (d) => d.playerState(), { quiet: true });
+  }
+
+  /**
+   * Un comando del lettore su tutti i visori, nello stesso momento.
+   *
+   * Insieme, non in fila: fermarsi è la cosa che più si nota se avviene a
+   * scaglioni, ed è il motivo per cui esiste questo pulsante.
+   */
+  async mediaEverywhere(serials, azione, profilo = this.config.data.playerKeys) {
+    return this.each(serials, async (d) => {
+      const esito = await d.mediaKey(azione, profilo);
+      // L'orologio di bordo conta da questi ordini: è ciò che fa muovere la
+      // barra quando il lettore non si lascia leggere.
+      d.segnaOrdineMedia(azione);
+      // Un ordine esplicito merita una riga: quando «non succede niente», la
+      // differenza fra un annuncio consegnato per nome e uno lanciato nel
+      // vuoto è tutta la diagnosi.
+      if (esito?.consegnato) d.log('info', `ordine ${azione} consegnato: ${esito.consegnato}`);
+      return azione;
+    });
+  }
+
+  /**
+   * Ferma il filmato: prima l'annuncio d'uscita che il lettore PICO ascolta,
+   * poi la chiusura delle app di riproduzione, che vale ovunque.
+   */
+  async stopVideoEverywhere(serials) {
+    return this.each(serials, async (d) => {
+      await apps.stopPlayback(d.serial, { player: d.playerPackage });
+      d.setPlaying(null);
+      d.log('info', 'filmato fermato');
+      return true;
+    });
+  }
+
+  /** Porta tutti i visori allo stesso punto del filmato. */
+  async seekEverywhere(serials, ms) {
+    return this.each(serials, async (d) => {
+      const stato = await d.seekTo(ms, { profilo: this.config.data.playerKeys });
+      return stato?.positionMs ?? null;
+    });
+  }
+
+  /** Rimanda dall'inizio il filmato che ciascuno sta già guardando. */
+  async replayEverywhere(serials) {
+    const voci = this.targets(serials)
+      .filter((d) => d.playing?.path)
+      .map((d) => ({ serial: d.serial, path: d.playing.path, videoType: d.playing.videoType ?? null }));
+    if (!voci.length) throw new Error('nessun filmato in corso: mandane uno dalla finestra «Video…»');
+    return this.playVideoEverywhere(voci, { fromStart: true });
   }
 
   /** Pacchetti presenti su TUTTI i visori indicati (utile per la libreria app). */

@@ -55,7 +55,7 @@ export const STATE = {
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000];
 
 export class Device extends EventEmitter {
-  constructor(serial, { label = null, config = {} } = {}) {
+  constructor(serial, { label = null, playerPackage = null, config = {} } = {}) {
     super();
     this.serial = serial;
     this.label = label;
@@ -63,6 +63,14 @@ export class Device extends EventEmitter {
     this.error = null;
     this.info = {};
     this.status = { battery: null, foreground: null, updatedAt: 0 };
+    // Il filmato che gli abbiamo mandato noi: il visore non sa dire quale file
+    // stia guardando, ma noi sì, ed è l'unico modo di conoscerne la durata.
+    this.playing = null;
+    // Il lettore visto in azione l'ultima volta: è il dato che permette di
+    // chiuderlo e azzerarlo prima del prossimo avvio, e quindi di ripartire
+    // dall'inizio. Arriva dalla configurazione, così vale già al primo lancio.
+    this.playerPackage = playerPackage;
+    this.homePackage = null;
     this.videoSize = null;
     this.session = null;
     this.mirror = config.mirror ?? 'scrcpy';
@@ -111,6 +119,7 @@ export class Device extends EventEmitter {
       displayId: this.displayId,
       quality: this.quality,
       pointerMode: this.pointerMode,
+      playing: this.playing,
     };
   }
 
@@ -582,6 +591,65 @@ export class Device extends EventEmitter {
 
   async listDisplays() {
     return apps.listDisplays(this.serial);
+  }
+
+  /** Segna quale filmato gli abbiamo mandato, con la sua durata. */
+  setPlaying(playing) {
+    // startedAt/pausedAt/pausedMs sono l'orologio di bordo: il lettore PICO
+    // non dice a che punto è, ma gli ordini di moto e di pausa glieli diamo
+    // noi, e contando il tempo fra un ordine e l'altro la posizione si stima.
+    this.playing = playing ? { pausedAt: null, pausedMs: 0, ...playing } : null;
+    this.emit('state', this.toJSON());
+  }
+
+  /** L'orologio di bordo segna la pausa (o la ripresa) ordinata da qui. */
+  segnaOrdineMedia(azione) {
+    if (!this.playing) return;
+    const now = Date.now();
+    if (azione === 'pause' && !this.playing.pausedAt) {
+      this.playing = { ...this.playing, pausedAt: now };
+    } else if (azione === 'play' && this.playing.pausedAt) {
+      this.playing = {
+        ...this.playing,
+        pausedAt: null,
+        pausedMs: this.playing.pausedMs + (now - this.playing.pausedAt),
+      };
+    }
+    this.emit('state', this.toJSON());
+  }
+
+  /** A che punto è il filmato, secondo il lettore del visore. */
+  async playerState() {
+    const stato = await apps.playerState(this.serial);
+    if (!stato) return null;
+    return {
+      ...stato,
+      durationMs: this.playing?.durationMs ?? null,
+      name: this.playing?.name ?? null,
+    };
+  }
+
+  async mediaKey(azione, profilo = 'media') {
+    return apps.mediaKey(this.serial, azione, profilo);
+  }
+
+  async seekTo(ms, { profilo = 'media' } = {}) {
+    return apps.seekTo(this.serial, ms, { profilo });
+  }
+
+  /** Guarda cosa si è aperto e se lo ricorda: sarà il lettore da chiudere. */
+  async imparaLettore() {
+    if (!this.homePackage) this.homePackage = await apps.resolveHomePackage(this.serial).catch(() => null);
+    const fg = await apps.foregroundPackage(this.serial).catch(() => null);
+    const candidato = apps.riconosciLettore(fg, this.homePackage);
+    // Non basta che sia in primo piano: dev'essere un'app che i filmati li sa
+    // aprire. Se il filmato non è partito, davanti c'è dell'altro — e
+    // ricordarselo come lettore vorrebbe dire chiuderlo al prossimo avvio.
+    if (candidato && (await apps.gestisceVideo(this.serial, candidato))) {
+      this.playerPackage = candidato;
+      return candidato;
+    }
+    return null;
   }
 
   async refreshStatus(afterMs = 0) {

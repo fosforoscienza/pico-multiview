@@ -1,7 +1,9 @@
 // UI: postazioni (slot) nella schermata principale, anteprima grande a metà
 // schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
+import { formattaTempo, letturaStimata, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
 import { TileRenderer } from './decoder.js';
+import { avviaTutorial } from './tutorial.js';
 import { Viewport } from './viewport.js';
 import { attachPreviewInput, canvasPixelsPerClientPixel } from './pointer.js';
 
@@ -20,6 +22,18 @@ const state = {
   pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
   lastTouch: null, // ultimo punto toccato: la diagnostica riprova lì
   videos: [], // filmati trovati sui visori, raggruppati per nome
+  players: new Map(), // serial -> ultima lettura del lettore, con l'ora in cui è arrivata
+  playerTimer: null,
+  playerKeys: 'media', // con quali tasti si comanda il lettore del visore
+  profiliLettore: {},
+  // Ricominciare da capo è il default a ogni avvio dell'app, di proposito: è
+  // quello che si vuole in sala, e una scelta diversa fatta ieri non deve
+  // sorprendere oggi. La spunta serve per l'eccezione, non per la regola.
+  fromStart: true,
+  videoMode: 'auto', // come proiettare i filmati (auto = lascia riconoscere)
+  videoModes: {},
+  prossimaAzioneMedia: 'pause', // quando il lettore non si legge, si alterna
+  thumbPer: null, // percorso del filmato di cui la barra mostra la miniatura
   viewport: new Viewport(),
   pendingSlot: null, // slot che ha aperto la modale "aggiungi"
   config: null,
@@ -177,7 +191,8 @@ function renderEyeMode() {
   const left = state.eyeMode === 'left';
   const button = $('btn-eye');
   button.classList.toggle('is-active', left);
-  button.textContent = left ? 'Immagine intera' : 'Un occhio';
+  // Si tocca solo l'etichetta: il testo intero cancellerebbe l'icona accanto.
+  $('btn-eye-label').textContent = left ? 'Immagine intera' : 'Un occhio';
 }
 
 // ---------------------------------------------------------------------------
@@ -197,11 +212,28 @@ function openVideoModal() {
   $('video-modal').classList.remove('hidden');
   $('video-search').value = '';
   $('video-search').focus();
+  wireVideoMode();
   renderVideoList();
   // Se non abbiamo ancora letto i file, li leggiamo ora: la ricerca su dieci
   // visori richiede qualche secondo, e farla all'avvio dell'app sarebbe tempo
   // sprecato per chi non usa i video.
   if (!state.videos.length) loadVideos();
+}
+
+function wireVideoMode() {
+  const menu = $('video-mode');
+  if (menu.options.length) return;
+  for (const [id, modo] of Object.entries(state.videoModes)) {
+    const opzione = document.createElement('option');
+    opzione.value = id;
+    opzione.textContent = modo.etichetta;
+    menu.append(opzione);
+  }
+  menu.value = state.videoMode;
+  menu.addEventListener('change', async () => {
+    state.videoMode = menu.value;
+    await window.pico.config.patch({ videoMode: menu.value }).catch((err) => log(err.message, 'error'));
+  });
 }
 
 async function loadVideos() {
@@ -271,10 +303,39 @@ function renderVideoList() {
  * visore, e va detto invece di lasciarlo credere.
  */
 async function playVideo(video) {
-  const results = await run(window.pico.devices.playVideo(video.on));
+  // Un clic su un nome non è un ordine di far partire il filmato in sala: la
+  // riga dell'elenco serve a scegliere, la conferma a lanciare. E nella
+  // conferma si scelgono i visori: tutti spuntati di default — è il caso
+  // normale — e si toglie chi non deve, senza dover sapere prima che esiste
+  // una selezione da qualche altra parte.
+  const modo = state.videoModes[state.videoMode];
+  const comeProiettato = modo?.code != null ? ` Proiettato: ${modo.etichetta}.` : '';
+  // La selezione delle postazioni, se c'è, pre-spunta: due modi di dire la
+  // stessa cosa non devono litigare.
+  const preSelezione = state.selected.size ? state.selected : null;
+  const destinatari = await chiediConferma({
+    titolo: `Avviare «${video.name}»?`,
+    testo:
+      `Parte insieme sui visori spuntati` +
+      (state.fromStart ? ', dall\'inizio.' : ', da dove era rimasto.') +
+      comeProiettato,
+    conferma: 'Avvia',
+    scelte: video.on.map((voce) => ({
+      valore: voce,
+      etichetta: state.devices.get(voce.serial)?.displayName ?? voce.serial,
+      spuntato: preSelezione ? preSelezione.has(voce.serial) : true,
+    })),
+  });
+  if (!destinatari || !destinatari.length) return;
+  const results = await run(
+    window.pico.devices.playVideo(destinatari, { fromStart: state.fromStart, videoType: modo?.code ?? null }),
+  );
   if (results === null) return;
   reportBatch(results, `«${video.name}»`);
   $('video-modal').classList.add('hidden');
+  // La barra deve comparire adesso, non al prossimo giro: il lettore ci mette
+  // un momento ad aprirsi, e questa è l'attesa che serve.
+  setTimeout(pollPlayers, 1500);
 }
 
 function persistSlots() {
@@ -444,6 +505,7 @@ function renderSlots() {
       if (wrapper.firstElementChild?.classList.contains('slot-empty')) return;
       wrapper.innerHTML = `
         <button class="slot-empty">
+          <img class="slot-visore" src="visore.png" alt="" />
           <span class="plus">+</span>
           <span>Aggiungi visore</span>
           <span class="slot-index">Postazione ${index + 1}</span>
@@ -904,6 +966,13 @@ function wireEvents() {
     updateSummary();
   });
 
+  window.pico.on('config', (data) => {
+    // Il processo principale può cambiare da solo il canale dei comandi (lo
+    // fa quando scopre che ad aprire il filmato è il lettore PICO): lo stato
+    // locale deve seguirlo, o il prossimo clic partirebbe col canale vecchio.
+    if (data.playerKeys) state.playerKeys = data.playerKeys;
+  });
+
   window.pico.on('device-status', ({ serial, status }) => {
     const device = state.devices.get(serial);
     if (!device) return;
@@ -928,6 +997,14 @@ function wireEvents() {
   window.pico.on('log', ({ serial, level, message }) => log(message, level, serial));
 
   window.pico.on('remote-status', renderRemoteStatus);
+
+  // Schermo intero e ricarica esistono solo sull'iPad: sul Mac c'è la
+  // finestra, e l'interfaccia nuova arriva col riavvio dell'app.
+  $('btn-fullscreen').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => setStatus('Questo browser non permette lo schermo intero.'));
+  });
+  $('btn-reload').addEventListener('click', () => location.reload());
 
   // Solo da browser: il collegamento al Mac può cadere e va ripreso.
   if (window.pico.isRemote) {
@@ -967,6 +1044,31 @@ async function doAdoptUsb() {
   $('add-progress').textContent = text;
   for (const r of res.filter((x) => !x.ok)) log(`${r.usb}: ${r.error}`, 'error');
   renderAvailable();
+  // L'esito va detto in faccia, non nel registro: chi ha appena attaccato un
+  // cavo sta guardando lo schermo, e la cosa che vuole sapere — «posso
+  // staccarlo? e al prossimo riavvio?» — merita più di una riga in fondo.
+  if (!res.length) {
+    await mostraAvviso({
+      titolo: 'Nessun visore via cavo',
+      testo: 'Non vedo visori collegati via USB. Attacca il cavo, accetta «Consenti debug USB» dentro il visore, e riprova.',
+    });
+    return;
+  }
+  const righe = res.map((r) => {
+    if (!r.ok) return `✗ ${r.usb}: ${r.error}`;
+    return r.persistente
+      ? `✓ ${r.wifi} — wifi fissato: raggiungibile anche dopo un riavvio, senza cavo`
+      : `✓ ${r.wifi} — wifi attivo fino al prossimo riavvio del visore: dopo, servirà di nuovo il cavo`;
+  });
+  await mostraAvviso({
+    titolo: ok.length === res.length ? 'Visori passati al wifi' : 'Adozione completata a metà',
+    testo: `${righe.join('\n')}\n\nPuoi staccare il cavo dei visori passati al wifi.`,
+  });
+}
+
+/** Un avviso da leggere e chiudere: il modale di conferma, senza domanda. */
+function mostraAvviso({ titolo, testo }) {
+  return chiediConferma({ titolo, testo, conferma: 'Ok', soloOk: true });
 }
 
 function wireUi() {
@@ -976,6 +1078,93 @@ function wireUi() {
   $('btn-eye').addEventListener('click', toggleEyeMode);
   $('btn-pointer-mode').addEventListener('click', togglePointerMode);
   $('btn-diagnose').addEventListener('click', diagnosePointer);
+
+  // Il giro guidato: i passi stanno qui, accanto ai pulsanti che raccontano,
+  // così quando un pulsante cambia si vede subito che va cambiato anche il
+  // suo racconto.
+  $('btn-tutorial').addEventListener('click', () =>
+    avviaTutorial([
+      {
+        selettore: '#btn-scan',
+        titolo: 'Cerca in rete',
+        testo:
+          'Cerca i visori sulla rete wifi a cui è collegato il computer e aggiunge quelli che rispondono. ' +
+          'Serve la stessa rete, non serve internet.',
+      },
+      {
+        selettore: '#btn-usb',
+        titolo: 'Adotta USB',
+        testo:
+          'La prima volta un visore va collegato col cavo: questo pulsante lo autorizza a lavorare via wifi. ' +
+          'L\'esito compare in un avviso: dice se puoi staccare il cavo e se servirà di nuovo al prossimo riavvio.',
+      },
+      {
+        selettore: '#btn-sync',
+        titolo: 'Aggiorna',
+        testo: 'Rilegge l\'elenco dei visori: quelli nuovi compaiono, quelli salvati vengono ricollegati.',
+      },
+      {
+        selettore: '.selection',
+        titolo: 'Su chi agiscono i comandi',
+        testo:
+          'Nessuna selezione = i comandi valgono per tutti i visori. Spuntando le caselle sulle postazioni, ' +
+          'valgono solo per quelle. «Tutti» e «Nessuno» fanno in fretta.',
+      },
+      {
+        selettore: '#btn-video',
+        titolo: 'Video…',
+        testo:
+          'Il mestiere principale: cerca i filmati nei file dei visori e li manda in riproduzione, ' +
+          'dall\'inizio, tutti nello stesso momento. Nella conferma scegli su quali visori partire ' +
+          'e la modalità di proiezione (per i 360 immersivi: «3D 360° sopra-sotto»).',
+      },
+      {
+        selettore: '#playbar',
+        titolo: 'La barra del filmato',
+        testo:
+          'Il filmato in corso: miniatura, tempo e conto alla rovescia, pausa e ripresa per tutti, ' +
+          '«Da capo», «Stop». La spunta «dall\'inizio» governa se un filmato riparte da zero.',
+      },
+      {
+        selettore: '#btn-open-apps',
+        titolo: 'Apri app…',
+        testo:
+          'Le app installate sui visori: si scelgono dalla libreria, si avviano e si chiudono da qui. ' +
+          'Niente da scaricare sul computer: sono già dentro i visori.',
+      },
+      {
+        selettore: '#slots',
+        titolo: 'Le postazioni',
+        testo:
+          'Ogni visore ha la sua scheda: batteria, anteprima, e — con un filmato in corso — tempo e ' +
+          'comandi per quel visore soltanto. Clic sulla miniatura per l\'anteprima grande.',
+      },
+      {
+        selettore: '#btn-remote',
+        titolo: 'Telecomando',
+        testo:
+          'La stessa interfaccia su iPad, via wifi: accendi, inquadra il QR con la fotocamera ' +
+          'dell\'iPad, e comandi la sala camminando fra le postazioni.',
+      },
+      {
+        selettore: '#btn-guide',
+        titolo: 'Guida',
+        testo:
+          'Come installare il programma su un Mac nuovo, preparare i visori e usare tutto su una wifi ' +
+          'senza internet. È scritta dentro l\'app: si legge anche quando internet non c\'è.',
+      },
+      {
+        selettore: '#btn-log',
+        titolo: 'Il registro',
+        testo:
+          'Cosa è successo, visore per visore: è la prima cosa da guardare quando qualcosa non va, ' +
+          'e la prima cosa da copiare quando chiedi aiuto.',
+      },
+    ]),
+  );
+
+  $('btn-open-apps').addEventListener('click', () => $('apps-command-modal').classList.remove('hidden'));
+  $('apps-command-close').addEventListener('click', () => $('apps-command-modal').classList.add('hidden'));
 
   $('btn-video').addEventListener('click', openVideoModal);
   $('video-close').addEventListener('click', () => $('video-modal').classList.add('hidden'));
@@ -1238,11 +1427,29 @@ function renderRemoteStatus(status) {
     list.innerHTML = '<li class="muted">Il Mac non risulta collegato a nessuna rete.</li>';
     return;
   }
-  for (const url of status.urls) {
+  for (const [i, url] of status.urls.entries()) {
+    const completo = `${url}/?k=${status.pin}`;
     const li = document.createElement('li');
-    li.innerHTML = '<span class="pkg"></span><span class="muted">apre già sbloccato</span>';
-    li.querySelector('.pkg').textContent = `${url}/?k=${status.pin}`;
+    li.innerHTML = '<span class="pkg"></span><span class="muted">clicca per il QR</span>';
+    li.querySelector('.pkg').textContent = completo;
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => mostraQr(completo));
     list.append(li);
+    // Il primo indirizzo è la rete locale, quella dell'iPad in sala: il suo
+    // QR compare da solo, gli altri con un clic.
+    if (i === 0) mostraQr(completo);
+  }
+}
+
+/** Il QR dell'indirizzo col PIN dentro: la fotocamera dell'iPad lo apre già sbloccato. */
+async function mostraQr(url) {
+  const img = $('remote-qr');
+  const dataUrl = await window.pico.remoteQr?.(url).catch(() => null);
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove('hidden');
+  } else {
+    img.classList.add('hidden');
   }
 }
 
@@ -1303,6 +1510,13 @@ async function boot() {
   state.slotCount = info.config.slotCount ?? 10;
   state.slots = Array.isArray(info.config.slots) ? [...info.config.slots] : [];
   state.unassigned = new Set(info.config.unassigned ?? []);
+  state.playerKeys = info.config.playerKeys ?? 'media';
+  state.profiliLettore = info.playerProfiles ?? {};
+  state.videoMode = info.config.videoMode ?? 'auto';
+  // Sui visori dove il tocco non arriva, il segmento «Tocco» è solo un modo
+  // per cliccare a vuoto: si nasconde e resta la visuale.
+  if (!info.config.touchControls) $('mode-touch').classList.add('hidden');
+  state.videoModes = info.videoModes ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
   state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
@@ -1318,6 +1532,8 @@ async function boot() {
   }
 
   renderDevices(await window.pico.devices.list());
+  wirePlaybar();
+  wirePreviewPlayer();
   setStatus('Pronto.');
 }
 
@@ -1325,3 +1541,380 @@ boot().catch((err) => {
   console.error(err);
   setStatus(`Errore di avvio: ${err.message}`);
 });
+
+// ---------------------------------------------------------------------------
+// Barra del filmato
+// ---------------------------------------------------------------------------
+
+/**
+ * Chiede a ogni visore a che punto è il filmato.
+ *
+ * Ogni due secondi, non dieci volte al secondo: ogni lettura è un comando adb
+ * per visore, e con dieci postazioni sarebbe un martellamento. Fra una lettura
+ * e l'altra la barra si muove da sola, contando il tempo che passa.
+ */
+let tickLettore = 0;
+
+/** Un filmato c'è se gliel'abbiamo mandato noi, o se ne stiamo già leggendo uno. */
+function filmatoInGiro() {
+  if (state.players.size) return true;
+  return state.slots.filter(Boolean).some((s) => state.devices.get(s)?.playing);
+}
+
+async function pollPlayers() {
+  const serials = state.slots.filter(Boolean);
+  if (!serials.length) return;
+  // Ogni lettura è un comando adb per visore. Quando non c'è nessun filmato in
+  // giro si guarda molto più di rado: serve solo ad accorgersi di un filmato
+  // avviato dal visore stesso, non a seguirlo secondo per secondo.
+  tickLettore += 1;
+  if (!filmatoInGiro() && tickLettore % 5 !== 0) return;
+  const results = await window.pico.devices.playerState(serials).catch(() => null);
+  if (!Array.isArray(results)) return;
+  const adesso = Date.now();
+  for (const r of results) {
+    if (r.ok && r.value) state.players.set(r.serial, { ...r.value, letto: adesso });
+    else state.players.delete(r.serial);
+  }
+  // I visori spariti dalle postazioni non devono restare nella media.
+  for (const serial of [...state.players.keys()]) {
+    if (!serials.includes(serial)) state.players.delete(serial);
+  }
+  drawPlaybar();
+}
+
+/** Le letture dei soli visori ancora in postazione. */
+function lettureCorrenti() {
+  // La parola del lettore quando c'è; l'orologio di bordo quando il lettore
+  // tace ma il filmato gliel'abbiamo mandato noi, con la sua durata.
+  return state.slots
+    .filter(Boolean)
+    .map((s) => state.players.get(s) ?? letturaStimata(state.devices.get(s)?.playing))
+    .filter(Boolean);
+}
+
+/** I filmati che abbiamo mandato noi e che risultano ancora in corso. */
+function filmatiMandati() {
+  return state.slots
+    .filter(Boolean)
+    .map((s) => state.devices.get(s)?.playing)
+    .filter(Boolean);
+}
+
+/**
+ * Disegna la barra.
+ *
+ * La barra c'è **sempre**, finché c'è un visore in postazione. Nascondere una
+ * riga che a volte compare e a volte no non è discrezione: è un guasto, per chi
+ * guarda. Quando manca qualcosa — il filmato, la durata, un lettore che si
+ * lasci seguire — la barra resta e lo scrive. Cosa dire lo decide `statoBarra`,
+ * qui si scrive soltanto.
+ */
+function drawPlaybar() {
+  const barra = $('playbar');
+  const visori = state.slots.filter(Boolean);
+  if (!visori.length) {
+    barra.classList.add('hidden');
+    return;
+  }
+  barra.classList.remove('hidden');
+
+  const sintesi = riepilogo(lettureCorrenti());
+  const b = statoBarra(sintesi, filmatiMandati(), {
+    prossimaAzione: state.prossimaAzioneMedia,
+    scelti: state.selected.size,
+  });
+
+  $('playbar-name').textContent = b.nome;
+  $('playbar-time').textContent = b.tempo;
+  aggiornaMiniatura();
+  $('playbar-note').textContent = b.nota;
+  $('playbar-fill').style.width = `${b.quota}%`;
+  $('btn-play-pause').textContent = b.etichettaPausa;
+  $('btn-play-pause').disabled = !b.pausaAttiva;
+  $('btn-replay').disabled = !b.pausaAttiva;
+  $('btn-stop-video').disabled = !b.pausaAttiva;
+  $('playbar-track').classList.toggle('is-off', !b.saltoAttivo);
+
+  // La fascia rossa è la distanza fra il visore più avanti e quello più
+  // indietro: mezzo secondo non si vede, mezzo minuto sì, ed è quello che
+  // conta sapere prima di entrare in sala.
+  const spread = $('playbar-spread');
+  spread.classList.toggle('hidden', !b.distanti);
+  if (b.distanti) {
+    const quota = (ms) => Math.max(0, Math.min(100, (ms / sintesi.durationMs) * 100));
+    spread.style.left = `${quota(sintesi.minMs)}%`;
+    spread.style.width = `${Math.max(1, quota(sintesi.maxMs) - quota(sintesi.minMs))}%`;
+  }
+
+  for (const serial of visori) aggiornaRigaLettore(serial);
+  aggiornaPreviewPlayer();
+}
+
+/**
+ * La riga del filmato sotto la miniatura del visore: posizione, e i comandi
+ * per **questo** visore soltanto.
+ *
+ * I comandi della barra agiscono su tutti (o sui selezionati); questi sul
+ * singolo, senza dover selezionare niente. È la differenza fra «fermate la
+ * sala» e «ferma la postazione 3» — e la seconda serve mentre si cammina fra
+ * le postazioni, quando aprire menù è l'ultima cosa che si vuole fare.
+ */
+function aggiornaRigaLettore(serial) {
+  const card = state.cards.get(serial);
+  if (!card) return;
+  let riga = card.el.querySelector('.card-player');
+  const lettura = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
+  if (!lettura) {
+    riga?.remove();
+    return;
+  }
+  if (!riga) {
+    riga = document.createElement('div');
+    riga.className = 'card-player';
+    const tempo = document.createElement('span');
+    tempo.className = 'card-player-time';
+    // I bottoni si costruiscono una volta sola: rifarli a ogni giro della
+    // barra vorrebbe dire ricrearli sotto il mouse mentre uno li clicca.
+    const bottone = (testo, title, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card-player-btn';
+      b.textContent = testo;
+      b.title = title;
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fn();
+      });
+      return b;
+    };
+    riga.append(
+      tempo,
+      bottone('⏯', 'Ferma o riprende solo questo visore', async () => {
+        const ora = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
+        const azione = ora?.state === 'in pausa' ? 'play' : 'pause';
+        await run(window.pico.devices.media([serial], azione, state.playerKeys));
+        setTimeout(pollPlayers, 400);
+      }),
+      bottone('↺', 'Rimanda dall\'inizio solo questo visore', async () => {
+        await run(window.pico.devices.replay([serial]));
+        setTimeout(pollPlayers, 1500);
+      }),
+      bottone('⏹', 'Chiude il filmato solo su questo visore', async () => {
+        await run(window.pico.devices.stopVideo([serial]));
+        setTimeout(pollPlayers, 800);
+      }),
+    );
+    card.el.append(riga);
+  }
+  const posizione = formattaTempo(stimaPosizione(lettura));
+  riga.querySelector('.card-player-time').textContent = lettura.durationMs
+    ? `${posizione} / ${formattaTempo(lettura.durationMs)} · ${lettura.state}`
+    : `${posizione} · ${lettura.state}`;
+}
+
+/** Il punto del filmato su cui si è cliccato, in millisecondi. */
+function puntoCliccato(evento, elemento, durationMs) {
+  const rect = elemento.getBoundingClientRect();
+  const quota = Math.max(0, Math.min(1, (evento.clientX - rect.left) / rect.width));
+  return Math.round(quota * durationMs);
+}
+
+function wirePlaybar() {
+  $('btn-play-pause').addEventListener('click', async () => {
+    const sintesi = riepilogo(lettureCorrenti());
+    // Play e pausa espliciti, mai l'interruttore: se un visore fosse rimasto
+    // indietro, il tasto unico lo farebbe ripartire mentre ferma gli altri.
+    // Quando il lettore non si legge, si alterna ricordando l'ultimo ordine.
+    const azione = sintesi ? (sintesi.inRiproduzione ? 'pause' : 'play') : state.prossimaAzioneMedia;
+    state.prossimaAzioneMedia = azione === 'pause' ? 'play' : 'pause';
+    const results = await run(window.pico.devices.media(targetSerials(), azione, state.playerKeys));
+    reportBatch(results, azione === 'pause' ? 'pausa' : 'ripresa');
+    setTimeout(pollPlayers, 400);
+  });
+
+  $('btn-replay').addEventListener('click', async () => {
+    const results = await run(window.pico.devices.replay(targetSerials()));
+    reportBatch(results, 'da capo');
+    setTimeout(pollPlayers, 1500);
+  });
+
+  $('btn-stop-video').addEventListener('click', async () => {
+    const results = await run(window.pico.devices.stopVideo(targetSerials()));
+    reportBatch(results, 'stop');
+    setTimeout(pollPlayers, 800);
+  });
+
+  $('playbar-track').addEventListener('click', async (evento) => {
+    const sintesi = riepilogo(lettureCorrenti());
+    if (!sintesi?.durationMs) {
+      log('Senza la durata non so dove sia il punto che hai indicato.', 'error');
+      return;
+    }
+    const ms = puntoCliccato(evento, $('playbar-track'), sintesi.durationMs);
+    setStatus(`Porto i visori a ${formattaTempo(ms)}…`);
+    const results = await run(window.pico.devices.seek(targetSerials(), ms));
+    reportBatch(results, `salto a ${formattaTempo(ms)}`);
+    setTimeout(pollPlayers, 600);
+  });
+
+  // La spunta «dall'inizio» è stato di sessione, non configurazione: a ogni
+  // avvio torna accesa. (Il collegamento era sparito in una pulizia: la
+  // casella mostrava il segno ma non parlava più con nessuno — e il config
+  // conservava un vecchio «no» che nessuno vedeva.)
+  const daCapo = $('from-start');
+  daCapo.checked = state.fromStart;
+  daCapo.addEventListener('change', () => {
+    state.fromStart = daCapo.checked;
+    log(
+      daCapo.checked
+        ? 'i filmati ripartiranno dall\'inizio'
+        : 'i filmati ripartiranno da dove erano rimasti (fino al prossimo avvio dell\'app)',
+    );
+  });
+
+  // Niente menù dei tasti: il canale giusto per comandare il lettore lo
+  // scopre l'app da sola (quando ad aprire il filmato è il lettore PICO, i
+  // comandi passano al suo canale diretto). Un menù di tentativi era un esame
+  // a chi guarda, e la risposta la conosceva solo il codice.
+
+  // Due orologi: uno chiede al visore, l'altro fa scorrere la barra fra una
+  // domanda e l'altra. Senza il secondo la barra andrebbe a scatti di due
+  // secondi; senza il primo si allontanerebbe dal vero.
+  setInterval(pollPlayers, 2000);
+  setInterval(drawPlaybar, 250);
+}
+
+/**
+ * Chiede conferma con un modale dell'app.
+ *
+ * Non `window.confirm`: dentro Electron quel dialogo può non comparire, e un
+ * dialogo che non compare vale come un «no» che nessuno ha detto — il comando
+ * non parte e non lascia traccia, che è il modo peggiore in cui una cosa possa
+ * non funzionare.
+ */
+function chiediConferma({ titolo, testo, conferma = 'Avvia', scelte = null, soloOk = false }) {
+  const modale = $('confirm-modal');
+  $('confirm-title').textContent = titolo;
+  $('confirm-text').textContent = testo;
+  $('confirm-yes').textContent = conferma;
+  $('confirm-no').classList.toggle('hidden', soloOk);
+
+  // L'elenco delle scelte: caselle tutte gestibili col pollice, e la risposta
+  // sono i valori spuntati (o true/false quando l'elenco non c'è).
+  const lista = $('confirm-list');
+  lista.replaceChildren();
+  lista.classList.toggle('hidden', !scelte);
+  const caselle = [];
+  for (const scelta of scelte ?? []) {
+    const li = document.createElement('li');
+    const label = document.createElement('label');
+    label.style.display = 'flex';
+    label.style.alignItems = 'center';
+    label.style.gap = '8px';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = scelta.spuntato !== false;
+    caselle.push({ box, valore: scelta.valore });
+    label.append(box, document.createTextNode(scelta.etichetta));
+    li.append(label);
+    lista.append(li);
+  }
+
+  modale.classList.remove('hidden');
+  $('confirm-yes').focus();
+
+  return new Promise((resolve) => {
+    const chiudi = (risposta) => {
+      modale.classList.add('hidden');
+      $('confirm-yes').removeEventListener('click', si);
+      $('confirm-no').removeEventListener('click', no);
+      document.removeEventListener('keydown', tasto);
+      resolve(risposta);
+    };
+    const esito = () => (scelte ? caselle.filter((c) => c.box.checked).map((c) => c.valore) : true);
+    const si = () => chiudi(esito());
+    const no = () => chiudi(scelte ? null : false);
+    const tasto = (e) => {
+      if (e.key === 'Escape') chiudi(scelte ? null : false);
+      if (e.key === 'Enter') chiudi(esito());
+    };
+    $('confirm-yes').addEventListener('click', si);
+    $('confirm-no').addEventListener('click', no);
+    document.addEventListener('keydown', tasto);
+  });
+}
+
+/**
+ * La miniatura del filmato in corso, chiesta al visore una volta per filmato.
+ *
+ * È il fotogramma che il visore usa nelle sue gallerie: si chiede al primo
+ * visore che ha il filmato, e si tiene finché il filmato non cambia.
+ */
+async function aggiornaMiniatura() {
+  const img = $('playbar-thumb');
+  const conFilmato = state.slots.filter(Boolean).find((s) => state.devices.get(s)?.playing?.path);
+  const path = conFilmato ? state.devices.get(conFilmato).playing.path : null;
+  if (!path) {
+    img.classList.add('hidden');
+    state.thumbPer = null;
+    return;
+  }
+  if (state.thumbPer === path) return;
+  state.thumbPer = path;
+  const dataUrl = await window.pico.devices.videoThumb(conFilmato).catch(() => null);
+  // Nel frattempo il filmato può essere cambiato: una miniatura vecchia su un
+  // filmato nuovo è peggio di nessuna miniatura.
+  if (state.thumbPer !== path) return;
+  if (dataUrl) {
+    img.src = dataUrl;
+    img.classList.remove('hidden');
+  } else {
+    img.classList.add('hidden');
+  }
+}
+
+/**
+ * I comandi del filmato per il visore in anteprima.
+ *
+ * Stessa logica dei bottoncini sulla scheda — agiscono su questo visore
+ * soltanto — ma a portata di mano mentre si guarda cosa vede il visitatore:
+ * è lì che ci si accorge che a QUESTA persona il filmato va fermato.
+ */
+function aggiornaPreviewPlayer() {
+  const riga = $('preview-player');
+  const serial = state.previewSerial;
+  const lettura = serial
+    ? state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing)
+    : null;
+  if (!serial || !lettura) {
+    riga.classList.add('hidden');
+    return;
+  }
+  riga.classList.remove('hidden');
+  const posizione = formattaTempo(stimaPosizione(lettura));
+  $('preview-player-time').textContent = lettura.durationMs
+    ? `${posizione} / ${formattaTempo(lettura.durationMs)} · ${lettura.state}`
+    : `${posizione} · ${lettura.state}`;
+  $('preview-play-pause').textContent = lettura.state === 'in pausa' ? 'Riprendi' : 'Pausa';
+}
+
+function wirePreviewPlayer() {
+  $('preview-play-pause').addEventListener('click', async () => {
+    const serial = state.previewSerial;
+    if (!serial) return;
+    const ora = state.players.get(serial) ?? letturaStimata(state.devices.get(serial)?.playing);
+    await run(window.pico.devices.media([serial], ora?.state === 'in pausa' ? 'play' : 'pause', state.playerKeys));
+    setTimeout(pollPlayers, 400);
+  });
+  $('preview-replay').addEventListener('click', async () => {
+    if (!state.previewSerial) return;
+    await run(window.pico.devices.replay([state.previewSerial]));
+    setTimeout(pollPlayers, 1500);
+  });
+  $('preview-stop').addEventListener('click', async () => {
+    if (!state.previewSerial) return;
+    await run(window.pico.devices.stopVideo([state.previewSerial]));
+    setTimeout(pollPlayers, 800);
+  });
+}

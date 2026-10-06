@@ -330,6 +330,14 @@ vera): utile per prendere confidenza con l'anteprima, la visuale libera e il pul
 La procedura completa, passo passo e con le schermate del visore, è in
 **[docs/SETUP-PICO.md](docs/SETUP-PICO.md)**. Qui la versione breve.
 
+### La rete: serve il wifi, non serve internet
+
+Il collegamento è fra il computer e i visori, dentro la stessa rete locale: **internet non
+serve a niente**. Una wifi interna senza connessione — anche il solo router in una stanza — è
+anzi la configurazione migliore per un evento. Due condizioni sole: computer e visori sulla
+**stessa rete**, e una rete che lasci parlare i dispositivi fra loro (le reti «ospiti» che
+isolano i client non vanno).
+
 ### Una volta sola, per ogni visore
 
 1. **Stessa rete.** Mac e visori sulla stessa wifi. Sul router disattiva l'*isolamento client*
@@ -392,18 +400,60 @@ nell'app, leggibile senza connessione.
 
 | Voglio… | Come |
 |---|---|
-| lanciare l'esperienza su tutti | nessuna selezione → scegli l'app → **Avvia** |
+| lanciare l'esperienza su tutti | **Apri app…** → scegli l'app → **Avvia** |
 | lanciarla solo su alcuni | spunta le caselle delle postazioni → **Avvia** |
 | vedere bene cosa fa una persona | clicca la sua miniatura → anteprima grande |
 | guardarmi intorno nella sua visuale | trascina nell'anteprima, rotellina per zoomare |
 | tornare a quello che vede lei | pulsante **Visuale visitatore** (o tasto `0`) |
-| aiutarla a cliccare | segmento **Tocco** → clicca al posto suo |
+| aiutarla a cliccare | segmento **Tocco** (nascosto di default: `touchControls: true` in `config.json` per mostrarlo) |
 | far uscire uno dall'app | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
+| mandare un filmato a tutti | **Video…** → scegli il file → **conferma** → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
+| un 360 che parte «al cinema» | nella finestra Video scegli la modalità (es. **3D 360° sopra-sotto**): il lettore parte già giusto |
+| fermare tutti insieme | **Pausa a tutti** sulla barra del filmato |
+| portare tutti a un punto | clicca quel punto sulla barra del filmato |
+| far ripartire da capo | **Da capo** sulla barra del filmato |
+| pausa/stop/da capo su UN visore | i bottoncini ⏯ ↺ ⏹ nella riga del filmato, sotto la sua miniatura |
+| avviare un filmato su alcuni soltanto | **Video…** → clic sul filmato → togli la spunta a chi non deve partire |
+| se un visore fa storie all'avvio | togli la spunta **dall'inizio**: il filmato riparte da dov'era, ma parte |
 
 Il pannello **Log** in basso mostra cosa è successo, visore per visore: è la prima cosa da
 guardare quando qualcosa non va.
+
+### La barra del filmato
+
+C'è sempre, finché c'è un visore in postazione: mostra il punto in cui sono i visori, e sotto ogni
+miniatura il punto di quel visore. Quando manca qualcosa — nessun filmato, nessuna durata, un
+lettore che non si lascia seguire — la barra resta e lo scrive, invece di sparire.
+
+La **fascia rossa** è la distanza fra il visore più avanti e quello più indietro. I comandi
+partono insieme, ma un visore che ha impiegato mezzo secondo in più ad aprire il file resta
+mezzo secondo indietro per tutto il filmato: la fascia lo rende visibile prima che lo si scopra
+in sala. Se si allarga, un clic sulla barra li rimette tutti sullo stesso punto.
+
+**Quanto è preciso il salto.** Da fuori non esiste un «vai al minuto due»: esistono i tasti
+avanti e indietro del lettore, e ogni lettore salta di quanto gli pare. L'app dà un colpo, misura
+quanto è valso, calcola i colpi che mancano e verifica — arriva entro un paio di secondi dal
+punto chiesto, non al fotogramma. Per quello servirebbe un'app dentro il visore.
+
+**Come vengono comandati i lettori.** L'app sceglie da sola il canale giusto: quando ad aprire
+il filmato è il lettore PICO, pausa e ripresa viaggiano sul suo canale diretto (l'annuncio
+`playorpause` dei kiosk); sugli altri visori si usano i tasti media standard. Non c'è niente da
+configurare. (Per casi particolari, `playerKeys` in `config.json` accetta anche `ok`, `dpad`,
+`spazio`, `mediaToggle`.)
+
+**Se la barra dice «il lettore non dice a che punto è»**, quel lettore non pubblica il proprio
+stato: da fuori nessuno può sapere dove sia arrivato. **Pausa** e **Da capo** funzionano lo
+stesso — sono tasti da mandare, non domande da fare — mentre il salto no, perché senza posizione
+non ha un bersaglio. Per sapere in anticipo se il tuo lettore si lascia seguire, con un filmato in
+riproduzione:
+
+```
+vendor/platform-tools/adb -s <indirizzo>:5555 shell dumpsys media_session | grep -i playbackstate
+```
+
+Una riga `PlaybackState {state=3, position=…}` vuol dire che la barra funzionerà.
 
 ## Impostazioni per visore (icona ⚙︎)
 

@@ -7,9 +7,10 @@ const app = fs.readFileSync(new URL('../src/renderer/app.js', import.meta.url), 
 
 test('il pulsante Guida sta nella barra in alto, visibile anche dal telecomando', () => {
   const barra = html.slice(html.indexOf('class="topbar-actions"'), html.indexOf('class="commandbar"'));
-  const pulsante = barra.match(/<button id="btn-guide"[^>]*>([^<]*)<\/button>/);
+  const pulsante = barra.match(/<button id="btn-guide"[^>]*>([\s\S]*?)<\/button>/);
   assert.ok(pulsante, 'manca btn-guide fra le azioni della barra in alto');
-  assert.equal(pulsante[1].trim(), 'Guida');
+  // L'icona è un <svg> dentro il pulsante: conta il testo che resta.
+  assert.equal(pulsante[1].replace(/<svg[\s\S]*?<\/svg>/g, '').trim(), 'Guida');
   assert.ok(!pulsante[0].includes('desktop-only'), "la guida serve anche dall'iPad");
 });
 
@@ -21,6 +22,11 @@ test('la guida è scritta nella pagina, non caricata da internet', () => {
   for (const [, id] of guida.matchAll(/href="#([^"]+)"/g)) {
     assert.ok(html.includes(`id="${id}"`), `l'indice punta a #${id}, che non esiste`);
   }
+});
+
+test('il Tutorial ha il suo passo per il pulsante Guida', () => {
+  // Regola del progetto (CLAUDE.md): ogni pulsante nuovo entra nel giro guidato.
+  assert.ok(app.includes("selettore: '#btn-guide'"));
 });
 
 test('Esc chiude la guida come le altre finestre', () => {

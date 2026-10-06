@@ -9,7 +9,7 @@ della guida PDF.
 
 ---
 
-## 2.3 — ottobre 2026
+## 3.3 — ottobre 2026
 
 Una **Guida** dentro l'app, per chi parte da un Mac vuoto e usa i visori su una wifi senza
 internet.
@@ -27,6 +27,382 @@ internet.
   indicato in cima alla guida. Installa Node.js se manca, scarica il progetto, i componenti, e
   mette l'app in *Applicazioni*. Non serve `git`, né un account: il progetto ora è pubblico.
 - Nel README, la stessa procedura da zero e una sezione sull'uso senza internet.
+- Il Tutorial ha un passo in più, per il pulsante Guida. La Guida era nata sulla 2.2, in
+  parallelo alla serie 2.3–3.2: unendole, i suoi riferimenti all'interfaccia sono stati
+  aggiornati («Libreria…» e «Avvia» ora stanno in *Apri app…*, l'iPad entra col QR).
+
+## 3.2 — settembre 2026
+
+- **Icone nei pulsanti principali** (Cerca in rete, Adotta USB, Aggiorna, Un occhio,
+  Telecomando, Video…, Apri app…, Home, Indietro, Riavvia), disegnate in stile «3D morbido»:
+  gradiente per la luce dall'alto, riflesso in cima, ombra sotto — il linguaggio dell'icona del
+  telecomando, in scala bottone. Sono SVG dentro la pagina: nessun file da scaricare, e valgono
+  anche sull'iPad.
+
+## 3.1 — settembre 2026
+
+- **Il visore è l'icona dell'app**: la foto del PICO sostituisce il pallino in alto a sinistra,
+  e compare in filigrana nelle postazioni libere sopra «Aggiungi visore» — dice cosa ci va, il
+  testo dice come. L'immagine vive in `src/renderer`, così arriva anche al telecomando.
+
+## 3.0 — settembre 2026
+
+La versione che chiude un ciclo: da «mando un filmato e speriamo» a una regia. Nessuna modifica
+di codice rispetto alla 2.24 — il numero riconosce quello che le venti versioni precedenti hanno
+costruito, un difetto vero alla volta:
+
+- **I filmati si trovano** (la ricerca attraversa i collegamenti, le memorie esterne, ignora le
+  maiuscole) **e partono davvero**: dall'inizio, nella proiezione scelta (3D 360° compreso),
+  con conferma e scelta dei visori.
+- **La riproduzione si comanda**: pausa e ripresa, da capo, stop — su tutti, sui selezionati, o
+  sul singolo visore, dalla scheda o dall'anteprima grande. La barra mostra miniatura, tempo e
+  conto alla rovescia, stimati dall'orologio di bordo quando il lettore non si lascia leggere.
+- **Il telecomando è alla pari col Mac** (un'API sola per entrambi), si apre **inquadrando un
+  QR**, e ha schermo intero e aggiornamento a un tocco.
+- **Il collegamento si spiega da solo**: gli indirizzi morti non bloccano più niente, «Adotta
+  USB» dice in faccia se il cavo servirà ancora, e il wifi — dove il visore lo permette —
+  sopravvive al riavvio. Internet non serve: basta una rete locale.
+- **Il software si racconta**: tutorial guidato passo passo, registro che scrive il perché di
+  ogni esito, e un CHANGELOG che è la memoria di come ci si è arrivati.
+
+## 2.24 — settembre 2026
+
+- **«Adotta USB» risponde con un avviso sullo schermo**, non con una riga nel registro: chi ha
+  appena attaccato un cavo sta guardando lo schermo, e la cosa che vuole sapere — posso
+  staccarlo? e al prossimo riavvio? — non va cercata in fondo. Una riga per visore, e il caso
+  «nessun visore via cavo» spiegato con cosa fare.
+- **I filmati si raggruppano ignorando maiuscole e minuscole**: «Tra Borghi e Natura.mp4» e
+  «tra borghi e natura.mp4» sono lo stesso filmato copiato da mani diverse, e due righe in
+  elenco vorrebbero dire mandarlo a metà sala per volta.
+- Le regole di manutenzione (il tutorial segue l'interfaccia, una versione per consegna, le due
+  interfacce sono una) ora stanno in `CLAUDE.md`.
+
+## 2.23 — settembre 2026
+
+- **Tutorial guidato**: pulsante «Tutorial» nel footer. Un riflettore illumina un pezzo
+  dell'interfaccia alla volta — il resto in penombra — con un testo che spiega, «Avanti» e
+  «Termina tutorial». I passi che in quel momento non sono a schermo si saltano da soli.
+- **«Adotta USB» prova a fissare il wifi per sempre**: su molti visori a uso aziendale la
+  proprietà persistente si lascia scrivere, e da lì in poi il visore resta raggiungibile via
+  wifi **anche dopo un riavvio**, senza cavo. Il registro dice com'è andata: «wifi fissato» o
+  «attivo fino al prossimo riavvio».
+- Nel README: la rete necessaria è la wifi locale, **internet non serve**.
+
+## 2.22 — settembre 2026
+
+L'app assume il suo mestiere: prima i filmati, poi le app.
+
+- **Nella conferma di avvio ora si scelgono i visori**: l'elenco di chi ha il filmato, tutti
+  spuntati di default — è il caso normale — e si toglie chi non deve partire. La selezione delle
+  postazioni, se c'è, pre-spunta le caselle: due modi di dire la stessa cosa non devono litigare.
+- **La barra dei comandi è video-prima**: «Video…» è il pulsante principale, e tutti i comandi
+  delle app — scelta, Avvia, Chiudi questa, Chiudi app attiva, Libreria… — stanno dietro
+  **«Apri app…»**, dove non ingombrano il lavoro di tutti i giorni.
+
+## 2.21 — settembre 2026
+
+- **I comandi del filmato anche nell'anteprima grande**: sotto la riga di Home/Indietro/volume,
+  quando un filmato è in corso sul visore in anteprima — tempo, **Pausa/Riprendi**, **Da capo**,
+  **Stop**, per quel visore soltanto. È lì che ci si accorge che a *questa* persona il filmato va
+  fermato, ed è lì che ora c'è il pulsante.
+
+## 2.20 — settembre 2026
+
+Il telecomando raggiunge l'app: era rimasto **otto versioni indietro**, e nessun errore lo diceva.
+
+- **L'elenco delle chiamate che l'interfaccia può fare al Mac ora vive in un posto solo**
+  (`shared/api.js`), usato sia dalla finestra sia dal telecomando. Erano due copie, e le copie
+  divergono: dall'iPad i filmati partivano senza modalità («al cinema») e senza «dall'inizio»,
+  in silenzio. Da un elenco solo non si diverge. Con questo, dall'iPad funziona tutto quello che
+  funziona dal Mac: modalità, dall'inizio, pausa, stop, da capo, comandi sul singolo visore.
+- **QR nel pannello Telecomando**: è l'indirizzo col PIN dentro — la fotocamera dell'iPad lo
+  apre già sbloccato. Il QR della rete locale compare da solo; clic su un altro indirizzo per il
+  suo. Chi vede il QR entra: va mostrato sullo schermo, non stampato e lasciato sul tavolo.
+- **Il «Non autorizzato» aprendo i link col PIN**: due cause. Il cookie era `SameSite=Strict`, e
+  per Strict una navigazione che arriva da fuori — un QR inquadrato, un link toccato in un'app —
+  è «di un altro sito»: cookie mai inviato. Ora è `Lax`. E il redirect dopo il PIN era un viaggio
+  in più in cui certi browser perdevano il cookie: ora la pagina arriva subito, col cookie nella
+  stessa risposta.
+- **Su iPad**: pulsante **Schermo intero**, pulsante **Aggiorna** (ricarica l'interfaccia dal
+  Mac — serve dopo un aggiornamento dell'app), e **niente più pannello Log**, che una volta
+  aperto non si riusciva a chiudere.
+
+## 2.19 — settembre 2026
+
+- **Comandi del filmato sul singolo visore**, nella riga sotto la sua miniatura: ⏯ ferma o
+  riprende, ↺ rimanda dall'inizio, ⏹ chiude — **quel** visore soltanto, senza selezionare
+  niente. È la differenza fra «fermate la sala» e «ferma la postazione 3», e la seconda serve
+  mentre si cammina fra le postazioni. Per avviare un filmato su alcuni soltanto: spunta le loro
+  caselle e passa da «Video…» — la conferma dice su quanti parte.
+
+## 2.18 — settembre 2026
+
+La pausa funziona (l'interruttore dei kiosk era la strada giusta), e la barra diventa un posto
+dove si guarda, non solo si clicca.
+
+- **Miniatura del filmato in corso** nella barra: è il fotogramma che il visore stesso usa nelle
+  sue gallerie, chiesto una volta per filmato.
+- **Il tempo si legge da in piedi**: posizione, durata e conto alla rovescia in evidenza accanto
+  al nome. E quando la durata non c'è (file non ancora nell'indice del visore), **il tempo
+  trascorso scorre comunque** — mezzo orologio è meglio di nessun orologio, purché non inventi
+  quanto manca.
+- **Il segmento «Tocco» è nascosto di default**: sui visori dove il tocco non arriva era solo un
+  modo per cliccare a vuoto davanti al pubblico. `touchControls: true` in `config.json` lo
+  rimette.
+- **Via il menù dei tasti dalla barra** (tasti media, OK, pad, spazio, «Prova»): il canale giusto
+  l'app lo sceglie da sola — lettore PICO → canale diretto, altrimenti tasti media. Un menù di
+  tentativi era un esame a chi guarda, e la risposta la conosceva solo il codice. Le varianti
+  restano in `config.json` per i casi strani.
+
+## 2.17 — agosto 2026
+
+- **La pausa passa all'interruttore del lettore PICO** (`playorpause`): è l'unico comando di
+  pausa che i kiosk su questi visori usano davvero, e l'ordine col nome dell'operazione scritto
+  per esteso veniva ignorato. È un interruttore, quindi conta che i visori siano allineati — ed è
+  quello per cui il resto dell'app già lavora. Ogni ordine ora scrive nel registro **a chi è
+  stato consegnato**: la differenza fra «nome giusto, ordine sbagliato» e «mai arrivato» è tutta
+  la diagnosi.
+- **«Da capo» ripartiva «al cinema»**: rifaceva l'avvio senza la modalità di proiezione. Ora la
+  modalità viene ricordata insieme al filmato, e il riavvio la ripete.
+
+## 2.16 — agosto 2026
+
+La timeline anche col lettore muto, lo Stop, e i comandi mirati.
+
+- **La barra ora scorre anche col lettore PICO**, che non dice a che punto è: la durata la
+  conosce l'indice del visore, l'avvio e le pause li ordiniamo noi, e la posizione è il tempo
+  passato in moto — un **orologio di bordo**. Accanto al tempo c'è il **conto alla rovescia**
+  («−8:37»): in sala la domanda vera è quanto manca, non a che punto siamo. È una stima e la
+  barra lo scrive: una pausa messa dal controller dentro il visore qui non si vede.
+- **Pulsante Stop**: chiude il filmato — prima con l'annuncio d'uscita che il lettore PICO
+  ascolta, poi chiudendo le app di riproduzione, che vale su qualunque visore.
+- **Tutti i comandi del filmato rispettano la selezione delle postazioni**: nessuna spunta =
+  tutti (come per gli altri comandi), con le spunte solo gli scelti — vale per pausa, riprendi,
+  da capo, stop **e per l'avvio di un filmato**. Le etichette lo dicono («Pausa sui 2 scelti»).
+- **La pausa parla al ricevitore per nome.** Da Android 8 un annuncio «a chi interessa» non
+  arriva ai ricevitori dichiarati nel manifest: il nome lo sa il visore, e glielo si chiede una
+  volta sola. Ed è il probabile motivo per cui l'annuncio anonimo non fermava niente.
+- **Quando ad aprire il filmato è il lettore PICO, i comandi passano da soli al canale diretto**
+  («Lettore PICO (comando diretto)»): coi tasti resterebbe sordo. Scritto nel registro,
+  reversibile dal menù.
+
+## 2.15 — agosto 2026
+
+Due strumenti per i due sintomi rimasti: il 360 che parte «al cinema», e la pausa che non fa
+niente.
+
+- **Il registro ora dice con quale chiamata è partito il filmato** («avviato con: …») e quali
+  sono state saltate e perché. «Parte ma in cinema» e «parte ma da metà» si diagnosticano solo
+  sapendo quale strada ha aperto il filmato — prima non lo scriveva nessuno.
+- **La chiamata PICO con la modalità ora nomina l'activity** che il visore stesso le indica, e se
+  nessuna app gestisce `picovr.intent.action.player` lo scrive invece di provare a vuoto.
+- **Nuovo profilo «Lettore PICO (comando diretto)»** nel menù dei tasti: play e pausa viaggiano
+  sull'annuncio documentato da PICO per G2 4K e Neo (`PLAY_CONTROL`, operazione scritta per
+  esteso), che arriva dove nessun tasto arriva — il lettore PICO non apre una sessione
+  multimediale, e i tasti media non lo raggiungono mai. Play e pausa restano espliciti: niente
+  interruttore che scambia i visori.
+- **Quando il lettore non si legge, il pulsante alterna e ricorda l'ultimo ordine**: prima
+  restava «Pausa a tutti» per sempre, e chi fermava non poteva più riprendere.
+
+## 2.14 — agosto 2026
+
+- **La modalità di proiezione si sceglie prima di avviare** — «3D 360° sopra-sotto», 360°, 180°,
+  2D — dal menù nella finestra Video. Con la modalità scelta si parla direttamente al lettore
+  PICO (`picovr.intent.action.player`, `videoType`): il filmato parte **già** nella proiezione
+  giusta, invece di cominciare «al cinema» su uno schermo piatto e correggersi da solo dopo
+  qualche secondo. Action e codici vengono dal codice pubblicato da PICO, non da tentativi. Su
+  «Riconosci da solo» tutto resta com'era, e un visore che non capisce la chiamata PICO scala
+  sui tentativi soliti.
+- **«Dall'inizio» è di nuovo il default, sempre.** Il collegamento della spunta era sparito in
+  una pulizia: la casella mostrava il segno ma non parlava più con nessuno, e la configurazione
+  conservava un vecchio «no» invisibile — per questo la conferma diceva «da dove era rimasto».
+  Ora la spunta è viva, e a ogni avvio dell'app torna accesa: spegnerla vale per la sessione, non
+  per sempre.
+
+## 2.13 — agosto 2026
+
+«Riparte sempre dallo stesso punto»: il sintomo diceva tutto.
+
+- **Il «riprendi da dove eri» sta su disco**, e chiudere il lettore non lo tocca — anzi lo
+  **congela**: l'app chiusa non salva più niente, e riparte per sempre da quel punto. Ora, prima
+  di lanciare, la memoria del lettore viene **azzerata** (`pm clear`): riparte come appena
+  installato, quindi dall'inizio. Si azzera solo chi riproduce — il lettore visto in azione e
+  quello a cui il visore affiderebbe il filmato — mai la schermata iniziale, mai il sistema, e
+  nemmeno ogni app che sappia genericamente aprire video. Il registro dice chi è stato azzerato.
+- **Il lettore visto in azione viene salvato nella configurazione**: al riavvio dell'app vale già
+  dal primo lancio, che altrimenti sarebbe l'unico a ripartire da metà.
+- Vale anche per **Da capo**, che rifà la stessa strada.
+- Con la spunta **dall'inizio** spenta non si azzera e non si chiude niente, come prima.
+
+## 2.12 — agosto 2026
+
+- **VLC è stato tolto**: sui visori non funzionava, e un'alternativa che non funziona è solo un
+  menù in più da sbagliare. Si torna al solo lettore del visore.
+- **Prima di lanciare si chiudono TUTTE le app di riproduzione video**, non una indovinata:
+  l'elenco lo dà il visore stesso. Sul visore chi apre il filmato e chi lo riproduce possono
+  essere app diverse — il gestore file delega al lettore — e chiudere solo la prima lasciava la
+  seconda viva, con il suo «riprendi da dove eri» intatto. Era questo a far ripartire i filmati
+  da metà. Le chiusure viaggiano in un comando solo, e la schermata iniziale non è mai
+  nell'elenco.
+
+## 2.11 — agosto 2026
+
+Un passo indietro dove serviva, e le difese perché non succeda più.
+
+- **L'avvio riparte dal comando che ha sempre funzionato.** Dalla 2.8 il filmato veniva lanciato
+  con dei flag che rifanno la schermata da capo: aiutano a ripartire dall'inizio, ma su certi
+  lettori impediscono l'avvio — e un filmato che parte da metà vale infinitamente più di uno che
+  non parte. Ora il comando nudo è il **primo** tentativo, sempre.
+- **Ogni tentativo viene verificato.** Dopo il comando, l'app guarda se il visore ha davvero
+  aperto qualcosa. Se no, prova a chiamare il lettore **per nome** — che è ciò che serve subito
+  dopo averlo chiuso, perché un'app appena fermata può restare fuori dalla scelta automatica di
+  Android — e solo per ultimo prova i flag. Se non apre niente in nessun modo, lo dice elencando
+  cosa ha provato.
+- **La conferma finiva dietro la finestra da cui l'avevi chiesta**, quindi bisognava chiudere
+  quella per poterla approvare. Ora sta sopra a tutto.
+- **Interruttore «dall'inizio»** nella barra: spegnendolo l'avvio è esattamente quello che
+  funzionava prima di tutte queste aggiunte — nessun lettore chiuso, nessun flag. Il filmato
+  riparte da dov'era, ma parte.
+
+## 2.10 — agosto 2026
+
+«Il video non parte più»: due difetti introdotti dalle due versioni precedenti, e la ragione per
+cui nessuno dei due si vedeva.
+
+- **Un avvio fallito passava per riuscito.** `am start` esce **sempre** con successo, anche
+  quando scrive «Error: …» e non apre niente: l'app credeva di aver avviato il filmato, e non
+  diceva nulla. Ora l'esito viene letto, e un avvio che non ha aperto niente è un errore col suo
+  motivo. È il difetto che rendeva invisibili gli altri due.
+- **La conferma non era un modale dell'app ma il dialogo del browser**, che dentro Electron può
+  non comparire: e un dialogo che non compare vale come un «no» che nessuno ha detto — il filmato
+  non parte e non lascia traccia. Ora è un modale come gli altri, con Invio e Esc.
+- **VLC scelto ma non installato** faceva un comando che non apriva niente, in silenzio. Ora lo
+  dice prima, e dice anche come tornare indietro.
+- **Se un lettore rifiuta il riavvio pulito**, il filmato parte lo stesso col comando semplice:
+  davanti al pubblico la differenza fra «parte da metà» e «non parte» è tutta. Il ripiego viene
+  scritto nel registro, non nascosto.
+- **La schermata iniziale non può più essere scambiata per un lettore.** Il pacchetto in primo
+  piano viene ricordato solo se sa davvero aprire filmati: un visore su cui l'app chiude il
+  proprio launcher è messo peggio di prima.
+
+## 2.9 — agosto 2026
+
+**VLC come lettore dei visori**, in alternativa a quello di sistema.
+
+Il lettore del visore, da fuori, è cieco e sordo: non pubblica a che punto è e non riceve i tasti
+media. VLC fa entrambe le cose, e in più accetta **la posizione dentro il comando di avvio**.
+
+- **La timeline funziona davvero**: VLC apre una sessione multimediale, quindi la barra sa dove si
+  trova il filmato e la pausa lo ferma.
+- **Il salto diventa un punto, non un inseguimento.** Col lettore di sistema si danno colpi di
+  avanti e indietro finché non si arriva «lì attorno»; con VLC si riapre il filmato al
+  millisecondo voluto, uguale su tutti i visori.
+- **«Dall'inizio» smette di dipendere da chi chiude cosa**: con VLC non si chiude niente e non si
+  chiede niente al sistema — `from_start` sta nel comando.
+- **Installazione dai visori**: si sceglie l'apk scaricato da videolan.org e si installa su tutti
+  in un colpo. Il pulsante compare solo dove VLC manca. L'app non scarica apk da internet per
+  conto suo: è software che finisce dentro i visori, e chi ce lo mette dev'essere una persona.
+- **Si torna indietro dallo stesso menù**: «Lettore del visore» e tutto è com'era.
+
+## 2.8 — agosto 2026
+
+Tre difetti della barra del filmato, tutti trovati usandola davvero.
+
+- **«Dall'inizio» non ripartiva dall'inizio.** Per chiudere il lettore prima di lanciare bisogna
+  sapere quale sia, e lo si chiedeva al visore **senza dirgli quale file**: così la domanda
+  tornava a mani vuote, nessuno veniva chiuso, e il lettore riprendeva da dov'era. Ora il file si
+  passa, il lettore che si è aperto davvero viene ricordato per la volta dopo, e la schermata
+  viene rifatta da capo (`--activity-clear-task`) invece di essere riusata.
+- **I tasti del lettore ora si scelgono, e si provano.** I tasti «media» sono gli unici standard
+  di Android e su molti visori non fanno niente: il sistema li consegna alla sessione
+  multimediale, e un lettore che non ne apre una non li riceve mai. Nella barra c'è un menù —
+  tasti media, OK/Invio, centro del pad, barra spaziatrice — con un pulsante **Prova**: si manda
+  il tasto e si guarda il visore. La scelta resta, e vale anche per il salto (col pad, avanti e
+  indietro sono le frecce).
+- **Un clic su un filmato non lo lancia più in sala.** Ora chiede conferma, dicendo su quanti
+  visori sta per partire: la riga dell'elenco serve a scegliere, la conferma a lanciare.
+
+## 2.7 — agosto 2026
+
+- **La barra del filmato c'è sempre**, finché c'è un visore in postazione. Prima compariva solo
+  quando qualcuno rispondeva: una riga che a volte c'è e a volte no, per chi guarda, è un guasto
+  — non una scelta di stile. Ora quando manca qualcosa lo scrive: «nessun filmato in corso»,
+  «durata sconosciuta», «il lettore non dice a che punto è».
+- **Pausa e «Da capo» restano attivi anche con un lettore che non pubblica il suo stato**: sono
+  tasti da mandare, non domande da fare. È il salto che, senza posizione, non ha un bersaglio —
+  e infatti è quello che si spegne.
+
+## 2.6 — agosto 2026
+
+I filmati si comandano dal computer: si vede a che punto sono, si fermano insieme, si spostano
+tutti sullo stesso punto.
+
+- **La barra del filmato** compare quando un filmato è in corso: il punto dei visori, la durata,
+  e sotto ogni miniatura il punto di quel visore. Fra una lettura e l'altra scorre da sola —
+  chiedere al visore due volte al secondo, per dieci visori, sarebbe un martellamento.
+- **Pausa a tutti / Riprendi tutti.** Il tasto unico «play-pausa» di Android è un interruttore:
+  mandato a dieci visori di cui uno era già fermo, li lascia metà in moto e metà fermi. Qui si
+  mandano due tasti distinti, così il comando è un'istruzione e i visori restano allineati.
+- **Un clic sulla barra porta tutti in quel punto.** Da fuori non esiste un «vai al minuto due»:
+  l'app dà un colpo di avanti, misura quanto è valso su quel lettore, fa il conto dei colpi che
+  mancano e verifica. Arriva entro un paio di secondi dal punto chiesto — e se il lettore ai
+  tasti non risponde, lo dice invece di far finta.
+- **La fascia rossa** sulla barra è la distanza fra il visore più avanti e quello più indietro:
+  è il dato che altrimenti si scopre solo in sala, guardandoli.
+- **Un filmato mandato da qui riparte sempre dall'inizio**: il lettore viene chiuso prima di
+  lanciarlo, e dopo l'avvio l'app **controlla** di essere davvero all'inizio — se il lettore era
+  ripartito da metà, lo riporta indietro e lo scrive nel registro.
+- **Se il lettore del visore non pubblica il proprio stato**, il registro lo dice una volta: la
+  barra non può seguirlo, ed è un limite di quel lettore, non un guasto da cercare.
+
+## 2.5 — agosto 2026
+
+Una difesa in più sulla ricerca dei video, per il caso che la 2.3 non copriva.
+
+- **Si guardano anche le memorie separate montate sotto `/storage`** — una microSD, una
+  chiavetta: sono altri posti, non altri nomi della memoria interna, e un filmato copiato lì
+  restava invisibile. La memoria interna resta guardata una volta sola: `emulated`, `self` e
+  `primary` sotto `/storage` sono lei, e ripassarci vorrebbe dire elencare ogni filmato due
+  volte.
+- Il registro elenca **tutte** le memorie in cui ha cercato, non solo la prima.
+
+## 2.4 — agosto 2026
+
+«Non si connette, né via cavo né via wifi»: il registro mostrava solo tentativi verso indirizzi
+di una rete abbandonata. Erano quelli a impedire tutto il resto.
+
+- **Un indirizzo salvato che non risponde non interrompe più l'aggiornamento.** `adb connect`
+  usciva con errore, l'errore risaliva fino a interrompere il giro a metà, e i visori che adb
+  già vedeva — quelli **attaccati al cavo** — non arrivavano mai a essere messi in elenco. Ora
+  il cavo viene servito per primo, e la rete dopo.
+- **Gli indirizzi salvati si provano tutti insieme, e si bussa alla porta prima di chiamare
+  adb**: un indirizzo morto costa una frazione di secondo invece di otto, e due indirizzi morti
+  non fanno più quindici secondi di attesa a ogni aggiornamento.
+- **Chi non risponde viene ritentato con calma** — mezzo minuto, poi uno, fino a cinque — e
+  **subito** se cambia la rete del computer: è il momento in cui gli indirizzi salvati possono
+  tornare buoni.
+- **Un cavo attaccato ma inutile ora lo dice.** Un visore che adb vede «unauthorized» oppure
+  «offline» non produceva nessuna riga: elenco vuoto e cavo in mano, senza sapere che il visore
+  era lì e cosa gli mancasse. Ora il registro dice cosa fare.
+- Il messaggio sull'indirizzo perduto dice anche **su quale rete si trova ora il computer**: è
+  il dato che spiega in un colpo perché quel `192.168.1.x` non risponde più.
+
+## 2.3 — agosto 2026
+
+«Il video lo vedo nel visore, ma dal computer non lo trova»: la ricerca guardava nel posto
+giusto e non ci entrava.
+
+- **La ricerca ora attraversa la radice della memoria.** `/sdcard` non è una cartella: è un
+  collegamento a `/storage/self/primary`, e `find` non attraversa i collegamenti se non glielo
+  si chiede. Guardava quindi il solo collegamento — che non è un filmato — e finiva senza
+  risultati **e senza errori**: «0 file trovati» su un visore pieno di video. Ora il
+  collegamento viene seguito, e se `/sdcard` mancasse si provano gli altri due nomi della
+  stessa memoria.
+- **Il registro dice anche dove ha cercato**, non solo quanti file ha trovato: «0 file trovati
+  in /sdcard» si legge, «0 file trovati» lascia il dubbio fra un visore vuoto e una ricerca
+  cieca — ed era proprio quel dubbio a nascondere questo difetto.
+- **Gli spazi nel nome non troncano più il filmato da riprodurre**: «Tra Borghi e Natura.mp4»
+  arrivava al lettore come «Tra». Lo stesso valeva per `#` e `?`.
 
 ## 2.2 — agosto 2026
 

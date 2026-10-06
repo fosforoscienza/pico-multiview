@@ -10,11 +10,35 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!--
+      La tavolozza delle icone « 3D»: gradienti condivisi, definiti una volta.
+      L'effetto plastica viene da tre cose: luce dall'alto (gradiente verticale),
+      un riflesso bianco in cima, e un'ombra morbida sotto (via CSS).
+    -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="ico-plast" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f5f8fc" /><stop offset=".55" stop-color="#c7d1df" /><stop offset="1" stop-color="#93a1b5" />
+        </linearGradient>
+        <linearGradient id="ico-blu" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8ecbff" /><stop offset=".55" stop-color="#3b82f6" /><stop offset="1" stop-color="#1d5fc4" />
+        </linearGradient>
+        <linearGradient id="ico-grigio" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#aab3bf" /><stop offset=".55" stop-color="#78828e" /><stop offset="1" stop-color="#525a64" />
+        </linearGradient>
+        <radialGradient id="ico-rosso" cx=".35" cy=".3" r=".9">
+          <stop offset="0" stop-color="#ff9f97" /><stop offset="1" stop-color="#d93030" />
+        </radialGradient>
+        <radialGradient id="ico-verde" cx=".35" cy=".3" r=".9">
+          <stop offset="0" stop-color="#93f1a0" /><stop offset="1" stop-color="#28a745" />
+        </radialGradient>
+      </defs>
+    </svg>
     <header class="topbar">
       <div class="drag-region"></div>
       <div class="topbar-inner">
         <div class="brand">
-          <span class="logo">◉</span>
+          <img class="logo-visore" src="visore.png" alt="" />
           <div>
             <h1>Pico MultiView</h1>
             <p id="summary">Nessun visore collegato</p>
@@ -22,18 +46,21 @@
         </div>
 
         <div class="topbar-actions">
-          <button id="btn-scan" class="btn">Cerca in rete</button>
-          <button id="btn-usb" class="btn" title="Prende i visori collegati via USB e li passa al wifi">Adotta USB</button>
-          <button id="btn-sync" class="btn">Aggiorna</button>
+          <button id="btn-scan" class="btn"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="8.4" cy="8.4" r="5.6" fill="url(#ico-blu)" stroke="url(#ico-plast)" stroke-width="1.8"/><ellipse cx="6.8" cy="6.2" rx="2.6" ry="1.6" fill="#fff" opacity=".5"/><rect x="12.6" y="11.4" width="6" height="2.8" rx="1.4" transform="rotate(45 12.6 11.4)" fill="url(#ico-grigio)"/></svg>Cerca in rete</button>
+          <button id="btn-usb" class="btn" title="Prende i visori collegati via USB e li passa al wifi"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="5" y="2.5" width="10" height="8" rx="1.6" fill="url(#ico-plast)"/><rect x="7.4" y="4.4" width="2" height="2.4" rx=".5" fill="#5a6572"/><rect x="10.6" y="4.4" width="2" height="2.4" rx=".5" fill="#5a6572"/><rect x="7" y="10.5" width="6" height="6.5" rx="1.4" fill="url(#ico-grigio)"/><ellipse cx="8.6" cy="4" rx="2.4" ry="1" fill="#fff" opacity=".55"/></svg>Adotta USB</button>
+          <button id="btn-sync" class="btn"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3.2a6.8 6.8 0 0 1 6.4 4.5h-2.6L17.6 12l3-4.3h-2A8.8 8.8 0 0 0 10 1.2z" transform="scale(.9) translate(1 1)" fill="url(#ico-blu)"/><path d="M10 16.8a6.8 6.8 0 0 1-6.4-4.5h2.6L2.4 8l-3 4.3h2A8.8 8.8 0 0 0 10 18.8z" transform="scale(.9) translate(1 1)" fill="url(#ico-plast)"/></svg>Aggiorna</button>
           <button
             id="btn-eye"
             class="btn"
             title="Chiede ai visori la sola metà sinistra dell'immagine, cioè un occhio: si vede quello che vede il visitatore, e sulla wifi viaggia metà dei dati"
           >
-            Un occhio
+            <svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M1.5 10Q10 1.5 18.5 10 10 18.5 1.5 10z" fill="url(#ico-plast)"/><circle cx="10" cy="10" r="3.6" fill="url(#ico-blu)"/><circle cx="10" cy="10" r="1.5" fill="#10233f"/><ellipse cx="8.7" cy="8.4" rx="1.4" ry=".9" fill="#fff" opacity=".7"/></svg>
+            <span id="btn-eye-label">Un occhio</span>
           </button>
-          <button id="btn-remote" class="btn desktop-only" title="Comanda i visori da iPad">Telecomando…</button>
-          <button id="btn-guide" class="btn" title="Come installare il programma sul Mac e usarlo su una wifi senza internet">Guida</button>
+          <button id="btn-remote" class="btn desktop-only" title="Comanda i visori da iPad"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="5.4" y="1.6" width="9.2" height="16.8" rx="2.6" fill="url(#ico-grigio)"/><circle cx="8.4" cy="5.4" r="1.5" fill="url(#ico-plast)"/><circle cx="11.8" cy="5.4" r="1.5" fill="url(#ico-plast)"/><circle cx="8.4" cy="9" r="1.5" fill="url(#ico-plast)"/><circle cx="11.8" cy="9" r="1.5" fill="url(#ico-plast)"/><circle cx="8.4" cy="12.8" r="1.5" fill="url(#ico-rosso)"/><circle cx="11.8" cy="14.4" r="1.5" fill="url(#ico-verde)"/><ellipse cx="9" cy="3" rx="2.6" ry=".9" fill="#fff" opacity=".35"/></svg>Telecomando…</button>
+          <button id="btn-fullscreen" class="btn remote-only" title="Schermo intero">Schermo intero</button>
+          <button id="btn-reload" class="btn remote-only" title="Ricarica l'interfaccia dal Mac: serve dopo un aggiornamento">Aggiorna</button>
+          <button id="btn-guide" class="btn" title="Come installare il programma sul Mac e usarlo su una wifi senza internet"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="3.5" y="1.8" width="13" height="16.4" rx="1.8" fill="url(#ico-blu)"/><rect x="5.6" y="3.4" width="9" height="13.2" rx=".8" fill="url(#ico-plast)"/><rect x="7.2" y="6" width="5.8" height="1.3" rx=".6" fill="#5a6572"/><rect x="7.2" y="8.6" width="5.8" height="1.3" rx=".6" fill="#5a6572"/><rect x="7.2" y="11.2" width="3.8" height="1.3" rx=".6" fill="#5a6572"/><ellipse cx="8.4" cy="3" rx="3.2" ry=".9" fill="#fff" opacity=".45"/></svg>Guida</button>
         </div>
       </div>
 
@@ -45,21 +72,45 @@
         </div>
 
         <div class="command-group">
-          <select id="app-select" class="select"></select>
-          <button id="btn-launch" class="btn btn-primary">Avvia</button>
-          <button id="btn-stop" class="btn">Chiudi questa</button>
-          <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
-          <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
-          <button id="btn-video" class="btn" title="Cerca un video nei file dei visori e mandalo in riproduzione su tutti quelli che ce l'hanno">Video…</button>
+          <!-- Il mestiere principale è mandare filmati: il pulsante grande è
+               questo. Le app stanno dietro «Apri app…», dove non ingombrano. -->
+          <button id="btn-video" class="btn btn-primary" title="Cerca un filmato nei file dei visori e mandalo in riproduzione"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="url(#ico-blu)"/><path d="M8.2 6.6l5.4 3.4-5.4 3.4z" fill="#fff"/><ellipse cx="7.6" cy="5.6" rx="3.4" ry="1.7" fill="#fff" opacity=".4"/></svg>Video…</button>
+          <button id="btn-open-apps" class="btn" title="Avvia o chiudi le app installate sui visori"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><rect x="2.6" y="2.6" width="6.4" height="6.4" rx="1.7" fill="url(#ico-blu)"/><rect x="11" y="2.6" width="6.4" height="6.4" rx="1.7" fill="url(#ico-plast)"/><rect x="2.6" y="11" width="6.4" height="6.4" rx="1.7" fill="url(#ico-plast)"/><rect x="11" y="11" width="6.4" height="6.4" rx="1.7" fill="url(#ico-verde)"/><ellipse cx="5" cy="4.3" rx="1.8" ry=".8" fill="#fff" opacity=".5"/></svg>Apri app…</button>
         </div>
 
         <div class="command-group">
-          <button id="btn-home" class="btn">Home</button>
-          <button id="btn-back" class="btn">Indietro</button>
+          <button id="btn-home" class="btn"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 2.4l8 6.8h-2.2v8.2H4.2V9.2H2z" fill="url(#ico-plast)"/><rect x="8.2" y="11.5" width="3.6" height="5.9" rx=".8" fill="url(#ico-blu)"/><ellipse cx="8.6" cy="5.4" rx="2.4" ry="1" fill="#fff" opacity=".5"/></svg>Home</button>
+          <button id="btn-back" class="btn"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M9.4 3.2L2.6 10l6.8 6.8v-4h4.2a4.6 4.6 0 0 0 0-9.2H9.4z" fill="url(#ico-blu)" transform="scale(.92) translate(.8 .8)"/><ellipse cx="8" cy="6" rx="2.6" ry="1" fill="#fff" opacity=".45"/></svg>Indietro</button>
           <button id="btn-vol-down" class="btn">Vol −</button>
           <button id="btn-vol-up" class="btn">Vol +</button>
-          <button id="btn-reboot" class="btn btn-danger">Riavvia</button>
+          <button id="btn-reboot" class="btn btn-danger"><svg class="btn-ico" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="7.6" fill="url(#ico-rosso)"/><path d="M10 4.6v5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M6.6 7a5 5 0 1 0 6.8 0" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><ellipse cx="7.6" cy="5.6" rx="2.6" ry="1.3" fill="#fff" opacity=".35"/></svg>Riavvia</button>
         </div>
+      </div>
+
+      <!--
+        Barra del filmato: compare solo quando un filmato è in corso. Da chiusa
+        non ruberebbe spazio, e da aperta è l'unico posto in cui si vede se i
+        visori sono davvero allo stesso punto.
+      -->
+      <div id="playbar" class="playbar hidden">
+        <!-- La miniatura viene dall'indice del visore: è il fotogramma che il
+             visore stesso usa nelle sue gallerie. -->
+        <img id="playbar-thumb" class="playbar-thumb hidden" alt="" />
+        <div class="playbar-info">
+          <span id="playbar-name" class="playbar-name"></span>
+          <span id="playbar-time" class="playbar-time mono">–</span>
+        </div>
+        <button id="btn-play-pause" class="btn btn-primary" title="Ferma o riprende su tutti i visori">Pausa a tutti</button>
+        <button id="btn-replay" class="btn" title="Rimanda dall'inizio il filmato in corso">Da capo</button>
+        <button id="btn-stop-video" class="btn" title="Chiude il filmato e riporta il visore com'era">Stop</button>
+        <div class="playbar-track" id="playbar-track" title="Clicca un punto per portarci tutti i visori">
+          <div id="playbar-fill" class="playbar-fill"></div>
+          <div id="playbar-spread" class="playbar-spread hidden" title="Quanto sono distanti fra loro i visori"></div>
+        </div>
+        <span id="playbar-note" class="muted"></span>
+        <label class="playbar-check" title="Chiude il lettore prima di lanciare, così il filmato ricomincia da capo. Se un visore facesse storie, spegnilo: il filmato parte comunque, da dov'era rimasto">
+          <input type="checkbox" id="from-start" checked /> dall'inizio
+        </label>
       </div>
     </header>
 
@@ -133,6 +184,20 @@
           <button id="preview-vol-down" class="btn">Vol −</button>
           <button id="preview-vol-up" class="btn">Vol +</button>
         </div>
+
+        <!--
+          I comandi del filmato per il visore in anteprima: compaiono solo
+          quando un filmato è in corso su di lui, e agiscono su lui soltanto.
+          Stessa logica dei bottoncini sulla scheda, ma a portata di mano
+          mentre si guarda cosa vede il visitatore.
+        -->
+        <div id="preview-player" class="preview-foot preview-player hidden">
+          <span id="preview-player-time" class="mono"></span>
+          <div class="spacer"></div>
+          <button id="preview-play-pause" class="btn" title="Ferma o riprende solo questo visore">Pausa</button>
+          <button id="preview-replay" class="btn" title="Rimanda dall'inizio solo questo visore">Da capo</button>
+          <button id="preview-stop" class="btn" title="Chiude il filmato solo su questo visore">Stop</button>
+        </div>
       </section>
 
       <!-- Metà destra (o schermo intero): le postazioni -->
@@ -149,7 +214,8 @@
     </main>
 
     <footer class="statusbar">
-      <button id="btn-log" class="chip">Log</button>
+      <button id="btn-log" class="chip desktop-only">Log</button>
+      <button id="btn-tutorial" class="chip" title="Un giro guidato dell'interfaccia, pezzo per pezzo">Tutorial</button>
       <span id="status-line" class="muted"></span>
       <span class="spacer"></span>
       <span id="version" class="version"></span>
@@ -158,6 +224,45 @@
         <span id="credit-text"></span>
       </span>
     </footer>
+
+    <!--
+      Conferma prima di mandare un filmato in sala. È un modale dell'app e non
+      il dialogo del browser: quello, dentro Electron, può non comparire — e un
+      dialogo che non compare è un «no» che nessuno ha detto.
+    -->
+    <!-- I comandi delle app, raccolti: il mestiere principale è il filmato. -->
+    <div id="apps-command-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3>App sui visori</h3>
+        <p class="muted">
+          Avvia o chiudi un'app già installata sui visori. I comandi valgono per la selezione, o
+          per tutti se non c'è selezione.
+        </p>
+        <div class="video-bar">
+          <select id="app-select" class="select"></select>
+          <button id="btn-launch" class="btn btn-primary">Avvia</button>
+        </div>
+        <div class="video-bar">
+          <button id="btn-stop" class="btn">Chiudi questa</button>
+          <button id="btn-close-fg" class="btn">Chiudi app attiva</button>
+          <button id="btn-apps" class="btn btn-ghost" title="Gestisci la libreria app">Libreria…</button>
+        </div>
+        <div class="modal-actions"><button id="apps-command-close" class="btn">Chiudi</button></div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="confirm-title">Confermi?</h3>
+        <p id="confirm-text" class="muted"></p>
+        <!-- Su quali visori: tutti spuntati di default, si toglie chi non deve. -->
+        <ul id="confirm-list" class="apps-list hidden"></ul>
+        <div class="modal-actions">
+          <button id="confirm-no" class="btn">Annulla</button>
+          <button id="confirm-yes" class="btn btn-primary">Avvia</button>
+        </div>
+      </div>
+    </div>
 
     <div id="video-modal" class="modal hidden">
       <div class="modal-card modal-wide">
@@ -169,6 +274,12 @@
 
         <div class="video-bar">
           <input id="video-search" type="search" placeholder="Scrivi parte del nome del file…" autocomplete="off" />
+          <!--
+            Come proiettare il filmato. Detto al lancio, il lettore parte già
+            nella modalità giusta invece di cominciare «al cinema» su uno
+            schermo piatto e correggersi dopo qualche secondo.
+          -->
+          <select id="video-mode" class="select" title="Come proiettare il filmato sul visore"></select>
           <button id="video-refresh" class="btn">Rileggi i file</button>
         </div>
 
@@ -431,7 +542,8 @@ npm install</pre>
             </li>
             <li>
               Dai un nome alla postazione (⚙︎ sulla miniatura) e attacca un'etichetta uguale sul
-              visore. Prepara anche la <strong>Libreria…</strong> delle app da lanciare.
+              visore. Se userai delle app, preparale in <strong>Apri app…</strong> →
+              <strong>Libreria…</strong>.
             </li>
           </ol>
           <p>
@@ -507,7 +619,8 @@ npm install</pre>
             </li>
             <li>
               Telecomando dall'iPad: iPad sulla stessa wifi, sul Mac <strong>Telecomando…</strong>
-              → <strong>Accendi</strong>, e in Safari scrivi l'indirizzo che compare (per esempio
+              → <strong>Accendi</strong>, e inquadra il QR con la fotocamera dell'iPad: si apre già
+              sbloccato. In alternativa scrivi in Safari l'indirizzo che compare (per esempio
               <code>http://192.168.1.10:8788/?k=PIN</code>). Anche questo funziona senza internet.
             </li>
           </ol>
@@ -523,7 +636,9 @@ npm install</pre>
             <li>l'app si apre e in basso non compaiono errori rossi nel <strong>Log</strong>;</li>
             <li>tutti i visori compaiono nelle loro postazioni, con l'immagine;</li>
             <li>un clic su una miniatura apre l'anteprima grande;</li>
-            <li><strong>Avvia</strong> lancia l'app dell'esperienza su tutti;</li>
+            <li><strong>Video…</strong> fa partire un filmato su tutti, e la barra del filmato lo
+              mette in pausa e lo ferma;</li>
+            <li>se usi un'app: <strong>Apri app…</strong> → <strong>Avvia</strong> la lancia su tutti;</li>
             <li>l'iPad si collega al telecomando;</li>
             <li>dopo aver spento e riacceso un visore, torna da solo.</li>
           </ul>
@@ -604,7 +719,12 @@ npm install</pre>
         </div>
 
         <h3>Indirizzo</h3>
-        <ul id="remote-urls" class="apps-list"></ul>
+        <!-- Il QR è l'indirizzo col PIN dentro: la fotocamera dell'iPad lo
+             apre già sbloccato. Clic su un indirizzo per il QR di quella rete. -->
+        <div class="remote-qr-row">
+          <img id="remote-qr" class="remote-qr hidden" alt="Inquadra con la fotocamera dell'iPad" />
+          <ul id="remote-urls" class="apps-list"></ul>
+        </div>
 
         <h3>PIN</h3>
         <div class="pin-row">

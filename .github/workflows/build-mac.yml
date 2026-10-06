@@ -107,6 +107,10 @@ jobs:
             # Rilanciato sulla stessa versione: sostituiamo i file allegati.
             gh release upload "$TAG" dist/*.dmg docs/Guida-Pico-MultiView.pdf Guida-Installazione-Mac.pdf --clobber
           else
-            gh release create "$TAG" --title "$NOME" --notes-file note-release.md \
+            # --target: il tag della release punta al commit APPENA COSTRUITO,
+            # qualunque ramo sia. Senza, gh lo pianterebbe sul ramo principale
+            # — che può essere indietro — e la release direbbe una versione
+            # mostrando il codice di un'altra.
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$NOME" --notes-file note-release.md \
               dist/*.dmg docs/Guida-Pico-MultiView.pdf Guida-Installazione-Mac.pdf
           fi

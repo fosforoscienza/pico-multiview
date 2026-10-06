@@ -8,7 +8,10 @@ import { BrowserWindow, app, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import QRCode from 'qrcode';
+
 import * as adb from './adb.js';
+import * as apps from './apps.js';
 import { Config } from './config.js';
 import { brandForUi } from './brand.js';
 import { DeviceManager } from './device-manager.js';
@@ -123,6 +126,7 @@ function wireManager() {
   manager.on('device-codec', (payload) => broadcast('device-codec', payload));
   manager.on('log', (payload) => broadcast('log', payload));
   manager.on('scan-progress', (payload) => broadcast('scan-progress', payload));
+  manager.on('config-changed', (data) => broadcast('config', data));
   manager.on('frame', broadcastFrame);
 }
 
@@ -148,6 +152,7 @@ function applyQualityProfiles() {
 // Handler condivisi fra IPC (finestra) e WebSocket (telecomandi)
 // ---------------------------------------------------------------------------
 
+const thumbCache = new Map(); // percorso video -> data URL della miniatura
 const handlers = new Map(); // canale -> fn(payload, ctx) con risposta
 const signals = new Map(); // canale -> fn(payload, ctx) senza risposta
 
@@ -181,6 +186,8 @@ function registerHandlers() {
     subnets: adb.localSubnets(),
     config: config.data,
     keycodes: KEYCODE,
+    playerProfiles: apps.PROFILI_LETTORE,
+    videoModes: apps.VIDEO_MODES,
     remote: remote?.status ?? null,
     brand: brandForUi(),
   }));
@@ -270,7 +277,38 @@ function registerHandlers() {
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
   handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
   handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
-  handle('devices:playVideo', ({ entries }) => manager.playVideoEverywhere(entries ?? []));
+  handle('devices:playVideo', ({ entries, fromStart, videoType }) =>
+    manager.playVideoEverywhere(entries ?? [], {
+      fromStart: fromStart !== false,
+      videoType: videoType ?? null,
+    }),
+  );
+  handle('devices:playerState', ({ serials }) => manager.playersState(serials));
+  handle('devices:media', ({ serials, action, profile }) =>
+    manager.mediaEverywhere(serials, action, profile ?? config.data.playerKeys),
+  );
+  handle('devices:seek', ({ serials, ms }) => manager.seekEverywhere(serials, ms));
+  handle('devices:replay', ({ serials }) => manager.replayEverywhere(serials));
+  handle('devices:stopVideo', ({ serials }) => manager.stopVideoEverywhere(serials));
+  // Il QR è l'indirizzo con il PIN dentro: la fotocamera dell'iPad lo apre
+  // già sbloccato, senza copiare niente a mano. Chi vede il QR entra: va
+  // mostrato sullo schermo del Mac, non stampato e lasciato sul tavolo.
+  handle('remote:qr', async ({ url }) => {
+    if (typeof url !== 'string' || !url.startsWith('http')) throw new Error('indirizzo non valido');
+    return QRCode.toDataURL(url, { margin: 1, width: 240 });
+  });
+
+  handle('device:videoThumb', async ({ serial }) => {
+    const device = manager.get(serial);
+    const path = device?.playing?.path;
+    if (!path) return null;
+    // In cache per percorso: la miniatura non cambia, e leggerla dal visore a
+    // ogni giro della barra sarebbe un viaggio inutile.
+    if (!thumbCache.has(path)) {
+      thumbCache.set(path, await apps.videoThumbnail(serial, path).catch(() => null));
+    }
+    return thumbCache.get(path);
+  });
 
   handle('action:launch', ({ serials, package: pkg, activity }) =>
     manager.each(serials, (d) => d.launchApp(pkg, activity)),

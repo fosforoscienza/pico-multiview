@@ -68,11 +68,6 @@ h3 {
   gap: 10px;
 }
 
-.logo {
-  font-size: 22px;
-  color: var(--accent);
-}
-
 .brand h1 {
   font-size: 15px;
   letter-spacing: 0.2px;
@@ -1172,4 +1167,263 @@ body.is-remote .desktop-only {
   .preview-head h2 {
     font-size: 13px;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Barra del filmato
+   Compare solo mentre un filmato è in corso: è la riga in cui si legge a che
+   punto sono i visori, e da cui li si ferma o li si sposta tutti insieme.
+   --------------------------------------------------------------------------- */
+
+.playbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 12px;
+}
+
+.playbar-name {
+  font-weight: 600;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playbar-track {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.playbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: 5px;
+  background: var(--accent, #3b82f6);
+}
+
+/* Quanto sono distanti fra loro i visori: se la fascia si allarga, non stanno
+   guardando lo stesso istante, e va visto invece che scoperto in sala. */
+.playbar-spread {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-radius: 6px;
+  background: rgba(248, 113, 113, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  pointer-events: none;
+}
+
+.playbar-time {
+  min-width: 108px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* La posizione del singolo visore, sotto la sua anteprima. */
+.card-player {
+  padding: 0 10px 8px;
+  font-size: 11px;
+  color: var(--muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barra non cliccabile: manca la durata, quindi un punto sulla riga non
+   corrisponde a nessun istante del filmato. Si vede che è spenta. */
+.playbar-track.is-off {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* La conferma sta sopra a tutto, compreso il pannello da cui è stata chiesta:
+   una domanda che compare dietro la finestra che l'ha fatta nascere è una
+   domanda che nessuno vede, e un comando che non parte senza dire perché. */
+#confirm-modal {
+  z-index: 80;
+}
+
+.playbar-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--muted, #94a3b8);
+}
+
+.playbar-thumb {
+  width: 56px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+}
+
+.playbar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 170px;
+}
+
+/* Il tempo è la risposta alla domanda di sala («quanto manca?»): si legge da
+   in piedi, non cercandolo con gli occhi. */
+.playbar-info .playbar-time {
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  min-width: 0;
+}
+
+/* I comandi del singolo visore, nella sua riga del filmato: agiscono su lui
+   solo, senza selezionare niente. */
+.card-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-player-time {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-player-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 5px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+}
+
+.card-player-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Visibile solo sul telecomando (iPad): sul Mac non ha senso. */
+.remote-only {
+  display: none;
+}
+
+body.is-remote .remote-only {
+  display: inline-flex;
+}
+
+.remote-qr-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.remote-qr {
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+  flex: none;
+}
+
+.remote-qr-row .apps-list {
+  flex: 1;
+}
+
+/* I comandi del filmato nell'anteprima grande: sotto la riga dei comandi del
+   visore, solo quando un filmato è in corso su di lui. */
+.preview-player {
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+
+.preview-player .mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Tutorial: il riflettore e la scheda che spiega.
+   --------------------------------------------------------------------------- */
+
+.tutorial-hole {
+  position: fixed;
+  z-index: 200;
+  border-radius: 10px;
+  /* L'ombra sterminata È la penombra: un solo elemento scurisce tutto il
+     resto e lascia in luce il pezzo di cui si parla. */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.72);
+  border: 2px solid var(--accent, #3b82f6);
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+.tutorial-card {
+  position: fixed;
+  z-index: 201;
+  width: min(420px, calc(100vw - 20px));
+  background: var(--bg-elev, #1c2333);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  transition: top 0.25s ease, left 0.25s ease;
+}
+
+.tutorial-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tutorial-card .tutorial-text {
+  margin: 8px 0 12px;
+  line-height: 1.45;
+}
+
+.tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Gli avvisi elencano un visore per riga: gli a-capo vanno rispettati. */
+#confirm-text {
+  white-space: pre-line;
+}
+
+/* Il visore al posto del pallino: è di lui che parla tutta la finestra. */
+.logo-visore {
+  width: 44px;
+  height: auto;
+  flex: none;
+}
+
+/* Il visore in filigrana nelle postazioni libere: dice cosa ci va, il testo
+   dice come. Tutto il riquadro resta cliccabile come prima. */
+.slot-visore {
+  width: 72px;
+  height: auto;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Le icone «3D» nei pulsanti: il rilievo viene dal gradiente e dal riflesso
+   (nell'SVG), la stacca da terra quest'ombra morbida. */
+.btn-ico {
+  flex: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.45));
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
