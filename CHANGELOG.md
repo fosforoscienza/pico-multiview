@@ -23,6 +23,9 @@ internet.
   progetto, generata da `npm run guida` insieme a quella illustrata.
 - Il testo è scritto nella pagina, non scaricato: si legge proprio quando internet non c'è. C'è
   anche sull'iPad, dal telecomando.
+- **Installazione con un comando solo**: `installa-mac.sh`, da incollare nel Terminale come
+  indicato in cima alla guida. Installa Node.js se manca, scarica il progetto, i componenti, e
+  mette l'app in *Applicazioni*. Non serve `git`, né un account: il progetto ora è pubblico.
 - Nel README, la stessa procedura da zero e una sezione sull'uso senza internet.
 
 ## 2.2 — agosto 2026

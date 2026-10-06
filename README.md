@@ -122,8 +122,21 @@ visitatore sullo schermo del visore.
 ### Da zero, su un Mac nuovo
 
 Per un Mac su cui non c'è niente: né `git`, né Node, né il progetto. Si fa una volta, con
-internet; alla fine in *Applicazioni* c'è un'app completa che non scarica più niente. La stessa
-procedura, spiegata passo per passo, è nel pulsante **Guida** dentro l'app e in
+internet; alla fine in *Applicazioni* c'è un'app completa che non scarica più niente.
+
+**Con un comando solo** — incolla nel Terminale le due righe insieme:
+
+```bash
+U=https://raw.githubusercontent.com/fosforoscienza/pico-multiview/main
+/bin/bash -c "$(curl -fsSL $U/installa-mac.sh)"
+```
+
+[`installa-mac.sh`](installa-mac.sh) installa Node.js se manca, scarica il progetto in
+`~/Documents/pico-multiview` (o lo aggiorna), scarica Electron, scrcpy-server e adb, costruisce
+l'app per questo Mac e la mette in *Applicazioni*. Niente `git`, niente account GitHub; chiede la
+password del Mac solo per installare Node. Si può rilanciare per aggiornare.
+
+Gli stessi passi, a mano. Spiegati uno per uno sono nel pulsante **Guida** dentro l'app e in
 **`Guida-Installazione-Mac.pdf`**, nella cartella principale del progetto.
 
 ```bash
@@ -137,7 +150,7 @@ echo "Scarico $NOME"
 curl -fL -o ~/Downloads/node.pkg "$BASE/$NOME"
 sudo installer -pkg ~/Downloads/node.pkg -target /
 
-# 3. Il progetto (repository privato: come password serve un token GitHub con permesso "repo")
+# 3. Il progetto (pubblico: non servono account né password)
 cd ~/Documents
 git clone https://github.com/fosforoscienza/pico-multiview.git
 cd pico-multiview
@@ -164,17 +177,25 @@ i comandi):
 
 Su macOS più vecchio di 13.5 Node 24 non si installa: al passo 2 usa `latest-v22.x` al posto di
 `latest-v24.x`.
-Senza token, il progetto si scarica anche da *Code → Download ZIP* sul sito di GitHub — la Guida
-nell'app ha i comandi per sistemarlo in `~/Documents`.
+Senza `git` (e quindi senza il passo 1) il progetto si scarica anche come ZIP:
+
+```bash
+cd ~/Downloads
+curl -fL -o pico-multiview.zip \
+  https://github.com/fosforoscienza/pico-multiview/archive/refs/heads/main.zip
+unzip -q pico-multiview.zip
+mv pico-multiview-main ~/Documents/pico-multiview
+```
 
 ### Se qualcuno ti ha già dato il `.dmg`
 
 Aprilo, trascina l'app in *Applicazioni*, e vai al riquadro **La prima volta va sbloccata** qui
 sotto. Dentro c'è già tutto, compreso `adb`: niente Node, niente Terminale, niente `npm`.
 
-Il `.dmg` di ogni versione sta anche nella scheda **Releases** del progetto — ma il repository è
-privato, quindi quel link funziona solo per chi ha accesso. Per tutti gli altri il `.dmg` va
-passato come un file qualsiasi: AirDrop, chiavetta, Drive.
+Il `.dmg` delle versioni pubblicate sta anche nella scheda
+**[Releases](https://github.com/fosforoscienza/pico-multiview/releases)** del progetto, che è
+pubblico: chiunque lo scarica senza account. In alternativa si passa come un file qualsiasi:
+AirDrop, chiavetta, Drive.
 
 ### Costruire il `.dmg`: sul proprio Mac
 
@@ -423,6 +444,8 @@ della Guida in `src/renderer/index.html`, così app e PDF dicono sempre la stess
 ```
 CHANGELOG.md                   cosa è cambiato, versione per versione
 Pico Multiview.app/            avvio con doppio clic: icona, nome e nient'altro
+installa-mac.sh                installazione da zero con un comando solo (vedi sopra)
+Guida-Installazione-Mac.pdf    la Guida dell'app in PDF (generata da npm run guida)
 assets/brand/                  logo Brown Enterprises (bianco e nero)
 assets/icona/                  icona del visore VR (sorgente SVG + PNG)
 src/

@@ -27,3 +27,11 @@ test('Esc chiude la guida come le altre finestre', () => {
   const riga = app.match(/const openModal = \[([^\]]*)\]/);
   assert.ok(riga?.[1].includes("'guide-modal'"));
 });
+
+test('lo script di installazione esiste, è eseguibile e la guida lo chiama per nome', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const script = new URL('../installa-mac.sh', import.meta.url);
+  assert.ok(fs.statSync(script).mode & 0o111, 'installa-mac.sh non è eseguibile');
+  execFileSync('bash', ['-n', script.pathname]); // solo sintassi: gira davvero solo su macOS
+  assert.ok(html.includes('$U/installa-mac.sh'), 'la guida non usa installa-mac.sh');
+});

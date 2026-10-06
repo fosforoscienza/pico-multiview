@@ -214,6 +214,26 @@
             <kbd>Invio</kbd>. Il Terminale si apre con ⌘+Spazio, scrivendo «Terminale».
           </p>
 
+          <h4>Il modo più rapido: un comando solo</h4>
+          <p>
+            Incolla nel Terminale <strong>queste due righe insieme</strong> e premi
+            <kbd>Invio</kbd>. Fanno da sole tutti i passi qui sotto: installano Node.js, scaricano
+            il progetto in <em>Documenti</em>, scaricano i componenti e mettono l'app in
+            <em>Applicazioni</em>. Non servono <code>git</code> né un account GitHub.
+          </p>
+          <pre>U=https://raw.githubusercontent.com/fosforoscienza/pico-multiview/main
+/bin/bash -c "$(curl -fsSL $U/installa-mac.sh)"</pre>
+          <p>
+            Ci vogliono 5-15 minuti. A metà chiede la <strong>password del Mac</strong> (solo se
+            deve installare Node.js; mentre la scrivi non si vede niente). Alla fine scrive
+            <em>Fatto.</em> in verde e apre la cartella con l'app. Si può rilanciare quando si
+            vuole: aggiorna il progetto e ricostruisce l'app.
+          </p>
+          <p class="guide-ok">
+            Se il comando unico arriva in fondo, salta pure al punto 2. Se si ferma, il messaggio
+            rosso dice dove: i passi qui sotto fanno la stessa cosa a mano, uno per volta.
+          </p>
+
           <h4>Passo 1 — Gli strumenti di Apple (contengono <code>git</code>)</h4>
           <pre>xcode-select --install</pre>
           <p>
@@ -251,21 +271,25 @@ npm -v</pre>
           <pre>cd ~/Documents
 git clone https://github.com/fosforoscienza/pico-multiview.git</pre>
           <p>
-            Il repository è privato, quindi <code>git</code> chiede due cose: come
-            <em>Username</em> il tuo nome utente GitHub, come <em>Password</em> un
-            <strong>token</strong> (la password normale non viene accettata). Il token si crea su
-            github.com: foto profilo → <em>Settings</em> → <em>Developer settings</em> →
-            <em>Personal access tokens</em> → <em>Tokens (classic)</em> → <em>Generate new token
-            (classic)</em>, spunta <strong>repo</strong>, <em>Generate token</em>, e copia il codice
-            che inizia con <code>ghp_</code>. Il Mac lo ricorda per le volte successive.
+            Il progetto è pubblico: non serve nessun account GitHub, né nome utente né password.
+            Crea la cartella <code>pico-multiview</code> dentro <em>Documenti</em>. Più avanti, per
+            aggiornarlo all'ultima versione, basta <code>git pull</code> da dentro quella cartella.
           </p>
           <p>
-            <strong>In alternativa, senza token:</strong> sul sito del progetto, già collegato con il
-            tuo account, <em>Code → Download ZIP</em>. Poi:
+            <strong>In alternativa, senza <code>git</code></strong> (e quindi senza il passo 1):
+            scarica il progetto come archivio ZIP.
           </p>
           <pre>cd ~/Downloads
-[ -d pico-multiview-main ] || unzip -q pico-multiview-main.zip
-mv pico-multiview-main ~/Documents/pico-multiview
+curl -fL -o pico-multiview.zip \
+  https://github.com/fosforoscienza/pico-multiview/archive/refs/heads/main.zip
+unzip -q pico-multiview.zip
+mv pico-multiview-main ~/Documents/pico-multiview</pre>
+          <p class="muted">
+            Lo stesso ZIP si scarica anche dal browser: sulla pagina del progetto
+            <em>Code → Download ZIP</em>. Safari lo estrae da solo in <em>Download</em>; in quel
+            caso servono solo le ultime due righe qui sotto:
+          </p>
+          <pre>mv ~/Downloads/pico-multiview-main ~/Documents/pico-multiview
 xattr -dr com.apple.quarantine ~/Documents/pico-multiview</pre>
 
           <h4>Passo 4 — I componenti del programma</h4>
@@ -367,6 +391,12 @@ npm install</pre>
           </p>
 
           <h4>Su un altro Mac, con il <code>.dmg</code> già pronto</h4>
+          <p>
+            Il <code>.dmg</code> si può passare con chiavetta o AirDrop, oppure scaricare dalla
+            pagina <em>Releases</em> del progetto
+            (<code>github.com/fosforoscienza/pico-multiview/releases</code>), se lì c'è quello
+            della versione che ti serve.
+          </p>
           <p>
             <code>arm64</code> per i Mac con chip Apple (M1, M2, M3, M4…), <code>x64</code> per gli
             Intel (menu  → <em>Informazioni su questo Mac</em>). Trascina l'app in
