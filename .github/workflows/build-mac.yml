@@ -105,8 +105,8 @@ jobs:
           ls -lh dist/*.dmg
           if gh release view "$TAG" >/dev/null 2>&1; then
             # Rilanciato sulla stessa versione: sostituiamo i file allegati.
-            gh release upload "$TAG" dist/*.dmg docs/Guida-Pico-MultiView.pdf --clobber
+            gh release upload "$TAG" dist/*.dmg docs/Guida-Pico-MultiView.pdf Guida-Installazione-Mac.pdf --clobber
           else
             gh release create "$TAG" --title "$NOME" --notes-file note-release.md \
-              dist/*.dmg docs/Guida-Pico-MultiView.pdf
+              dist/*.dmg docs/Guida-Pico-MultiView.pdf Guida-Installazione-Mac.pdf
           fi

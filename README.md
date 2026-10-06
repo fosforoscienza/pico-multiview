@@ -123,7 +123,8 @@ visitatore sullo schermo del visore.
 
 Per un Mac su cui non c'è niente: né `git`, né Node, né il progetto. Si fa una volta, con
 internet; alla fine in *Applicazioni* c'è un'app completa che non scarica più niente. La stessa
-procedura, spiegata passo per passo, è nel pulsante **Guida** dentro l'app.
+procedura, spiegata passo per passo, è nel pulsante **Guida** dentro l'app e in
+**`Guida-Installazione-Mac.pdf`**, nella cartella principale del progetto.
 
 ```bash
 # 1. Strumenti di Apple (contengono git): conferma "Installa" nella finestra e aspetta la fine
@@ -407,7 +408,13 @@ In `docs/Guida-Pico-MultiView.pdf` c'è una guida illustrata di diciotto pagine 
 apre il Terminale e arriva alla checklist del giorno dell'evento. È pensata per chi non ha mai
 usato una riga di comando: se devi far preparare i visori a qualcun altro, dagli quella.
 
-Si rigenera con `npm run guida` (la sorgente è `docs/guida.html`).
+Nella cartella principale del progetto c'è anche **`Guida-Installazione-Mac.pdf`**: è il testo
+del pulsante **Guida** dell'app — installazione da zero su un Mac nuovo, i singoli software a
+mano, la wifi senza internet e la prova generale. È il primo file da aprire per chi scarica il
+progetto da GitHub.
+
+Si rigenerano entrambe con `npm run guida`: la prima da `docs/guida.html`, la seconda dal testo
+della Guida in `src/renderer/index.html`, così app e PDF dicono sempre la stessa cosa.
 
 ## Struttura del progetto
 

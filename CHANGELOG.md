@@ -19,6 +19,8 @@ internet.
   progetto, componenti, creazione dell'app) con i comandi da copiare, preparazione dei visori,
   il download a mano di ogni singolo software se quello automatico non va, la wifi senza
   internet, la checklist della prova generale e i problemi più comuni.
+- La stessa guida in PDF: **`Guida-Installazione-Mac.pdf`**, nella cartella principale del
+  progetto, generata da `npm run guida` insieme a quella illustrata.
 - Il testo è scritto nella pagina, non scaricato: si legge proprio quando internet non c'è. C'è
   anche sull'iPad, dal telecomando.
 - Nel README, la stessa procedura da zero e una sezione sull'uso senza internet.
