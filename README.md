@@ -149,6 +149,17 @@ npm run dist
 open dist/*-$(uname -m | sed 's/x86_64/x64/').dmg
 ```
 
+Se un download automatico non va, i pezzi si scaricano anche a mano (la Guida nell'app ha tutti
+i comandi):
+
+| Software | Da dove | Dove va |
+|---|---|---|
+| Strumenti Apple (`git`) | `xcode-select --install`, oppure *Command Line Tools for Xcode* da developer.apple.com/download/all | sistema |
+| Node.js LTS | [nodejs.org](https://nodejs.org) → *macOS Installer (.pkg)* | sistema |
+| adb | [platform-tools-latest-darwin.zip](https://dl.google.com/android/repository/platform-tools-latest-darwin.zip) | estratto in `vendor/` → `vendor/platform-tools/adb` |
+| scrcpy-server 2.7 | [scrcpy-server-v2.7](https://github.com/Genymobile/scrcpy/releases/download/v2.7/scrcpy-server-v2.7) | `vendor/scrcpy-server` (SHA-256 `a23c5659…01377a1adba`) |
+| Electron | solo tramite `npm install` | `node_modules/` |
+
 Su macOS più vecchio di 13.5 Node 24 non si installa: al passo 2 usa `v22` al posto di `v24`.
 Senza token, il progetto si scarica anche da *Code → Download ZIP* sul sito di GitHub — la Guida
 nell'app ha i comandi per sistemarlo in `~/Documents`.

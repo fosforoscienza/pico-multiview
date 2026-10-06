@@ -295,6 +295,69 @@ npm start -- --demo=10</pre>
             AirDrop): lì basta aprirli e trascinare l'app, più la riga di sblocco qui sotto.
           </p>
 
+          <h4>I singoli software, uno per uno — se un download automatico non va</h4>
+          <p>
+            I passi sopra scaricano tutto da soli. Se uno si blocca (rete lenta, un sito che non
+            risponde), ogni pezzo si può scaricare e mettere al suo posto anche a mano.
+          </p>
+          <dl>
+            <dt>Strumenti di Apple (<code>git</code>)</dt>
+            <dd>
+              Se <code>xcode-select --install</code> dice «non disponibile sul server»: dal sito
+              <code>developer.apple.com/download/all</code> (serve un Apple ID, anche gratuito)
+              scarica <em>Command Line Tools for Xcode</em>, apri il <code>.dmg</code> e fai doppio
+              clic sul <code>.pkg</code>. Non servono se il progetto lo scarichi come ZIP.
+            </dd>
+
+            <dt>Node.js</dt>
+            <dd>
+              Dal sito <code>nodejs.org</code>, pulsante <strong>LTS</strong> → <em>macOS
+              Installer (.pkg)</em>, poi doppio clic sul file e avanti fino alla fine. È lo stesso
+              pacchetto del passo 2. In alternativa, con Homebrew: <code>brew install node</code>.
+            </dd>
+
+            <dt><code>adb</code> (Android platform-tools, di Google)</dt>
+            <dd>
+              Va nella cartella <code>vendor/platform-tools</code> del progetto:
+              <pre>cd ~/Downloads
+curl -fLO https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+mkdir -p ~/Documents/pico-multiview/vendor
+unzip -o -q platform-tools-latest-darwin.zip -d ~/Documents/pico-multiview/vendor
+xattr -dr com.apple.quarantine ~/Documents/pico-multiview/vendor/platform-tools
+~/Documents/pico-multiview/vendor/platform-tools/adb version</pre>
+              L'ultima riga deve rispondere <em>Android Debug Bridge version</em> e un numero. In alternativa,
+              con Homebrew: <code>brew install --cask android-platform-tools</code>: l'app lo trova
+              da sola, ma solo su questo Mac — il <code>.dmg</code> da passare ad altri contiene
+              <code>adb</code> soltanto se sta in <code>vendor/platform-tools</code>.
+            </dd>
+
+            <dt><code>scrcpy-server</code> 2.7 (lo streaming video dai visori)</dt>
+            <dd>
+              Va nel file <code>vendor/scrcpy-server</code>, senza estensione. Serve
+              <strong>proprio la versione 2.7</strong>:
+              <pre>mkdir -p ~/Documents/pico-multiview/vendor
+curl -fL -o ~/Documents/pico-multiview/vendor/scrcpy-server \
+  https://github.com/Genymobile/scrcpy/releases/download/v2.7/scrcpy-server-v2.7
+shasum -a 256 ~/Documents/pico-multiview/vendor/scrcpy-server</pre>
+              Il codice che compare deve iniziare con <code>a23c5659f36c</code> e finire con
+              <code>01377a1adba</code>. Se è diverso il file è rovinato: cancellalo e riscaricalo.
+            </dd>
+
+            <dt>Electron (la finestra del programma)</dt>
+            <dd>
+              Lo scarica <code>npm install</code> (circa 220 MB) e non c'è un modo comodo di farlo a
+              mano. Se si interrompe, rilancialo: riprende da dove serve. Se insiste a fallire,
+              cancella la cartella e riprova da capo:
+              <pre>cd ~/Documents/pico-multiview
+rm -rf node_modules
+npm install</pre>
+            </dd>
+          </dl>
+          <p>
+            Messi a mano <code>adb</code> e <code>scrcpy-server</code>, si riprende dal passo 4
+            (<code>npm install</code> li trova già al loro posto e non li riscarica) e poi il passo 5.
+          </p>
+
           <h4>Su un altro Mac, con il <code>.dmg</code> già pronto</h4>
           <p>
             <code>arm64</code> per i Mac con chip Apple (M1, M2, M3, M4…), <code>x64</code> per gli
