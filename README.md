@@ -119,6 +119,40 @@ visitatore sullo schermo del visore.
 
 ## Scaricare e installare su Mac
 
+### Da zero, su un Mac nuovo
+
+Per un Mac su cui non c'è niente: né `git`, né Node, né il progetto. Si fa una volta, con
+internet; alla fine in *Applicazioni* c'è un'app completa che non scarica più niente. La stessa
+procedura, spiegata passo per passo, è nel pulsante **Guida** dentro l'app.
+
+```bash
+# 1. Strumenti di Apple (contengono git): conferma "Installa" nella finestra e aspetta la fine
+xcode-select --install
+
+# 2. Node.js LTS dal sito ufficiale (pacchetto universale, Apple e Intel; chiede la password del Mac)
+cd ~/Downloads
+PKG=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+\.pkg' | head -1)
+curl -fLO "https://nodejs.org/dist/latest-v24.x/$PKG"
+sudo installer -pkg "$PKG" -target /
+
+# 3. Il progetto (repository privato: come password serve un token GitHub con permesso "repo")
+cd ~/Documents
+git clone https://github.com/fosforoscienza/pico-multiview.git
+cd pico-multiview
+
+# 4. Componenti: Electron, scrcpy-server, adb
+npm install
+npm run deps:adb
+
+# 5. L'app: costruisce i .dmg e apre quello giusto per questo Mac → trascina in Applicazioni
+npm run dist
+open dist/*-$(uname -m | sed 's/x86_64/x64/').dmg
+```
+
+Su macOS più vecchio di 13.5 Node 24 non si installa: al passo 2 usa `v22` al posto di `v24`.
+Senza token, il progetto si scarica anche da *Code → Download ZIP* sul sito di GitHub — la Guida
+nell'app ha i comandi per sistemarlo in `~/Documents`.
+
 ### Se qualcuno ti ha già dato il `.dmg`
 
 Aprilo, trascina l'app in *Applicazioni*, e vai al riquadro **La prima volta va sbloccata** qui
@@ -298,6 +332,26 @@ Accendi i visori e apri l'app: le postazioni si ricollegano da sole. Se qualcuno
 **Libreria…** nella barra comandi → **Rileva app installate**: l'app elenca i pacchetti presenti
 sui visori (✓ = presente su tutti). Clicca quello dell'esperienza, dagli un nome leggibile e
 salva. Da quel momento lo lanci ovunque con **Avvia**.
+
+## Su una wifi senza internet
+
+Il programma non usa internet mentre gira: parla con i visori solo sulla rete locale, e l'app
+del `.dmg` contiene già `adb` e `scrcpy-server`. Internet serve solo per installare (sopra) e
+per aggiornare. All'evento basta un router wifi **non collegato a internet**, con l'isolamento
+client spento.
+
+- Sul Mac, l'avviso *«Nessuna connessione a Internet»* è normale. Togli *Accedi
+  automaticamente* alle altre reti conosciute, così non ci salta sopra da solo.
+- Sui visori, dimentica le altre reti salvate; se avvisano che la rete non ha internet, resta
+  collegato.
+- Una prenotazione DHCP per ogni visore nel router tiene fissi gli indirizzi.
+- Il telecomando da iPad funziona uguale: è tutto sulla rete locale.
+- **Prova generale:** a casa, stacca il cavo internet del router e prova tutto. Se va lì, va
+  anche all'evento.
+- Non lanciare `git pull`, `npm install` o `npm run dist` all'evento: servono internet.
+
+Tutto questo, con l'elenco dei problemi più comuni, è anche nel pulsante **Guida** in alto
+nell'app, leggibile senza connessione.
 
 ## Come si usa durante un evento
 

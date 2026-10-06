@@ -9,6 +9,19 @@ della guida PDF.
 
 ---
 
+## 2.3 — ottobre 2026
+
+Una **Guida** dentro l'app, per chi parte da un Mac vuoto e usa i visori su una wifi senza
+internet.
+
+- **Nuovo pulsante «Guida»** nella barra in alto, accanto a *Telecomando…*. Si apre sopra le
+  postazioni e contiene tutto: installazione da zero su un Mac nuovo (strumenti Apple, Node.js,
+  progetto, componenti, creazione dell'app) con i comandi da copiare, preparazione dei visori,
+  la wifi senza internet, la checklist della prova generale e i problemi più comuni.
+- Il testo è scritto nella pagina, non scaricato: si legge proprio quando internet non c'è. C'è
+  anche sull'iPad, dal telecomando.
+- Nel README, la stessa procedura da zero e una sezione sull'uso senza internet.
+
 ## 2.2 — agosto 2026
 
 «Non trova il file nel visore»: due difetti nella ricerca dei video, uno dei quali la rendeva

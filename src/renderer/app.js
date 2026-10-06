@@ -181,6 +181,15 @@ function renderEyeMode() {
 }
 
 // ---------------------------------------------------------------------------
+// Guida
+// ---------------------------------------------------------------------------
+
+function openGuide() {
+  $('guide-modal').classList.remove('hidden');
+  $('guide-modal').querySelector('.modal-card').scrollTop = 0;
+}
+
+// ---------------------------------------------------------------------------
 // Video sui visori
 // ---------------------------------------------------------------------------
 
@@ -973,6 +982,16 @@ function wireUi() {
   $('video-refresh').addEventListener('click', loadVideos);
   $('video-search').addEventListener('input', renderVideoList);
 
+  $('btn-guide').addEventListener('click', openGuide);
+  $('guide-close').addEventListener('click', () => $('guide-modal').classList.add('hidden'));
+  // L'indice scorre dentro la guida invece di cambiare l'indirizzo della pagina.
+  $('guide-modal').querySelector('.guide-toc').addEventListener('click', (ev) => {
+    const link = ev.target.closest('a[href^="#"]');
+    if (!link) return;
+    ev.preventDefault();
+    document.querySelector(link.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
   $('add-scan').addEventListener('click', doScan);
   $('add-usb').addEventListener('click', doAdoptUsb);
   $('add-close').addEventListener('click', closeAddModal);
@@ -1140,7 +1159,7 @@ function wireUi() {
 function onKeyDown(ev) {
   if (ev.target.matches('input, select, textarea')) return;
 
-  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal', 'video-modal'].find(
+  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal', 'video-modal', 'guide-modal'].find(
     (id) => !$(id).classList.contains('hidden'),
   );
   if (ev.key === 'Escape') {

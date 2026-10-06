@@ -33,6 +33,7 @@
             Un occhio
           </button>
           <button id="btn-remote" class="btn desktop-only" title="Comanda i visori da iPad">Telecomando…</button>
+          <button id="btn-guide" class="btn" title="Come installare il programma sul Mac e usarlo su una wifi senza internet">Guida</button>
         </div>
       </div>
 
@@ -176,6 +177,298 @@
 
         <div class="modal-actions">
           <button id="video-close" class="btn">Chiudi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale: guida. Tutto il testo sta qui dentro, così si legge anche senza internet. -->
+    <div id="guide-modal" class="modal hidden">
+      <div class="modal-card modal-wide guide">
+        <h2>Guida — installare sul Mac e usare su una wifi senza internet</h2>
+        <p>
+          Pico MultiView <strong>non ha bisogno di internet per funzionare</strong>: parla con i
+          visori solo sulla rete locale. Internet serve <strong>una volta sola</strong>, per scaricare
+          e installare il programma. Quindi si prepara tutto dove internet c'è (casa, ufficio) e
+          all'evento basta una wifi qualsiasi, anche isolata dal mondo.
+        </p>
+
+        <nav class="guide-toc">
+          <a href="#guida-installa">1. Installare da zero</a>
+          <a href="#guida-visori">2. Preparare i visori</a>
+          <a href="#guida-rete">3. La wifi senza internet</a>
+          <a href="#guida-mac">4. Il Mac sulla wifi</a>
+          <a href="#guida-evento">5. All'evento</a>
+          <a href="#guida-prova">6. Prova generale</a>
+          <a href="#guida-problemi">7. Se qualcosa non va</a>
+        </nav>
+
+        <section id="guida-installa">
+          <h3>1. Installare su un Mac nuovo — da zero, con internet</h3>
+          <p>
+            Vale per un Mac su cui non è mai stato installato niente. Si fa <strong>una volta sola,
+            con internet</strong>: alla fine in <em>Applicazioni</em> c'è un'app che contiene già
+            tutto e non scarica più niente. Ci vogliono circa 20 minuti, quasi tutti di attesa.
+          </p>
+          <p>
+            Ogni riquadro grigio va copiato e incollato nel <strong>Terminale</strong>, poi
+            <kbd>Invio</kbd>. Il Terminale si apre con ⌘+Spazio, scrivendo «Terminale».
+          </p>
+
+          <h4>Passo 1 — Gli strumenti di Apple (contengono <code>git</code>)</h4>
+          <pre>xcode-select --install</pre>
+          <p>
+            Compare una finestra: <strong>Installa</strong> → <strong>Accetta</strong> e aspetta la
+            fine (5-10 minuti). Se dice che sono già installati, va bene così. Per controllare:
+          </p>
+          <pre>git --version</pre>
+
+          <h4>Passo 2 — Node.js</h4>
+          <p>Scarica e installa l'ultima versione LTS dal sito ufficiale (va bene sia per i Mac Apple sia per gli Intel):</p>
+          <pre>cd ~/Downloads
+PKG=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+\.pkg' | head -1)
+curl -fLO "https://nodejs.org/dist/latest-v24.x/$PKG"
+sudo installer -pkg "$PKG" -target /</pre>
+          <p>
+            Chiede la <strong>password del Mac</strong>: mentre la scrivi non si vede niente, è
+            normale. Poi controlla:
+          </p>
+          <pre>node -v
+npm -v</pre>
+          <p class="muted">
+            Su un Mac con macOS più vecchio di 13.5 l'installazione si rifiuta: nelle quattro righe
+            sopra sostituisci <code>v24</code> con <code>v22</code> (tutte e tre le volte).
+          </p>
+
+          <h4>Passo 3 — Scaricare il progetto</h4>
+          <pre>cd ~/Documents
+git clone https://github.com/fosforoscienza/pico-multiview.git</pre>
+          <p>
+            Il repository è privato, quindi <code>git</code> chiede due cose: come
+            <em>Username</em> il tuo nome utente GitHub, come <em>Password</em> un
+            <strong>token</strong> (la password normale non viene accettata). Il token si crea su
+            github.com: foto profilo → <em>Settings</em> → <em>Developer settings</em> →
+            <em>Personal access tokens</em> → <em>Tokens (classic)</em> → <em>Generate new token
+            (classic)</em>, spunta <strong>repo</strong>, <em>Generate token</em>, e copia il codice
+            che inizia con <code>ghp_</code>. Il Mac lo ricorda per le volte successive.
+          </p>
+          <p>
+            <strong>In alternativa, senza token:</strong> sul sito del progetto, già collegato con il
+            tuo account, <em>Code → Download ZIP</em>. Poi:
+          </p>
+          <pre>cd ~/Downloads
+[ -d pico-multiview-main ] || unzip -q pico-multiview-main.zip
+mv pico-multiview-main ~/Documents/pico-multiview
+xattr -dr com.apple.quarantine ~/Documents/pico-multiview</pre>
+
+          <h4>Passo 4 — I componenti del programma</h4>
+          <pre>cd ~/Documents/pico-multiview
+npm install
+npm run deps:adb</pre>
+          <p>
+            Il primo scarica Electron (circa 220 MB) e il componente per il video, il secondo
+            <code>adb</code>, lo strumento che parla con i visori. Scorre molto testo: è normale.
+            Gli avvisi gialli <code>npm warn</code> si possono ignorare, conta che alla fine non ci
+            sia <code>npm error</code>.
+          </p>
+
+          <h4>Passo 5 — Creare l'app e metterla in Applicazioni</h4>
+          <pre>cd ~/Documents/pico-multiview
+npm run dist
+open dist/*-$(uname -m | sed 's/x86_64/x64/').dmg</pre>
+          <p>
+            Ci vogliono un paio di minuti. Si apre una finestra: trascina
+            <strong>Pico MultiView</strong> nella cartella <em>Applicazioni</em>. Costruita su
+            questo stesso Mac si apre con un doppio clic, senza avvisi di sicurezza.
+          </p>
+
+          <h4>Passo 6 — Controllare che funzioni</h4>
+          <p>
+            Apri <strong>Pico MultiView</strong> da <em>Applicazioni</em> (o dal Launchpad). Per
+            vederla al lavoro anche senza visori, con dieci visori finti:
+          </p>
+          <pre>cd ~/Documents/pico-multiview
+npm start -- --demo=10</pre>
+          <p class="guide-ok">
+            Fatto: l'app in <em>Applicazioni</em> contiene già <code>adb</code> e il componente
+            video, non scarica niente all'avvio e funziona anche senza internet. I file
+            <code>.dmg</code> in <code>dist/</code> si possono copiare su altri Mac (chiavetta,
+            AirDrop): lì basta aprirli e trascinare l'app, più la riga di sblocco qui sotto.
+          </p>
+
+          <h4>Su un altro Mac, con il <code>.dmg</code> già pronto</h4>
+          <p>
+            <code>arm64</code> per i Mac con chip Apple (M1, M2, M3, M4…), <code>x64</code> per gli
+            Intel (menu  → <em>Informazioni su questo Mac</em>). Trascina l'app in
+            <em>Applicazioni</em>, poi una volta sola, perché arrivata da fuori non è firmata da
+            Apple:
+          </p>
+          <pre>xattr -dr com.apple.quarantine "/Applications/Pico MultiView.app"</pre>
+          <p class="guide-warn">
+            All'evento non lanciare <code>git pull</code>, <code>npm install</code> o
+            <code>npm run dist</code>: servono internet. Gli aggiornamenti si fanno prima di partire,
+            ripetendo i passi 4 e 5 dopo un <code>git pull</code>.
+          </p>
+        </section>
+
+        <section id="guida-visori">
+          <h3>2. Preparare i visori — una volta sola per visore</h3>
+          <p>Non serve internet: basta il cavo USB-C. Conviene farlo con calma prima dell'evento.</p>
+          <ol>
+            <li>
+              Sul visore: <em>Impostazioni → Generale → Informazioni sul dispositivo</em> → tocca
+              <strong>Versione software</strong> 7-8 volte. Poi <em>Impostazioni → Sviluppatore</em>
+              → attiva <strong>Debug USB</strong>.
+            </li>
+            <li>
+              Collega il visore al Mac con un cavo USB-C <strong>dati</strong>. Nel visore metti la
+              spunta su <strong>«Consenti sempre da questo computer»</strong> e conferma.
+            </li>
+            <li>
+              Collega il visore alla wifi dell'evento (vedi punto 3), poi nell'app clicca una
+              postazione vuota → <strong>Adotta quello collegato via USB</strong>. Il cavo si può
+              staccare.
+            </li>
+            <li>
+              Dai un nome alla postazione (⚙︎ sulla miniatura) e attacca un'etichetta uguale sul
+              visore. Prepara anche la <strong>Libreria…</strong> delle app da lanciare.
+            </li>
+          </ol>
+          <p>
+            L'autorizzazione vale per <em>questo</em> Mac. La procedura completa è in
+            <code>docs/SETUP-PICO.md</code>.
+          </p>
+        </section>
+
+        <section id="guida-rete">
+          <h3>3. La wifi senza internet</h3>
+          <ul>
+            <li>
+              Basta un <strong>router wifi</strong> (anche un router da viaggio) acceso e
+              <strong>non collegato a internet</strong>. Il suo compito è solo dare un indirizzo a
+              ogni apparecchio e metterli in contatto fra loro.
+            </li>
+            <li>
+              Nel router <strong>disattiva l'isolamento client</strong> (<em>AP isolation</em>,
+              <em>client isolation</em>) e non usare la rete ospiti: altrimenti il Mac non vede i
+              visori.
+            </li>
+            <li>Stesso nome di rete e stessa password per tutti i visori. Meglio la banda a 5 GHz.</li>
+            <li>
+              Consigliato: nel router <strong>riserva un indirizzo fisso</strong> a ogni visore
+              (<em>prenotazione DHCP</em>). Così ogni visore ha sempre lo stesso IP e le postazioni
+              si ricollegano subito.
+            </li>
+            <li>
+              Sui visori: collegali a quella wifi e <strong>dimentica le altre reti salvate</strong>,
+              così non ci saltano sopra. Se il visore avvisa che la rete non ha internet, scegli di
+              restare collegato.
+            </li>
+            <li>
+              Per non dover rifare il giro col cavo dopo ogni riavvio di un visore, rendi permanente
+              la connessione wifi di <code>adb</code> (col visore collegato via USB):
+              <pre>adb -s &lt;seriale&gt; shell setprop persist.adb.tcp.port 5555</pre>
+            </li>
+          </ul>
+        </section>
+
+        <section id="guida-mac">
+          <h3>4. Il Mac sulla wifi senza internet</h3>
+          <ul>
+            <li>
+              Collega il Mac alla wifi dell'evento. macOS scrive <em>«Nessuna connessione a
+              Internet»</em>: è normale, ignoralo.
+            </li>
+            <li>
+              Evita che il Mac salti da solo su un'altra rete conosciuta (o sull'hotspot del
+              telefono): <em>Impostazioni di Sistema → Wi-Fi</em> → <em>Dettagli…</em> accanto alle
+              altre reti → togli <strong>Accedi automaticamente</strong>.
+            </li>
+            <li>
+              Se ti serve internet sul Mac nello stesso momento, prendilo da un cavo Ethernet: la
+              wifi resta ai visori.
+            </li>
+            <li>
+              Se macOS chiede se consentire a Pico MultiView di <em>accettare connessioni in
+              entrata</em>, rispondi <strong>Consenti</strong>: serve al telecomando dall'iPad.
+            </li>
+          </ul>
+        </section>
+
+        <section id="guida-evento">
+          <h3>5. All'evento</h3>
+          <ol>
+            <li>Accendi il router e aspetta che la wifi compaia.</li>
+            <li>Accendi i visori, poi collega il Mac alla stessa wifi.</li>
+            <li>
+              Apri Pico MultiView (da <em>Applicazioni</em>, oppure con l'icona nella cartella del
+              progetto). Le postazioni si ricollegano da sole; se ne manca qualcuna premi
+              <strong>Cerca in rete</strong>.
+            </li>
+            <li>
+              Telecomando dall'iPad: iPad sulla stessa wifi, sul Mac <strong>Telecomando…</strong>
+              → <strong>Accendi</strong>, e in Safari scrivi l'indirizzo che compare (per esempio
+              <code>http://192.168.1.10:8788/?k=PIN</code>). Anche questo funziona senza internet.
+            </li>
+          </ol>
+        </section>
+
+        <section id="guida-prova">
+          <h3>6. Prova generale — prima di partire</h3>
+          <p>
+            Il modo sicuro di sapere che all'evento andrà: <strong>stacca il cavo internet del
+            router</strong> (la presa WAN) e prova tutto così.
+          </p>
+          <ul class="guide-check">
+            <li>l'app si apre e in basso non compaiono errori rossi nel <strong>Log</strong>;</li>
+            <li>tutti i visori compaiono nelle loro postazioni, con l'immagine;</li>
+            <li>un clic su una miniatura apre l'anteprima grande;</li>
+            <li><strong>Avvia</strong> lancia l'app dell'esperienza su tutti;</li>
+            <li>l'iPad si collega al telecomando;</li>
+            <li>dopo aver spento e riacceso un visore, torna da solo.</li>
+          </ul>
+          <p>Se funziona a casa senza internet, funziona anche all'evento.</p>
+        </section>
+
+        <section id="guida-problemi">
+          <h3>7. Se qualcosa non va</h3>
+          <dl>
+            <dt>«Cerca in rete» non trova nessun visore</dt>
+            <dd>
+              Visori accesi e svegli, sulla stessa wifi del Mac (controlla che il Mac non sia saltato
+              su un'altra rete), isolamento client spento nel router. Se la rete del router non è
+              una /24 standard (come <code>192.168.1.x</code>), indica le sottoreti in
+              <code>config.json</code> → <code>scan.subnets</code>. Puoi anche inserire l'IP a mano
+              dalla postazione.
+            </dd>
+            <dt>Un visore risulta <code>unauthorized</code></dt>
+            <dd>
+              Non era stata messa la spunta «Consenti sempre», oppure è un altro Mac. Ricollegalo col
+              cavo e conferma nel visore.
+            </dd>
+            <dt>Dopo un riavvio un visore non si collega più</dt>
+            <dd>
+              Ricollegalo via USB e premi <strong>Adotta USB</strong>; per non doverlo rifare usa il
+              comando <code>persist.adb.tcp.port</code> del punto 3.
+            </dd>
+            <dt>«adb non eseguibile» o «scrcpy-server mancante»</dt>
+            <dd>
+              Nella strada B non è stato completato <code>npm run deps:adb</code> mentre c'era
+              internet. Serve una connessione per un minuto: anche l'hotspot del telefono va bene,
+              poi torni alla wifi dell'evento.
+            </dd>
+            <dt>Altro</dt>
+            <dd>
+              Apri il <strong>Log</strong> in basso a sinistra: dice visore per visore cosa è
+              successo. Con <strong>Copia</strong> lo mandi a chi ti aiuta.
+            </dd>
+          </dl>
+          <p class="muted">
+            Per provare l'app senza visori: dai sorgenti, <code>npm start -- --demo=10</code>.
+          </p>
+        </section>
+
+        <div class="modal-actions">
+          <button id="guide-close" class="btn btn-primary">Chiudi</button>
         </div>
       </div>
     </div>

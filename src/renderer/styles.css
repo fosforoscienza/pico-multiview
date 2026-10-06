@@ -932,6 +932,128 @@ input[type="checkbox"] {
   display: block;
 }
 
+/* ------------------------------------------------------------------- guida */
+
+/* La guida è testo da leggere, e i comandi vanno copiati nel Terminale: qui la
+   selezione torna possibile, e le righe sono più ariose di quelle dei pannelli. */
+.guide {
+  user-select: text;
+  line-height: 1.55;
+}
+
+.guide p,
+.guide li,
+.guide dd {
+  color: #c9d3dd;
+}
+
+.guide section {
+  scroll-margin-top: 8px;
+}
+
+.modal-card.guide h3 {
+  margin: 26px 0 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.guide h4 {
+  margin: 16px 0 4px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.guide ol,
+.guide ul {
+  padding-left: 22px;
+  margin: 6px 0;
+}
+
+.guide li {
+  margin: 4px 0;
+}
+
+.guide code {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+  font: 12px ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.guide pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+  font: 12px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  color: var(--text);
+}
+
+.guide-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.guide-toc a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.guide-toc a:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.guide-ok,
+.guide-warn {
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.guide .guide-ok {
+  background: rgba(61, 220, 132, 0.08);
+  border: 1px solid rgba(61, 220, 132, 0.3);
+  color: #b9f0cf;
+}
+
+.guide .guide-warn {
+  background: rgba(255, 176, 32, 0.08);
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  color: #ffd98a;
+}
+
+.guide-check {
+  list-style: none;
+}
+
+.guide-check li::before {
+  content: '☐ ';
+  color: var(--accent);
+  margin-left: -18px;
+}
+
+.guide dt {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.guide dd {
+  margin: 2px 0 0 0;
+}
+
 /* --------------------------------------------------- telecomando da iPad */
 
 /* Da browser non c'è la barra del titolo di macOS da trascinare. */
