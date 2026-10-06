@@ -131,10 +131,11 @@ procedura, spiegata passo per passo, è nel pulsante **Guida** dentro l'app e in
 xcode-select --install
 
 # 2. Node.js LTS dal sito ufficiale (pacchetto universale, Apple e Intel; chiede la password del Mac)
-cd ~/Downloads
-PKG=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+\.pkg' | head -1)
-curl -fLO "https://nodejs.org/dist/latest-v24.x/$PKG"
-sudo installer -pkg "$PKG" -target /
+BASE=https://nodejs.org/dist/latest-v24.x
+NOME=$(curl -fsSL $BASE/SHASUMS256.txt | awk '/\.pkg$/ {print $2}')
+echo "Scarico $NOME"
+curl -fL -o ~/Downloads/node.pkg "$BASE/$NOME"
+sudo installer -pkg ~/Downloads/node.pkg -target /
 
 # 3. Il progetto (repository privato: come password serve un token GitHub con permesso "repo")
 cd ~/Documents
@@ -161,7 +162,8 @@ i comandi):
 | scrcpy-server 2.7 | [scrcpy-server-v2.7](https://github.com/Genymobile/scrcpy/releases/download/v2.7/scrcpy-server-v2.7) | `vendor/scrcpy-server` (SHA-256 `a23c5659…01377a1adba`) |
 | Electron | solo tramite `npm install` | `node_modules/` |
 
-Su macOS più vecchio di 13.5 Node 24 non si installa: al passo 2 usa `v22` al posto di `v24`.
+Su macOS più vecchio di 13.5 Node 24 non si installa: al passo 2 usa `latest-v22.x` al posto di
+`latest-v24.x`.
 Senza token, il progetto si scarica anche da *Code → Download ZIP* sul sito di GitHub — la Guida
 nell'app ha i comandi per sistemarlo in `~/Documents`.
 

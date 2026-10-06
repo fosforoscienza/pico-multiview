@@ -224,19 +224,27 @@
 
           <h4>Passo 2 — Node.js</h4>
           <p>Scarica e installa l'ultima versione LTS dal sito ufficiale (va bene sia per i Mac Apple sia per gli Intel):</p>
-          <pre>cd ~/Downloads
-PKG=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+\.pkg' | head -1)
-curl -fLO "https://nodejs.org/dist/latest-v24.x/$PKG"
-sudo installer -pkg "$PKG" -target /</pre>
+          <pre>BASE=https://nodejs.org/dist/latest-v24.x
+NOME=$(curl -fsSL $BASE/SHASUMS256.txt | awk '/\.pkg$/ {print $2}')
+echo "Scarico $NOME"
+curl -fL -o ~/Downloads/node.pkg "$BASE/$NOME"
+sudo installer -pkg ~/Downloads/node.pkg -target /</pre>
           <p>
-            Chiede la <strong>password del Mac</strong>: mentre la scrivi non si vede niente, è
-            normale. Poi controlla:
+            La terza riga deve scrivere qualcosa come <em>Scarico node-v24.21.0.pkg</em>: se dopo
+            «Scarico» non c'è niente, il Mac non ha raggiunto <code>nodejs.org</code> (controlla
+            internet e rilancia le righe). L'ultima chiede la <strong>password del Mac</strong>:
+            mentre la scrivi non si vede niente, è normale. Alla fine deve dire
+            <em>The install was successful</em>. Poi controlla:
           </p>
           <pre>node -v
 npm -v</pre>
           <p class="muted">
-            Su un Mac con macOS più vecchio di 13.5 l'installazione si rifiuta: nelle quattro righe
-            sopra sostituisci <code>v24</code> con <code>v22</code> (tutte e tre le volte).
+            Copia le righe dalla Guida dell'app o dal README: dal PDF, se una riga va a capo, il
+            comando arriva spezzato. Se resta un errore, scarica il pacchetto a mano: da
+            <code>nodejs.org</code>, pulsante <strong>LTS</strong> → <em>macOS Installer
+            (.pkg)</em>, doppio clic e avanti fino alla fine. Su macOS più vecchio di 13.5 Node 24
+            non si installa: nella prima riga scrivi <code>latest-v22.x</code> al posto di
+            <code>latest-v24.x</code>.
           </p>
 
           <h4>Passo 3 — Scaricare il progetto</h4>
