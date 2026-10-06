@@ -858,6 +858,9 @@ async function doScan() {
   setStatus(text);
   $('add-progress').textContent = text;
   renderAvailable();
+  // Una scansione a vuoto per colpa del Mac (nessuna rete, permesso «Rete
+  // locale» negato) va detta in faccia: dal registro non la legge nessuno.
+  if (res?.diagnosi) await mostraAvviso({ titolo: 'La ricerca non ha trovato visori', testo: res.diagnosi });
 }
 
 async function doAdoptUsb() {
@@ -886,9 +889,20 @@ async function doAdoptUsb() {
       ? `✓ ${r.wifi} — wifi fissato: raggiungibile anche dopo un riavvio, senza cavo`
       : `✓ ${r.wifi} — wifi attivo fino al prossimo riavvio del visore: dopo, servirà di nuovo il cavo`;
   });
+  // «Puoi staccare il cavo» solo se c'è davvero qualcosa da staccare: detto
+  // dopo un fallimento, l'operatore lo stacca e il visore sparisce.
+  const chiusa = !ok.length
+    ? 'Non staccare il cavo: il visore è ancora collegato solo da lì. Sistemato il problema qui sopra, ripremi «Adotta USB».'
+    : ok.length === res.length
+      ? 'Puoi staccare il cavo.'
+      : 'Puoi staccare il cavo solo dei visori con ✓. Gli altri sono ancora collegati solo dal cavo.';
   await mostraAvviso({
-    titolo: ok.length === res.length ? 'Visori passati al wifi' : 'Adozione completata a metà',
-    testo: `${righe.join('\n')}\n\nPuoi staccare il cavo dei visori passati al wifi.`,
+    titolo: !ok.length
+      ? 'Il passaggio al wifi non è riuscito'
+      : ok.length === res.length
+        ? 'Visori passati al wifi'
+        : 'Passaggio al wifi riuscito solo in parte',
+    testo: `${righe.join('\n\n')}\n\n${chiusa}`,
   });
 }
 

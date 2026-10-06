@@ -583,6 +583,14 @@ done</pre>
               wifi resta ai visori.
             </li>
             <li>
+              La prima volta macOS chiede se Pico MultiView può <em>trovare dispositivi sulla
+              rete locale</em>: rispondi <strong>Consenti</strong>. Senza quel permesso il
+              programma non raggiunge i visori in wifi — vede solo quelli col cavo. Se hai
+              risposto di no, o la domanda non è comparsa: <em>Impostazioni di Sistema →
+              Privacy e sicurezza → Rete locale</em>, attiva <strong>Pico MultiView</strong>, poi
+              chiudi e riapri il programma.
+            </li>
+            <li>
               Se macOS chiede se consentire a Pico MultiView di <em>accettare connessioni in
               entrata</em>, rispondi <strong>Consenti</strong>: serve al telecomando dall'iPad.
             </li>
@@ -631,7 +639,8 @@ done</pre>
           <dl>
             <dt>«Cerca in rete» non trova nessun visore</dt>
             <dd>
-              Visori accesi e svegli, sulla stessa wifi del Mac (controlla che il Mac non sia saltato
+              Se l'avviso parla del permesso «Rete locale», è quello: vedi sopra. Altrimenti: visori
+              accesi e svegli, sulla stessa wifi del Mac (controlla che il Mac non sia saltato
               su un'altra rete), isolamento client spento nel router. Se la rete del router non è
               una /24 standard (come <code>192.168.1.x</code>), indica le sottoreti in
               <code>config.json</code> → <code>scan.subnets</code>. Puoi anche inserire l'IP a mano
@@ -645,6 +654,17 @@ done</pre>
               riconosciuto — copiali come al punto 2b. «Non collegato»: il visore non risponde,
               premi <strong>Cerca in rete</strong>. «Nessun visore nelle postazioni»: assegna i
               visori alle postazioni, la ricerca guarda solo quelli.
+            </dd>
+            <dt>«Adotta USB» non riesce, e staccando il cavo il visore sparisce</dt>
+            <dd>
+              Il visore non è passato al wifi: la finestra dell'esito dice perché, e finché non ci
+              riesce il cavo va lasciato. I casi: <strong>reti diverse</strong> — il Mac è su
+              un'altra wifi, collegalo a quella del visore; <strong>Rete locale</strong> — macOS
+              non lascia il programma parlare con la rete: <em>Impostazioni di Sistema → Privacy e
+              sicurezza → Rete locale</em>, attiva Pico MultiView e riapri il programma;
+              <strong>nessuna risposta</strong> — il router isola i dispositivi fra loro
+              (rete ospiti, «isolamento client»): disattivalo o usa un'altra rete. Sistemato,
+              ripremi <strong>Adotta USB</strong>.
             </dd>
             <dt>Un visore risulta <code>unauthorized</code></dt>
             <dd>

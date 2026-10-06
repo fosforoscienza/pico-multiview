@@ -527,9 +527,19 @@ WebSocket, frame che arrivano interi) — le parti dove un errore si nota solo s
 
 **"adb non eseguibile"** → `npm run deps:adb`, oppure `brew install --cask android-platform-tools`.
 
-**"Cerca in rete" non trova niente** → i visori devono essere accesi e *svegli*, sulla stessa
+**"Cerca in rete" non trova niente** → se l'avviso parla del permesso «Rete locale», è quello (vedi sotto). Altrimenti i visori devono essere accesi e *svegli*, sulla stessa
 rete del Mac, e la rete non deve isolare i client. Se la tua rete non è una /24 standard puoi
 indicare le sottoreti in `config.json` → `scan.subnets`.
+
+**«Adotta USB» non riesce, e staccando il cavo il visore si scollega** → il visore non è passato
+al wifi, e l'avviso dice perché (finché non ci riesce, il cavo resta attaccato):
+
+- *reti diverse*: il Mac è su un'altra wifi rispetto al visore — collegalo alla stessa;
+- *Rete locale*: da macOS 15 un'app deve avere il permesso di parlare con la rete locale, e
+  senza quello raggiunge i visori solo via cavo. **Impostazioni di Sistema → Privacy e sicurezza
+  → Rete locale** → attiva *Pico MultiView*, poi chiudi e riapri il programma;
+- *nessuna risposta*: il router isola i dispositivi fra loro (rete ospiti, «isolamento client»,
+  «AP isolation») — disattivalo o usa un'altra rete.
 
 **Un visore risulta `unauthorized`** → la spunta "Consenti sempre" non era stata messa, oppure
 stai usando un computer diverso. L'autorizzazione è legata alla chiave di *quel* computer

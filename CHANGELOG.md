@@ -9,6 +9,30 @@ della guida PDF.
 
 ---
 
+## 3.5 — ottobre 2026
+
+«Mi dà questo errore, se tolgo il cavo si scollega.» Adotta USB falliva dicendo «adb connect
+192.168.1.26:5555 fallito: Command failed: …/adb connect 192.168.1.26:5555» — il comando
+ripetuto, nessun motivo — e chiudeva con «puoi staccare il cavo dei visori passati al wifi»
+anche quando non ne era passato nessuno.
+
+- **Il motivo, in italiano.** Prima di collegarsi, il Mac bussa da sé alla porta del visore, e il
+  modo in cui non risponde distingue i casi: Mac e visore su **reti diverse** (con gli
+  indirizzi), il permesso **«Rete locale»** di macOS negato (da macOS 15 un'app senza quel
+  permesso raggiunge i visori solo via cavo), il router che **isola i dispositivi**, il visore
+  che non accetta ancora. Ognuno con il suo rimedio.
+- **Si riprova** per qualche secondo mentre il visore riavvia il suo lato di adb: subito dopo
+  il passaggio al wifi la porta rifiuta, e un solo tentativo poteva arrivare troppo presto.
+- **«Puoi staccare il cavo» solo se c'è qualcosa da staccare.** Se il passaggio non riesce,
+  l'avviso dice di lasciarlo attaccato.
+- Gli errori di adb portano il motivo che adb scrive (anche su stdout, dove lo mette
+  `adb connect`), o «nessuna risposta in N secondi» quando è il tempo a scadere — non più il
+  solo «Command failed».
+- **Cerca in rete** dice, quando lo può dire, perché non ha trovato niente: se quasi ogni
+  indirizzo risulta irraggiungibile all'istante non è la rete, è il permesso «Rete locale».
+- L'app dichiara a macOS a cosa le serve la rete locale, così la richiesta del permesso dice
+  qualcosa di comprensibile. Guida, README e guida illustrata spiegano dove riattivarlo.
+
 ## 3.4 — ottobre 2026
 
 Il programma fa una cosa: mandare i filmati ai visori e seguirli. Tutto il resto se ne va, e la

@@ -1,6 +1,6 @@
 {
   "name": "pico-multiview",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "private": true,
   "description": "Regia multi-visore per PICO 4: mosaico dei 10 schermi, avvio/chiusura app e puntatore mouse su ogni visore.",
   "type": "module",
@@ -45,7 +45,10 @@
       "identity": "-",
       "hardenedRuntime": false,
       "icon": "assets/icona/pico-multiview.icns",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "Pico MultiView si collega ai visori sulla wifi locale per mostrarli e mandare i filmati."
+      }
     },
     "asarUnpack": [
       "vendor/**"

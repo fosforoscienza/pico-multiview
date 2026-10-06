@@ -56,3 +56,10 @@ test('il runtime irrobustito resta spento, altrimenti l\'app non parte', () => {
   // framework: l'app si firmerebbe correttamente e poi non si aprirebbe.
   assert.equal(pkg.build.mac.hardenedRuntime, false);
 });
+
+test('l\'app spiega a macOS perché le serve la rete locale', () => {
+  // Da macOS 15 un'app deve avere il permesso «Rete locale» per parlare con i
+  // visori: senza, ogni collegamento wifi fallisce. La frase è quella che
+  // compare nella richiesta del permesso.
+  assert.match(pkg.build.mac.extendInfo?.NSLocalNetworkUsageDescription ?? '', /visori/);
+});
