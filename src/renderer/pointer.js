@@ -1,11 +1,8 @@
-// Input del mouse sull'anteprima grande.
+// Input del mouse (e delle dita, su iPad) sull'anteprima grande.
 //
-// Due modalità:
-//   'view'  — trascinare sposta l'inquadratura, la rotellina zooma (nessun
-//             evento viene inviato al visore: è sicuro anche mentre il
-//             visitatore sta usando l'app)
-//   'touch' — trascinare e cliccare diventano tocchi veri sullo schermo del
-//             visore, la rotellina diventa scorrimento, il tasto destro "indietro"
+// Serve solo a guardare: trascinare sposta l'inquadratura, la rotellina e la
+// pinch a due dita zoomano. Niente arriva al visore — è sicuro anche mentre il
+// visitatore lo sta usando.
 
 /**
  * Coordinate del mouse normalizzate 0..1 sul contenuto del canvas, tenendo
@@ -35,30 +32,14 @@ export function canvasPixelsPerClientPixel(canvas) {
   return scale > 0 ? 1 / scale : 1;
 }
 
-const BUTTON_PRIMARY = 1;
-const BUTTON_SECONDARY = 2;
-const BUTTON_TERTIARY = 4;
-
-function domButtonToAndroid(button) {
-  if (button === 2) return BUTTON_SECONDARY;
-  if (button === 1) return BUTTON_TERTIARY;
-  return BUTTON_PRIMARY;
-}
-
 /**
  * @param canvas canvas dell'anteprima
- * @param h.getMode  () => 'view' | 'touch'
- * @param h.onPan    (dxCanvasPx, dyCanvasPx) => void
+ * @param h.onPan    (dxClientPx, dyClientPx) => void
  * @param h.onZoom   (factor, anchorNx, anchorNy) => void
- * @param h.onTouch  (type, nx, ny, button) => void   // nx,ny sull'inquadratura
- * @param h.onScroll (nx, ny, hscroll, vscroll) => void
- * @param h.onBack   () => void
- * @param h.onIgnoredClick () => void  // premuto in 'view': niente va al visore
  * @returns funzione per staccare i listener
  */
 export function attachPreviewInput(canvas, h) {
-  let dragging = null; // 'pan' | 'touch'
-  let activeButton = BUTTON_PRIMARY;
+  let dragging = false;
   let lastClient = null;
   let pinch = null; // { distance, midX, midY }
 
@@ -91,8 +72,8 @@ export function attachPreviewInput(canvas, h) {
   };
 
   const onDown = (ev) => {
-    if (ev.button === 2) return; // il destro è "indietro", non un trascinamento
-    const { nx, ny, inside } = clientToNormalized(canvas, ev.clientX, ev.clientY);
+    if (ev.button === 2) return;
+    const { inside } = clientToNormalized(canvas, ev.clientX, ev.clientY);
     if (!inside) return;
     ev.preventDefault();
     // Prima registriamo il dito, poi proviamo a catturarlo: se la cattura
@@ -101,9 +82,9 @@ export function attachPreviewInput(canvas, h) {
     pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     capture(ev.pointerId);
 
-    // Secondo dito in modalità visuale: si passa da trascinamento a pinch.
-    if (pointers.size === 2 && h.getMode() === 'view') {
-      dragging = null;
+    // Secondo dito: si passa da trascinamento a pinch.
+    if (pointers.size === 2) {
+      dragging = false;
       canvas.classList.remove('grabbing');
       pinch = pinchState();
       return;
@@ -111,17 +92,8 @@ export function attachPreviewInput(canvas, h) {
     if (pointers.size > 1) return; // le dita in più non aprono un nuovo gesto
 
     lastClient = { x: ev.clientX, y: ev.clientY };
-    if (h.getMode() === 'touch') {
-      dragging = 'touch';
-      activeButton = domButtonToAndroid(ev.button);
-      h.onTouch('down', nx, ny, activeButton);
-    } else {
-      dragging = 'pan';
-      canvas.classList.add('grabbing');
-      // In modalità Visuale il clic non arriva al visore. Farlo sparire in
-      // silenzio sembra un guasto: meglio dirlo.
-      h.onIgnoredClick?.();
-    }
+    dragging = true;
+    canvas.classList.add('grabbing');
   };
 
   const onMove = (ev) => {
@@ -142,18 +114,13 @@ export function attachPreviewInput(canvas, h) {
 
     if (!dragging) return;
     ev.preventDefault();
-    if (dragging === 'pan') {
-      const dx = ev.clientX - lastClient.x;
-      const dy = ev.clientY - lastClient.y;
-      lastClient = { x: ev.clientX, y: ev.clientY };
-      h.onPan(dx, dy);
-      return;
-    }
-    const { nx, ny } = clientToNormalized(canvas, ev.clientX, ev.clientY);
-    h.onTouch('move', nx, ny, activeButton);
+    const dx = ev.clientX - lastClient.x;
+    const dy = ev.clientY - lastClient.y;
+    lastClient = { x: ev.clientX, y: ev.clientY };
+    h.onPan(dx, dy);
   };
 
-  const endDrag = (ev, type) => {
+  const endDrag = (ev) => {
     pointers.delete(ev.pointerId);
     release(ev.pointerId);
 
@@ -163,33 +130,16 @@ export function attachPreviewInput(canvas, h) {
       if (pointers.size < 2) pinch = null;
       return;
     }
-    if (!dragging) return;
-
-    const wasTouch = dragging === 'touch';
-    dragging = null;
+    dragging = false;
     canvas.classList.remove('grabbing');
-    if (wasTouch) {
-      const { nx, ny } = clientToNormalized(canvas, ev.clientX, ev.clientY);
-      h.onTouch(type, nx, ny, activeButton);
-    }
   };
 
-  const onUp = (ev) => endDrag(ev, 'up');
-  const onCancel = (ev) => endDrag(ev, 'cancel');
-
-  const onContextMenu = (ev) => {
-    ev.preventDefault();
-    if (h.getMode() === 'touch') h.onBack();
-  };
+  const onContextMenu = (ev) => ev.preventDefault();
 
   const onWheel = (ev) => {
     const { nx, ny, inside } = clientToNormalized(canvas, ev.clientX, ev.clientY);
     if (!inside) return;
     ev.preventDefault();
-    if (h.getMode() === 'touch') {
-      h.onScroll(nx, ny, Math.max(-1, Math.min(1, -ev.deltaX / 120)), Math.max(-1, Math.min(1, -ev.deltaY / 120)));
-      return;
-    }
     // Trackpad e mouse mandano delta molto diversi: normalizziamo.
     const step = Math.exp(-ev.deltaY / 400);
     h.onZoom(step, nx, ny);
@@ -197,16 +147,16 @@ export function attachPreviewInput(canvas, h) {
 
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointercancel', onCancel);
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
   canvas.addEventListener('contextmenu', onContextMenu);
   canvas.addEventListener('wheel', onWheel, { passive: false });
 
   return () => {
     canvas.removeEventListener('pointerdown', onDown);
     canvas.removeEventListener('pointermove', onMove);
-    canvas.removeEventListener('pointerup', onUp);
-    canvas.removeEventListener('pointercancel', onCancel);
+    canvas.removeEventListener('pointerup', endDrag);
+    canvas.removeEventListener('pointercancel', endDrag);
     canvas.removeEventListener('contextmenu', onContextMenu);
     canvas.removeEventListener('wheel', onWheel);
   };

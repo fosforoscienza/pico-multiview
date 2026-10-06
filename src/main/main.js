@@ -154,16 +154,10 @@ function applyQualityProfiles() {
 
 const thumbCache = new Map(); // percorso video -> data URL della miniatura
 const handlers = new Map(); // canale -> fn(payload, ctx) con risposta
-const signals = new Map(); // canale -> fn(payload, ctx) senza risposta
 
 function handle(channel, fn) {
   handlers.set(channel, fn);
   ipcMain.handle(channel, (_event, payload) => invokeHandler(channel, payload, LOCAL));
-}
-
-function signal(channel, fn) {
-  signals.set(channel, fn);
-  ipcMain.on(channel, (_event, payload) => fn(payload ?? {}, LOCAL));
 }
 
 async function invokeHandler(channel, payload, ctx) {
@@ -253,7 +247,6 @@ function registerHandlers() {
     applyQualityProfiles();
     return serial ?? null;
   });
-  handle('device:packages', ({ serial, includeSystem }) => manager.get(serial)?.listPackages(includeSystem));
   handle('devices:eye', async ({ serials, mode }) => {
     const results = await manager.each(serials, async (d) => {
       const crop = await d.setEyeMode(mode);
@@ -263,19 +256,8 @@ function registerHandlers() {
     config.patch({ eyeMode: mode === 'left' ? 'left' : 'full' });
     return results;
   });
-  handle('devices:pointerMode', async ({ serials, mode }) => {
-    const results = await manager.each(serials, async (d) => d.setPointerMode(mode));
-    config.patch({ pointerMode: mode === 'trackball' ? 'trackball' : 'scrcpy' });
-    return results;
-  });
-  handle('device:diagnosePointer', ({ serial, nx, ny }) => {
-    const d = manager.get(serial);
-    if (!d) throw new Error('visore sconosciuto');
-    return d.diagnosePointer(nx ?? 0.5, ny ?? 0.5);
-  });
   handle('device:displays', ({ serial }) => manager.get(serial)?.listDisplays());
   handle('device:status', ({ serial }) => manager.get(serial)?.refreshStatus());
-  handle('devices:commonPackages', ({ serials }) => manager.commonPackages(serials));
   handle('devices:videos', ({ serials }) => manager.videoLibrary(serials));
   handle('devices:playVideo', ({ entries, fromStart, videoType }) =>
     manager.playVideoEverywhere(entries ?? [], {
@@ -310,10 +292,6 @@ function registerHandlers() {
     return thumbCache.get(path);
   });
 
-  handle('action:launch', ({ serials, package: pkg, activity }) =>
-    manager.each(serials, (d) => d.launchApp(pkg, activity)),
-  );
-  handle('action:stop', ({ serials, package: pkg }) => manager.each(serials, (d) => d.stopApp(pkg)));
   handle('action:closeForeground', ({ serials }) => manager.each(serials, (d) => d.closeForegroundApp()));
   handle('action:home', ({ serials }) => manager.each(serials, (d) => d.goHome()));
   handle('action:key', ({ serials, keycode }) => manager.each(serials, (d) => d.key(keycode)));
@@ -338,36 +316,6 @@ function registerHandlers() {
     config.patch({ remote: { ...config.data.remote, pin } });
     return remote.status;
   });
-
-  // Eventi ad alta frequenza: nessuna risposta, si buttano e via.
-  // Gli errori qui NON vanno ingoiati: un tocco che non parte è esattamente il
-  // guasto che si fatica a diagnosticare, perché dall'esterno sembra che il
-  // programma stia funzionando.
-  signal('pointer', ({ serial, type, nx, ny, button }) => {
-    const device = manager.get(serial);
-    if (!device) {
-      // Anche questo va detto: un clic che sparisce perché il visore non è nel
-      // registro è indistinguibile, da fuori, da un clic che non funziona.
-      if (type === 'down') {
-        broadcast('log', {
-          serial,
-          level: 'error',
-          message: `visore non in elenco: il clic non è stato inviato${demoList ? ' (sei in modalità dimostrativa: i visori sono finti)' : ''}`,
-        });
-      }
-      return;
-    }
-    device.pointer({ type, nx, ny, button }).catch((err) => {
-      device.log('error', `tocco non inviato: ${err.message}`);
-    });
-  });
-  signal('scroll', ({ serial, nx, ny, hscroll, vscroll }) => {
-    const device = manager.get(serial);
-    if (!device) return;
-    device.scroll({ nx, ny, hscroll, vscroll }).catch((err) => {
-      device.log('error', `scorrimento non inviato: ${err.message}`);
-    });
-  });
 }
 
 function wireRemote() {
@@ -376,13 +324,9 @@ function wireRemote() {
 
   remote.on('command', async (client, message) => {
     const ctx = { clientId: client.id };
-    if (message?.t === 'invoke') {
-      const result = await invokeHandler(message.channel, message.payload, ctx);
-      remote.send(client, 'reply', { id: message.id, ...result });
-      return;
-    }
-    const fn = signals.get(message?.t);
-    if (fn) fn(message.payload ?? {}, ctx);
+    if (message?.t !== 'invoke') return;
+    const result = await invokeHandler(message.channel, message.payload, ctx);
+    remote.send(client, 'reply', { id: message.id, ...result });
   });
 
   remote.on('client-disconnected', (client) => {

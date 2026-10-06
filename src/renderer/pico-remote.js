@@ -98,11 +98,6 @@ function invoke(channel, payload) {
   });
 }
 
-/** Comandi senza risposta: se il socket è chiuso si perdono, ed è giusto così. */
-function signal(type, payload) {
-  if (connected) socket.send(JSON.stringify({ t: type, payload }));
-}
-
 const pico = {
   ...costruisciApi(invoke),
   remote: {
@@ -114,8 +109,6 @@ const pico = {
     newPin: () => Promise.reject(new Error('gestibile solo dal Mac')),
   },
   isRemote: true,
-  pointer: (payload) => signal('pointer', payload),
-  scroll: (payload) => signal('scroll', payload),
   on(event, handler) {
     if (!listeners.has(event)) listeners.set(event, new Set());
     listeners.get(event).add(handler);

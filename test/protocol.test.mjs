@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  ACTION,
-  BUTTON,
   KEYCODE,
   PACKET_HEADER_SIZE,
   SCRCPY_CONTROL,
@@ -11,50 +9,9 @@ import {
   encodeBackOrScreenOn,
   encodeKeyPress,
   encodeKeycode,
-  encodeScroll,
-  encodeTouch,
   parsePacketHeader,
-  toFixedPoint16,
-  toFixedPointSigned16,
 } from '../src/shared/protocol.js';
 import { codecStringFromConfig } from '../src/renderer/decoder.js';
-
-test('encodeTouch produce i 32 byte attesi da scrcpy', () => {
-  const buf = encodeTouch({
-    action: ACTION.DOWN,
-    pointerId: 0xffffffffffffffffn,
-    x: 100,
-    y: 200,
-    width: 1280,
-    height: 720,
-    pressure: 1,
-    actionButton: BUTTON.PRIMARY,
-    buttons: BUTTON.PRIMARY,
-  });
-  assert.equal(buf.length, 32);
-  assert.equal(buf.readUInt8(0), SCRCPY_CONTROL.INJECT_TOUCH_EVENT);
-  assert.equal(buf.readUInt8(1), ACTION.DOWN);
-  assert.equal(buf.readBigUInt64BE(2), 0xffffffffffffffffn);
-  assert.equal(buf.readInt32BE(10), 100);
-  assert.equal(buf.readInt32BE(14), 200);
-  assert.equal(buf.readUInt16BE(18), 1280);
-  assert.equal(buf.readUInt16BE(20), 720);
-  assert.equal(buf.readUInt16BE(22), 0xffff); // pressione piena
-  assert.equal(buf.readUInt32BE(24), BUTTON.PRIMARY);
-  assert.equal(buf.readUInt32BE(28), BUTTON.PRIMARY);
-});
-
-test('il rilascio azzera pressione e pulsanti', () => {
-  const buf = encodeTouch({ action: ACTION.UP, x: 1, y: 2, width: 10, height: 10 });
-  assert.equal(buf.readUInt16BE(22), 0);
-  assert.equal(buf.readUInt32BE(28), 0);
-});
-
-test('le coordinate fuori scala vengono limitate ai campi u16', () => {
-  const buf = encodeTouch({ action: ACTION.MOVE, x: 5, y: 5, width: 999999, height: -3 });
-  assert.equal(buf.readUInt16BE(18), 65535);
-  assert.equal(buf.readUInt16BE(20), 0);
-});
 
 test('encodeKeycode: 17 byte, campi in big endian', () => {
   const buf = encodeKeycode({ action: 0, keycode: KEYCODE.HOME, repeat: 0, metaState: 0 });
@@ -70,25 +27,8 @@ test('encodeKeyPress concatena pressione e rilascio', () => {
   assert.equal(buf.readUInt32BE(18), 1); // up
 });
 
-test('encodeScroll: 21 byte con scroll in virgola fissa', () => {
-  const buf = encodeScroll({ x: 10, y: 20, width: 100, height: 50, vscroll: -1 });
-  assert.equal(buf.length, 21);
-  assert.equal(buf.readUInt8(0), SCRCPY_CONTROL.INJECT_SCROLL_EVENT);
-  assert.equal(buf.readInt16BE(13), 0); // hscroll
-  assert.equal(buf.readInt16BE(15), -32768); // vscroll
-  assert.equal(buf.readInt32BE(17), 0); // buttons
-});
-
 test('encodeBackOrScreenOn: 2 byte', () => {
   assert.deepEqual([...encodeBackOrScreenOn(1)], [SCRCPY_CONTROL.BACK_OR_SCREEN_ON, 1]);
-});
-
-test('virgola fissa: saturazione ai limiti', () => {
-  assert.equal(toFixedPoint16(1), 0xffff);
-  assert.equal(toFixedPoint16(0), 0);
-  assert.equal(toFixedPoint16(2), 0xffff);
-  assert.equal(toFixedPointSigned16(1), 32767);
-  assert.equal(toFixedPointSigned16(-1), -32768);
 });
 
 test('parsePacketHeader legge flag, pts e lunghezza', () => {

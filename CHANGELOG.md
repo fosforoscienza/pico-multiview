@@ -9,6 +9,29 @@ della guida PDF.
 
 ---
 
+## 3.4 — ottobre 2026
+
+Il programma fa una cosa: mandare i filmati ai visori e seguirli. Tutto il resto se ne va, e la
+ricerca dei filmati dice finalmente perché non trova niente.
+
+- **Via l'avvio e la chiusura delle app**: il pulsante «Apri app…», la libreria, «Avvia», «Chiudi
+  questa», il rilevamento dei pacchetti installati — dall'interfaccia, dal telecomando e dal
+  processo principale. Non servivano a chi usa i visori solo per i filmati, e ogni pulsante in più
+  è un pulsante da premere per sbaglio davanti al pubblico.
+- **Via il tocco dentro il visore**: «Tocco», «Modo PICO», «Diagnostica», il tasto destro come
+  «Indietro» e le frecce come DPAD. L'anteprima serve solo a guardare: trascinare sposta,
+  rotellina e due dita zoomano, e al visore non arriva niente.
+- Restano Home, Indietro, volume, riavvio e **Chiudi app attiva**, che esce dalla finestra delle
+  app e va nella barra accanto a Indietro: serve a chiudere il lettore.
+- **«Video…» non trova nessun filmato: ora dice perché**, sotto il titolo, visore per visore —
+  quanti file e in quale memoria, «ricerca non riuscita» con il motivo, oppure «non collegato».
+  Prima diceva solo «nessun filmato trovato in Movies, Download, DCIM, Video o Pictures», cartelle
+  che la ricerca non guardava più dalla 2.2, e il motivo vero stava nel registro. Un visore
+  chiesto ma assente dall'elenco veniva saltato in silenzio: ora compare. Se non c'è niente, la
+  finestra dice anche dove copiare i filmati e in quali formati.
+- Nella Guida, nel README e nella guida illustrata: come **copiare i filmati su tutti i visori**
+  con un comando solo, e niente più app, libreria o tocco.
+
 ## 3.3 — ottobre 2026
 
 Una **Guida** dentro l'app, per chi parte da un Mac vuoto e usa i visori su una wifi senza

@@ -1106,9 +1106,9 @@
       <h3>La visuale libera</h3>
       <p>
         Nell'anteprima, <strong>tieni premuto il tasto sinistro del mouse e muovilo</strong>: ti
-        sposti dentro l'immagine del visore. La rotellina ingrandisce. In questa modalità
-        <strong>non viene inviato nessun tocco al visore</strong>, quindi puoi guardare in giro
-        mentre la persona sta usando l'applicazione, senza disturbarla.
+        sposti dentro l'immagine del visore. La rotellina ingrandisce. <strong>Al visore non arriva
+        niente</strong>: puoi guardare in giro mentre la persona sta guardando il filmato, senza
+        disturbarla.
       </p>
       <p>
         Quando ti sei spostato compare in basso la scritta <em>Visuale spostata</em> e il pulsante
@@ -1142,44 +1142,6 @@
         </p>
       </div>
 
-      <h3>La modalità Tocco</h3>
-      <p>
-        Il segmento <span class="ui">Tocco</span> nella barra dell'anteprima trasforma il mouse in
-        un dito: clic e trascinamenti diventano tocchi veri sullo schermo del visore, il tasto
-        destro fa "indietro". Serve per sbloccare qualcuno: rimetterlo nell'app giusta, chiudere un
-        avviso, tornare alla home.
-      </p>
-      <p>
-        Si riparte sempre da <span class="ui">Visuale</span> quando cambi visore, apposta: durante
-        un evento non vuoi cliccare per sbaglio dentro il visore di un visitatore.
-      </p>
-
-      <div class="callout warn">
-        <div class="callout-title">Se il clic non fa niente: accendi Modo PICO</div>
-        <p>
-          Accanto a <span class="ui">Tocco</span> compare il pulsante
-          <span class="ui">Modo PICO</span>. Serve perché un visore PICO <strong>non ha un
-          touchscreen</strong>, e scarta i tocchi che dicono di venire da uno. È esattamente il
-          motivo per cui <span class="ui">Home</span>, <span class="ui">Indietro</span> e il volume
-          funzionano lo stesso: quelli sono tasti, e li gestisce il sistema.
-        </p>
-        <p>
-          Acceso, il tocco viene inviato dichiarandolo di un'altra periferica, che i visori
-          accettano. Si preme una volta e resta.
-        </p>
-      </div>
-
-      <div class="callout">
-        <div class="callout-title">Dove il tocco funziona e dove no</div>
-        <p>
-          Sui <strong>pannelli 2D</strong> — la home di PICO, i menu di sistema, il browser, le app
-          non immersive — il puntatore funziona molto bene. Dentro le <strong>esperienze
-          immersive</strong> invece l'app ascolta i controller: il clic può non produrre nulla,
-          nemmeno con Modo PICO acceso. Lì restano validi i comandi di sistema (Home, Indietro,
-          Chiudi app attiva, avvio app, volume) e, in modalità Tocco, i tasti freccia e Invio.
-        </p>
-      </div>
-
       <h3>I comandi su tutti insieme</h3>
       <p>
         La barra in alto agisce su <strong>tutte</strong> le postazioni se non hai selezionato
@@ -1191,15 +1153,19 @@
           <th>Come</th>
         </tr>
         <tr>
-          <td>lanciare l'esperienza su tutti</td>
-          <td>nessuna selezione → scegli l'app dal menù a tendina → <span class="ui">Avvia</span></td>
+          <td>mandare un filmato a tutti</td>
+          <td><span class="ui">Video…</span> → clic sul filmato → <span class="ui">Avvia</span></td>
         </tr>
         <tr>
-          <td>lanciarla solo su alcuni</td>
-          <td>spunta le caselle delle postazioni → <span class="ui">Avvia</span></td>
+          <td>mandarlo solo ad alcuni</td>
+          <td><span class="ui">Video…</span> → clic sul filmato → togli la spunta a chi non deve partire</td>
         </tr>
         <tr>
-          <td>far uscire uno dall'app</td>
+          <td>pausa, ripresa, da capo, stop per tutti</td>
+          <td>i pulsanti sulla barra del filmato, sotto i comandi</td>
+        </tr>
+        <tr>
+          <td>chiudere il lettore su un visore</td>
           <td>il tasto <span class="ui">✕</span> sulla sua miniatura</td>
         </tr>
         <tr>
@@ -1216,12 +1182,38 @@
         </tr>
       </table>
 
-      <h3>Preparare la lista delle app</h3>
+      <h3>Mettere i filmati sui visori</h3>
       <p>
-        Clicca <span class="ui">Libreria…</span> e poi <span class="ui">Rileva app installate</span>:
-        il programma elenca le applicazioni presenti sui visori, con una spunta accanto a quelle
-        installate su tutti. Clicca quella del tuo evento, dalle un nome leggibile e salva. Da quel
-        momento la lanci ovunque con un clic.
+        Il programma manda in riproduzione i filmati che <strong>stanno già dentro i
+        visori</strong>: non li trasmette dal Mac. Vanno copiati prima, su ogni visore, in una
+        cartella qualsiasi della memoria — per esempio <code>Movies</code> o
+        <code>Download</code>, ma non dentro <code>Android</code>. Formati riconosciuti: mp4, mkv,
+        webm, mov, m4v, avi, 3gp, insv.
+      </p>
+      <p>
+        Il modo più semplice, con i visori già collegati in wifi al programma, è dal Terminale. Le
+        prime tre righe trovano <code>adb</code> (nella cartella del progetto o dentro l'app), le
+        ultime copiano il filmato su tutti i visori collegati, uno dopo l'altro. Si incollano
+        tutte insieme:
+      </p>
+      <div class="term">
+        <div class="term-bar">
+          <i style="background: #ff5f56"></i><i style="background: #ffbd2e"></i
+          ><i style="background: #27c93f"></i>
+          <span class="t">Terminale</span>
+        </div>
+        <div class="term-body"><span class="prompt">%</span> ADB=~/Documents/pico-multiview/vendor/platform-tools/adb
+<span class="prompt">%</span> APP="/Applications/Pico MultiView.app/Contents/Resources"
+<span class="prompt">%</span> [ -x "$ADB" ] || ADB="$APP/app.asar.unpacked/vendor/platform-tools/adb"
+<span class="prompt">%</span> for s in $("$ADB" devices | awk 'NR>1 &amp;&amp; $2=="device" {print $1}'); do
+    "$ADB" -s "$s" push ~/Movies/filmato.mp4 /sdcard/Movies/
+  done</div>
+      </div>
+      <p>
+        Al posto di <code>~/Movies/filmato.mp4</code> metti il tuo file: puoi anche trascinarlo
+        dal Finder dentro la finestra del Terminale, e il percorso si scrive da solo. Sulla wifi
+        un filmato lungo ci mette qualche minuto per visore; col cavo USB è molto più veloce.
+        Poi, nel programma, <span class="ui">Video…</span> → <span class="ui">Rileggi i file</span>.
       </p>
 
       <!-- ================================================== PARTE 5 -->
@@ -1276,9 +1268,7 @@
           <h4>I gesti</h4>
           <p>
             <strong>Un dito</strong> trascina la visuale. <strong>Due dita</strong> pizzicano per
-            ingrandire. Il pulsante con la faccia riporta sulla visuale del visitatore. In modalità
-            <span class="ui">Tocco</span> il tuo dito diventa il dito del visitatore sullo schermo
-            del visore.
+            ingrandire. Il pulsante con la faccia riporta sulla visuale del visitatore.
           </p>
         </div>
       </div>
@@ -1317,17 +1307,16 @@
         </li>
         <li><strong>Controlla le percentuali di batteria</strong> su ogni miniatura.</li>
         <li>
-          <strong>Avvia l'app dell'evento</strong> su tutti: nessuna selezione → scegli l'app →
-          <span class="ui">Avvia</span>.
+          <strong>Apri <span class="ui">Video…</span></strong> e controlla che il filmato
+          dell'evento ci sia, su tutti i visori.
         </li>
         <li>
           <strong>Se usi l'iPad</strong>, accendi il telecomando sul Mac e collegalo <em>prima</em>
           che arrivi la gente.
         </li>
         <li>
-          <strong>Ricorda che l'anteprima parte in modalità Visuale</strong>: puoi guardarti intorno
-          nel visore di un visitatore senza toccargli niente. Passa a
-          <span class="ui">Tocco</span> solo quando devi intervenire davvero.
+          <strong>L'anteprima serve solo a guardare</strong>: puoi guardarti intorno nel visore di
+          un visitatore senza toccargli niente.
         </li>
       </ul>
 
@@ -1413,17 +1402,15 @@
           <td><span class="ui">Telecomando…</span> → <span class="ui">Accendi</span>; stessa wifi</td>
         </tr>
         <tr>
-          <td>Clicco nell'anteprima e non succede niente</td>
+          <td>La finestra Video non trova nessun filmato</td>
           <td>
-            Sei in modalità <span class="ui">Visuale</span>, quella sicura, da cui si riparte a
-            ogni cambio di visore. Oppure l'app è immersiva: ascolta i controller, non lo
-            schermo
+            I filmati non sono sui visori, sono dentro la cartella <code>Android</code>, o in un
+            formato non riconosciuto. Sotto il titolo la finestra dice, visore per visore, cosa ha
+            trovato e dove ha cercato
           </td>
           <td>
-            Passa a <span class="ui">Tocco</span> — se sei in Visuale l'avviso te lo dice — e
-            accendi <span class="ui">Modo PICO</span>, il pulsante accanto. Con un'app immersiva
-            restano i comandi di sistema (Home, Indietro, Chiudi app attiva, volume); sui
-            pannelli 2D il puntatore funziona bene
+            Copia i filmati come in «Mettere i filmati sui visori», poi
+            <span class="ui">Rileggi i file</span>
           </td>
         </tr>
         <tr>
@@ -1446,7 +1433,7 @@
         nuovo e i visori lo riconosceranno subito, tutti insieme.
       </p>
       <p>
-        Per portarti dietro anche postazioni, nomi e libreria app, copia il file di configurazione:
+        Per portarti dietro anche postazioni e nomi, copia il file di configurazione:
         <code>~/Library/Application Support/pico-multiview/config.json</code>.
       </p>
 

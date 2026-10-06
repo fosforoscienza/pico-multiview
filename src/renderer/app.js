@@ -2,6 +2,7 @@
 // schermo con visuale libera, miniature sempre visibili nell'altra metà.
 
 import { formattaTempo, letturaStimata, riepilogo, statoBarra, stimaPosizione } from '../shared/playback.js';
+import { descriviRicerca } from '../shared/ricerca-video.js';
 import { TileRenderer } from './decoder.js';
 import { avviaTutorial } from './tutorial.js';
 import { Viewport } from './viewport.js';
@@ -17,11 +18,9 @@ const state = {
   unassigned: new Set(), // visori tolti dagli slot di proposito
   selected: new Set(), // selezione per i comandi di gruppo
   previewSerial: null,
-  previewMode: 'view', // 'view' (guarda) | 'touch' (tocca)
   eyeMode: 'full', // 'full' (due occhi affiancati) | 'left' (un occhio solo)
-  pointerMode: 'scrcpy', // 'scrcpy' | 'trackball' (visori PICO)
-  lastTouch: null, // ultimo punto toccato: la diagnostica riprova lì
   videos: [], // filmati trovati sui visori, raggruppati per nome
+  esitiVideo: [], // com'è andata la ricerca, visore per visore
   players: new Map(), // serial -> ultima lettura del lettore, con l'ora in cui è arrivata
   playerTimer: null,
   playerKeys: 'media', // con quali tasti si comanda il lettore del visore
@@ -129,64 +128,6 @@ async function toggleEyeMode() {
   renderEyeMode();
 }
 
-/**
- * "Modo PICO": i visori PICO non hanno un touchscreen e scartano i tocchi che
- * dicono di venirne. Questo li manda dichiarandoli di un'altra periferica, che
- * loro accettano. Vale su tutte le postazioni piene.
- */
-async function togglePointerMode() {
-  const serials = state.slots.filter(Boolean);
-  if (!serials.length) {
-    log('Nessun visore collegato.', 'error');
-    return;
-  }
-  const mode = state.pointerMode === 'trackball' ? 'scrcpy' : 'trackball';
-  const button = $('btn-pointer-mode');
-  button.disabled = true;
-  const results = await run(window.pico.devices.pointerMode(serials, mode));
-  button.disabled = false;
-  if (results === null) return;
-  state.pointerMode = mode;
-  renderPointerMode();
-  setStatus(
-    mode === 'trackball'
-      ? 'Modo PICO acceso: i tocchi vengono inviati in modo compatibile con i visori.'
-      : 'Modo PICO spento: tocchi inviati per la via normale.',
-  );
-}
-
-function renderPointerMode() {
-  const pico = state.pointerMode === 'trackball';
-  const button = $('btn-pointer-mode');
-  button.classList.toggle('is-active', pico);
-  // Hanno senso solo mentre si tocca: in Visuale non parte niente comunque.
-  const inTocco = state.previewMode === 'touch';
-  button.classList.toggle('hidden', !inTocco);
-  $('btn-diagnose').classList.toggle('hidden', !inTocco);
-}
-
-/**
- * Tocca il centro dell'anteprima provando tutte le strade, una ogni due
- * secondi, scrivendo nel registro cosa sta per mandare. Serve a smettere di
- * indovinare quale periferica finta accetta questo modello di visore: si
- * guarda il visore e si vede a quale prova reagisce.
- */
-async function diagnosePointer() {
-  const serial = state.previewSerial;
-  if (!serial) return;
-  const punto = state.lastTouch ?? state.viewport.viewToFrame(0.5, 0.5);
-  const button = $('btn-diagnose');
-  button.disabled = true;
-  if ($('log-panel').classList.contains('hidden')) $('btn-log').click();
-  setStatus(
-    state.lastTouch
-      ? 'Diagnostica sull\'ultimo punto che hai cliccato: guarda il visore e segui il registro.'
-      : 'Clicca prima il punto da provare, poi ripremi Diagnostica. Intanto provo il centro.',
-  );
-  await run(window.pico.device.diagnosePointer(serial, punto.nx, punto.ny));
-  button.disabled = false;
-}
-
 function renderEyeMode() {
   const left = state.eyeMode === 'left';
   const button = $('btn-eye');
@@ -238,20 +179,43 @@ function wireVideoMode() {
 
 async function loadVideos() {
   const serials = state.slots.filter(Boolean);
+  state.esitiVideo = [];
+  mostraEsitiVideo(null);
   if (!serials.length) {
-    $('video-status').textContent = 'Nessun visore collegato.';
+    // Visori collegati ma lasciati fuori dalle postazioni non vengono
+    // interrogati: va detto, se no sembra che non abbiano filmati.
+    $('video-status').textContent = state.devices.size
+      ? 'Nessun visore nelle postazioni: clicca una postazione vuota e assegnagli un visore.'
+      : 'Nessun visore collegato.';
     return;
   }
   $('video-refresh').disabled = true;
   $('video-status').textContent = `Cerco nei file di ${serials.length} visore/i…`;
-  const elenco = await run(window.pico.devices.videos(serials));
+  const risposta = await run(window.pico.devices.videos(serials));
   $('video-refresh').disabled = false;
-  if (elenco === null) {
+  if (risposta === null) {
     $('video-status').textContent = 'Ricerca non riuscita: guarda il registro.';
     return;
   }
-  state.videos = elenco;
+  state.videos = risposta.filmati;
+  // Il nome della postazione dice di più dell'indirizzo: è quello scritto
+  // sull'etichetta del visore.
+  state.esitiVideo = risposta.esiti.map((e) => ({ ...e, nome: shortName(e.serial) }));
   renderVideoList();
+}
+
+/** Sotto il titolo: i visori da guardare, e cosa fare se non c'è niente. */
+function mostraEsitiVideo(descrizione) {
+  const lista = $('video-esiti');
+  lista.replaceChildren();
+  for (const riga of descrizione?.righe ?? []) {
+    const li = document.createElement('li');
+    li.textContent = riga;
+    lista.append(li);
+  }
+  lista.classList.toggle('hidden', !lista.children.length);
+  $('video-consiglio').textContent = descrizione?.consiglio ?? '';
+  $('video-consiglio').classList.toggle('hidden', !descrizione?.consiglio);
 }
 
 function renderVideoList() {
@@ -263,16 +227,19 @@ function renderVideoList() {
   const lista = $('video-list');
   lista.replaceChildren();
 
+  // Mentre la ricerca è in corso il titolo dice «Cerco…»: non va coperto.
+  if ($('video-refresh').disabled) return;
+
+  const descrizione = descriviRicerca(state.videos.length, state.esitiVideo);
+  mostraEsitiVideo(descrizione);
   if (!state.videos.length) {
-    $('video-status').textContent = $('video-refresh').disabled
-      ? $('video-status').textContent
-      : 'Nessun filmato trovato in Movies, Download, DCIM, Video o Pictures.';
+    $('video-status').textContent = descrizione.titolo;
     return;
   }
 
   $('video-status').textContent = cerca
     ? `${trovati.length} di ${state.videos.length} filmati`
-    : `${state.videos.length} filmati trovati`;
+    : descrizione.titolo;
 
   for (const video of trovati) {
     const riga = document.createElement('button');
@@ -578,8 +545,6 @@ function selectForPreview(serial) {
   if (!card) return;
 
   state.previewSerial = serial;
-  state.previewMode = 'view'; // si riparte sempre dalla modalità sicura
-  state.lastTouch = null;
   state.viewport = new Viewport();
   card.renderer.onPaint = drawPreview;
   card.el.classList.add('previewing');
@@ -648,49 +613,14 @@ function updatePreviewChrome() {
   $('preview-overlay').textContent = message ?? '';
   $('preview-overlay').classList.toggle('hidden', message === null);
 
-  const touch = state.previewMode === 'touch';
-  $('mode-view').classList.toggle('is-active', !touch);
-  $('mode-touch').classList.toggle('is-active', touch);
-  $('touch-warning').classList.toggle('hidden', !touch);
-  renderPointerMode();
-  $('preview').classList.toggle('mode-touch', touch);
-  $('preview-hint').textContent = touch
-    ? 'Il clic tocca lo schermo del visore · tasto destro = Indietro · rotellina = scorrimento'
-    : 'Trascina per guardarti intorno · rotellina per zoomare · nessun tocco viene inviato al visore';
+  $('preview-hint').textContent =
+    'Trascina per guardarti intorno · rotellina per zoomare · niente arriva al visore';
 
   const home = state.viewport.isHome;
   $('btn-recenter').classList.toggle('is-active', !home);
   const badge = $('view-badge');
-  // Mentre è esposto l'avviso "il clic non arriva al visore" non lo copriamo:
-  // trascinando, questa funzione viene richiamata di continuo.
-  if (badge.classList.contains('avviso')) return;
   badge.classList.toggle('hidden', home);
   badge.textContent = `Visuale spostata · ${state.viewport.zoomLabel}`;
-}
-
-let clicIgnoratoTimer = null;
-
-/**
- * Il clic in modalità Visuale non arriva al visore: è voluto, perché quella è
- * la modalità sicura mentre c'è qualcuno che indossa il visore. Ma se nessuno
- * lo dice, sembra che il programma sia rotto.
- */
-function segnalaClicIgnorato() {
-  const badge = $('view-badge');
-  badge.classList.remove('hidden');
-  badge.textContent = 'Sei in Visuale: il clic non arriva al visore — passa a Tocco';
-  badge.classList.add('avviso');
-  clearTimeout(clicIgnoratoTimer);
-  clicIgnoratoTimer = setTimeout(scartaClicIgnorato, 2600);
-}
-
-function scartaClicIgnorato() {
-  clearTimeout(clicIgnoratoTimer);
-  clicIgnoratoTimer = null;
-  const badge = $('view-badge');
-  if (!badge.classList.contains('avviso')) return;
-  badge.classList.remove('avviso');
-  updatePreviewChrome();
 }
 
 function panPreview(dxClient, dyClient) {
@@ -710,44 +640,14 @@ function recenterPreview() {
 
 function wirePreview() {
   attachPreviewInput($('preview-canvas'), {
-    getMode: () => state.previewMode,
     onPan: panPreview,
     onZoom: (factor, nx, ny) => {
       state.viewport.zoomBy(factor, nx, ny);
       drawPreview();
       updatePreviewChrome();
     },
-    onTouch: (type, nx, ny, button) => {
-      if (!state.previewSerial) return;
-      const point = state.viewport.viewToFrame(nx, ny);
-      // La diagnostica riprova su quest'ultimo punto: è quello che l'operatore
-      // stava cercando di premere, non il centro di un'inquadratura spostata.
-      if (type === 'down') state.lastTouch = point;
-      window.pico.pointer({ serial: state.previewSerial, type, nx: point.nx, ny: point.ny, button });
-    },
-    onScroll: (nx, ny, hscroll, vscroll) => {
-      if (!state.previewSerial) return;
-      const point = state.viewport.viewToFrame(nx, ny);
-      window.pico.scroll({ serial: state.previewSerial, nx: point.nx, ny: point.ny, hscroll, vscroll });
-    },
-    onBack: () => {
-      if (state.previewSerial) run(window.pico.actions.key([state.previewSerial], state.keycodes.BACK));
-    },
-    onIgnoredClick: segnalaClicIgnorato,
   });
 
-  $('mode-view').addEventListener('click', () => {
-    state.previewMode = 'view';
-    scartaClicIgnorato();
-    updatePreviewChrome();
-  });
-  $('mode-touch').addEventListener('click', () => {
-    state.previewMode = 'touch';
-    // L'avviso "sei in Visuale" non deve sopravvivere al passaggio a Tocco:
-    // resterebbe a contraddire la modalità appena scelta.
-    scartaClicIgnorato();
-    updatePreviewChrome();
-  });
   $('btn-recenter').addEventListener('click', recenterPreview);
   $('preview-close').addEventListener('click', closePreview);
 
@@ -826,80 +726,6 @@ function freeSlot(serial) {
   persistSlots();
   renderSlots();
   updateSummary();
-}
-
-// ---------------------------------------------------------------------------
-// Libreria app
-// ---------------------------------------------------------------------------
-
-function renderAppSelect() {
-  const select = $('app-select');
-  const apps = state.config?.apps ?? [];
-  const previous = select.value;
-  select.innerHTML = '';
-  if (!apps.length) {
-    const opt = document.createElement('option');
-    opt.textContent = '— libreria vuota, aggiungi un\'app —';
-    opt.value = '';
-    select.append(opt);
-  }
-  for (const app of apps) {
-    const opt = document.createElement('option');
-    opt.value = app.package;
-    opt.dataset.activity = app.activity ?? '';
-    opt.textContent = app.name;
-    select.append(opt);
-  }
-  if (previous) select.value = previous;
-  $('btn-launch').disabled = !apps.length;
-  $('btn-stop').disabled = !apps.length;
-}
-
-function renderAppsList() {
-  const list = $('apps-list');
-  list.innerHTML = '';
-  for (const [i, app] of (state.config?.apps ?? []).entries()) {
-    const li = document.createElement('li');
-    li.innerHTML = '<strong></strong><span class="pkg"></span><button class="icon-btn" title="Rimuovi">✕</button>';
-    li.querySelector('strong').textContent = app.name;
-    li.querySelector('.pkg').textContent = app.activity ? `${app.package}/${app.activity}` : app.package;
-    li.querySelector('button').addEventListener('click', async () => {
-      const apps = [...state.config.apps];
-      apps.splice(i, 1);
-      state.config = await window.pico.config.patch({ apps });
-      renderAppsList();
-      renderAppSelect();
-    });
-    list.append(li);
-  }
-  if (!list.children.length) list.innerHTML = '<li class="muted">Nessuna app in libreria.</li>';
-}
-
-async function detectApps() {
-  const box = $('detect-result');
-  box.textContent = 'Rilevamento in corso…';
-  const found = await run(window.pico.devices.commonPackages(targetSerials()));
-  if (!found) return;
-  box.innerHTML = '';
-  if (!found.length) {
-    box.textContent = 'Nessun pacchetto trovato.';
-    return;
-  }
-  const title = document.createElement('p');
-  title.className = 'muted';
-  title.textContent = 'Clicca un pacchetto per aggiungerlo alla libreria (✓ = presente su tutti i visori):';
-  box.append(title);
-  for (const item of found) {
-    const btn = document.createElement('button');
-    btn.className = 'chip';
-    btn.textContent = `${item.onAll ? '✓ ' : `(${item.count}/${item.total}) `}${item.package}`;
-    btn.addEventListener('click', () => {
-      $('app-package').value = item.package;
-      $('app-name').value = item.package.split('.').pop();
-      $('app-name').focus();
-    });
-    box.append(btn);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1076,8 +902,6 @@ function wireUi() {
   $('btn-usb').addEventListener('click', doAdoptUsb);
   $('btn-sync').addEventListener('click', () => run(window.pico.devices.sync(), 'Elenco aggiornato.'));
   $('btn-eye').addEventListener('click', toggleEyeMode);
-  $('btn-pointer-mode').addEventListener('click', togglePointerMode);
-  $('btn-diagnose').addEventListener('click', diagnosePointer);
 
   // Il giro guidato: i passi stanno qui, accanto ai pulsanti che raccontano,
   // così quando un pulsante cambia si vede subito che va cambiato anche il
@@ -1126,13 +950,6 @@ function wireUi() {
           '«Da capo», «Stop». La spunta «dall\'inizio» governa se un filmato riparte da zero.',
       },
       {
-        selettore: '#btn-open-apps',
-        titolo: 'Apri app…',
-        testo:
-          'Le app installate sui visori: si scelgono dalla libreria, si avviano e si chiudono da qui. ' +
-          'Niente da scaricare sul computer: sono già dentro i visori.',
-      },
-      {
         selettore: '#slots',
         titolo: 'Le postazioni',
         testo:
@@ -1162,9 +979,6 @@ function wireUi() {
       },
     ]),
   );
-
-  $('btn-open-apps').addEventListener('click', () => $('apps-command-modal').classList.remove('hidden'));
-  $('apps-command-close').addEventListener('click', () => $('apps-command-modal').classList.add('hidden'));
 
   $('btn-video').addEventListener('click', openVideoModal);
   $('video-close').addEventListener('click', () => $('video-modal').classList.add('hidden'));
@@ -1228,26 +1042,6 @@ function wireUi() {
     updateSelectionCount();
   });
 
-  const selectedApp = () => {
-    const opt = $('app-select').selectedOptions[0];
-    if (!opt?.value) return null;
-    return { package: opt.value, activity: opt.dataset.activity || null };
-  };
-
-  $('btn-launch').addEventListener('click', async () => {
-    const app = selectedApp();
-    if (!app) return;
-    const serials = targetSerials();
-    setStatus(`Avvio ${app.package} su ${serials.length} visore/i…`);
-    reportBatch(await run(window.pico.actions.launch(serials, app.package, app.activity)), 'Avvio app');
-  });
-
-  $('btn-stop').addEventListener('click', async () => {
-    const app = selectedApp();
-    if (!app) return;
-    reportBatch(await run(window.pico.actions.stop(targetSerials(), app.package)), 'Chiusura app');
-  });
-
   $('btn-close-fg').addEventListener('click', async () =>
     reportBatch(await run(window.pico.actions.closeForeground(targetSerials())), 'Chiusura app attiva'),
   );
@@ -1265,30 +1059,6 @@ function wireUi() {
     if (!serials.length) return;
     if (!confirm(`Riavviare ${serials.length} visore/i? Torneranno disponibili dopo circa un minuto.`)) return;
     reportBatch(await run(window.pico.actions.reboot(serials)), 'Riavvio');
-  });
-
-  $('btn-apps').addEventListener('click', () => {
-    renderAppsList();
-    $('detect-result').innerHTML = '';
-    $('apps-modal').classList.remove('hidden');
-  });
-  $('apps-close').addEventListener('click', () => $('apps-modal').classList.add('hidden'));
-  $('btn-detect').addEventListener('click', detectApps);
-
-  $('app-form').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const app = {
-      id: crypto.randomUUID(),
-      name: $('app-name').value.trim(),
-      package: $('app-package').value.trim(),
-      activity: $('app-activity').value.trim() || null,
-    };
-    state.config = await window.pico.config.patch({ apps: [...(state.config.apps ?? []), app] });
-    $('app-name').value = '';
-    $('app-package').value = '';
-    $('app-activity').value = '';
-    renderAppsList();
-    renderAppSelect();
   });
 
   $('device-save').addEventListener('click', saveDeviceModal);
@@ -1348,7 +1118,7 @@ function wireUi() {
 function onKeyDown(ev) {
   if (ev.target.matches('input, select, textarea')) return;
 
-  const openModal = ['add-modal', 'apps-modal', 'device-modal', 'remote-modal', 'video-modal', 'guide-modal'].find(
+  const openModal = ['add-modal', 'device-modal', 'remote-modal', 'video-modal', 'guide-modal'].find(
     (id) => !$(id).classList.contains('hidden'),
   );
   if (ev.key === 'Escape') {
@@ -1359,28 +1129,7 @@ function onKeyDown(ev) {
   }
   if (openModal || !state.previewSerial) return;
 
-  const K = state.keycodes;
-  if (state.previewMode === 'touch') {
-    const keycode = {
-      ArrowUp: K.DPAD_UP,
-      ArrowDown: K.DPAD_DOWN,
-      ArrowLeft: K.DPAD_LEFT,
-      ArrowRight: K.DPAD_RIGHT,
-      Enter: K.DPAD_CENTER,
-      Backspace: K.BACK,
-    }[ev.key];
-    if (keycode != null) {
-      ev.preventDefault();
-      // Anche i tasti vanno tracciati: sono l'altra metà del comando a
-      // distanza, e finora un tasto che non arrivava era indistinguibile da un
-      // tasto che il visore ignora.
-      log(`tasto ${ev.key} → keycode ${keycode}`, 'info', state.previewSerial);
-      run(window.pico.actions.key([state.previewSerial], keycode));
-    }
-    return;
-  }
-
-  // Modalità visuale: le frecce spostano l'inquadratura, "0" torna sul visitatore.
+  // Le frecce spostano l'inquadratura, "0" torna sul visitatore.
   const step = 60;
   const pan = {
     ArrowUp: [0, step],
@@ -1513,15 +1262,10 @@ async function boot() {
   state.playerKeys = info.config.playerKeys ?? 'media';
   state.profiliLettore = info.playerProfiles ?? {};
   state.videoMode = info.config.videoMode ?? 'auto';
-  // Sui visori dove il tocco non arriva, il segmento «Tocco» è solo un modo
-  // per cliccare a vuoto: si nasconde e resta la visuale.
-  if (!info.config.touchControls) $('mode-touch').classList.add('hidden');
   state.videoModes = info.videoModes ?? {};
   state.eyeMode = info.config.eyeMode === 'left' ? 'left' : 'full';
-  state.pointerMode = info.config.pointerMode === 'trackball' ? 'trackball' : 'scrcpy';
 
   renderEyeMode();
-  renderAppSelect();
   renderBrand(info.brand);
   renderRemoteStatus(info.remote);
   log(`adb: ${info.adbPath} · scrcpy-server v${info.scrcpyVersion} · reti: ${info.subnets.join(', ') || 'n/d'}`);

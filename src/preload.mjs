@@ -32,8 +32,6 @@ contextBridge.exposeInMainWorld('pico', {
     newPin: () => invoke('remote:newPin'),
   },
   isRemote: false,
-  pointer: (payload) => ipcRenderer.send('pointer', payload),
-  scroll: (payload) => ipcRenderer.send('scroll', payload),
   on(event, handler) {
     if (!EVENTS.includes(event)) throw new Error(`evento non consentito: ${event}`);
     const listener = (_e, payload) => handler(payload);

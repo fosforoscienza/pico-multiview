@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { parseDisplaySize } from '../src/main/apps.js';
 import { spiegaLogScrcpy } from '../src/main/device.js';
-import { framePointToScreen, leftEyeCrop, parseCrop, visiblePoint } from '../src/shared/protocol.js';
+import { leftEyeCrop } from '../src/shared/protocol.js';
 
 // Un visore disegna due immagini affiancate, una per occhio. Chiedergli solo la
 // metà sinistra rende l'immagine leggibile ovunque — anteprima e miniature — e
@@ -58,95 +58,4 @@ test('gli altri messaggi passano intatti', () => {
   const passa = 'INFO: Device: [PICO] A8110 (Android 12)';
   assert.equal(spiegaLogScrcpy(passa), passa);
   assert.equal(spiegaLogScrcpy(null), '');
-});
-
-// --- dal punto sull'immagine al pixel sullo schermo del visore ---
-//
-// Il comando `input`, che usiamo sui PICO, non sa niente del rimpicciolimento
-// del video né del ritaglio: vuole i pixel veri dello schermo. Sbagliare questa
-// conversione significa cliccare da un'altra parte, che è peggio di non
-// cliccare affatto.
-
-test('senza ritaglio il punto si spalma su tutto lo schermo', () => {
-  const schermo = { width: 3840, height: 1080 };
-  assert.deepEqual(framePointToScreen(0, 0, schermo), { x: 0, y: 0 });
-  assert.deepEqual(framePointToScreen(1, 1, schermo), { x: 3840, y: 1080 });
-  assert.deepEqual(framePointToScreen(0.5, 0.5, schermo), { x: 1920, y: 540 });
-});
-
-test('con l\'occhio singolo il punto resta nella metà ritagliata', () => {
-  // Il centro di ciò che si vede è il centro dell'occhio sinistro, cioè un
-  // quarto dello schermo: non la sua metà.
-  const schermo = { width: 3840, height: 1080 };
-  assert.deepEqual(framePointToScreen(0.5, 0.5, schermo, '1920:1080:0:0'), { x: 960, y: 540 });
-  assert.deepEqual(framePointToScreen(1, 0.5, schermo, '1920:1080:0:0'), { x: 1920, y: 540 });
-});
-
-test('un ritaglio spostato porta con sé il suo scostamento', () => {
-  const schermo = { width: 3840, height: 1080 };
-  assert.deepEqual(framePointToScreen(0, 0, schermo, '1920:1080:1920:0'), { x: 1920, y: 0 });
-});
-
-test('i punti fuori bordo vengono riportati dentro', () => {
-  const schermo = { width: 1000, height: 500 };
-  assert.deepEqual(framePointToScreen(-0.4, 1.9, schermo), { x: 0, y: 500 });
-});
-
-test('senza la dimensione dello schermo non si inventa un punto', () => {
-  // Meglio un errore leggibile che un tocco a caso in mezzo alla sala.
-  assert.equal(framePointToScreen(0.5, 0.5, null), null);
-  assert.equal(framePointToScreen(0.5, 0.5, { width: 0, height: 500 }), null);
-});
-
-test('un ritaglio scritto male viene ignorato invece di sballare il clic', () => {
-  const schermo = { width: 1000, height: 500 };
-  assert.deepEqual(framePointToScreen(0.5, 0.5, schermo, 'boh'), { x: 500, y: 250 });
-  assert.deepEqual(framePointToScreen(0.5, 0.5, schermo, '0:0:0:0'), { x: 500, y: 250 });
-});
-
-test('parseCrop legge le quattro misure', () => {
-  assert.deepEqual(parseCrop('1920:1080:0:0'), { width: 1920, height: 1080, x: 0, y: 0 });
-  assert.deepEqual(parseCrop(' 800:600:10:20 '), { width: 800, height: 600, x: 10, y: 20 });
-  assert.equal(parseCrop(null), null);
-  assert.equal(parseCrop('1920:1080'), null);
-});
-
-// --- il punto riportato sulla porzione che si vede davvero ---
-//
-// Serve per mandare un tocco a uno schermo diverso da quello catturato: lì le
-// coordinate dello schermo stereo non hanno senso. Sbagliarle significa cadere
-// fuori dal pannello, e la prova sembrerebbe fallita per la periferica invece
-// che per le coordinate.
-
-test('su una cattura stereoscopica la metà sinistra diventa tutto', () => {
-  const stereo = { width: 3840, height: 1920 };
-  // Il centro dell'occhio sinistro (nx 0.25) è il centro di ciò che si vede.
-  assert.deepEqual(visiblePoint(0.25, 0.5, stereo), { nx: 0.5, ny: 0.5 });
-  assert.deepEqual(visiblePoint(0, 0, stereo), { nx: 0, ny: 0 });
-  assert.deepEqual(visiblePoint(0.5, 1, stereo), { nx: 1, ny: 1 });
-});
-
-test('oltre l\'occhio sinistro non si va', () => {
-  const stereo = { width: 3840, height: 1920 };
-  assert.deepEqual(visiblePoint(0.9, 0.5, stereo), { nx: 1, ny: 0.5 });
-});
-
-test('con il ritaglio il fotogramma è già la porzione visibile', () => {
-  // "Un occhio" acceso: non va raddoppiato una seconda volta.
-  const stereo = { width: 3840, height: 1920 };
-  assert.deepEqual(visiblePoint(0.5, 0.5, stereo, '1920:1920:0:0'), { nx: 0.5, ny: 0.5 });
-});
-
-test('una cattura piatta resta com\'è', () => {
-  const piatto = { width: 1920, height: 1080 };
-  assert.deepEqual(visiblePoint(0.25, 0.5, piatto), { nx: 0.25, ny: 0.5 });
-});
-
-test('il punto per un altro schermo si calcola sulla sua misura', () => {
-  // Il caso che questo evita: mandare 960,960 (schermo stereo) a un pannello
-  // 1280×720, dove la y cadrebbe fuori e non toccherebbe niente.
-  const stereo = { width: 3840, height: 1920 };
-  const pannello = { width: 1280, height: 720 };
-  const v = visiblePoint(0.25, 0.5, stereo);
-  assert.deepEqual(framePointToScreen(v.nx, v.ny, pannello), { x: 640, y: 360 });
 });

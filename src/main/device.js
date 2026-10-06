@@ -1,26 +1,11 @@
-// Un visore: stato, mirroring (scrcpy oppure screencap), puntatore, comandi app.
+// Un visore: stato, mirroring (scrcpy oppure screencap), comandi e filmati.
 
 import { EventEmitter } from 'node:events';
 
 import * as apps from './apps.js';
 import { adbTry, delay, shellBinary } from './adb.js';
 import { ScrcpySession, dimenticaJar } from './scrcpy-session.js';
-import {
-  ACTION,
-  BUTTON,
-  KEYCODE,
-  POINTER_ID_MOUSE,
-  encodeBackOrScreenOn,
-  encodeKeyPress,
-  encodeScroll,
-  encodeTouch,
-  framePointToScreen,
-  leftEyeCrop,
-  visiblePoint,
-} from '../shared/protocol.js';
-
-// La periferica finta da cui dichiariamo di far arrivare i tocchi sui PICO.
-const TRACKBALL = 'trackball';
+import { KEYCODE, encodeBackOrScreenOn, encodeKeyPress, leftEyeCrop } from '../shared/protocol.js';
 
 /**
  * Traduce i messaggi di scrcpy che l'operatore può incontrare davvero, perché
@@ -82,22 +67,8 @@ export class Device extends EventEmitter {
     this.reconnectTimer = null;
     this.screencapTimer = null;
     this.screencapIntervalMs = config.screencapIntervalMs ?? 700;
-    this.pointerDown = false;
-    // Come far arrivare il tocco: 'scrcpy' (canale di controllo) oppure
-    // 'trackball' (comando `input`, dichiarando un'altra periferica). Serve
-    // perché i visori PICO non hanno un touchscreen e scartano gli eventi che
-    // dicono di venirne.
-    this.pointerMode = config.pointerMode ?? 'scrcpy';
-    this.screen = null; // dimensione vera dello schermo, letta alla bisogna
     this.connecting = false; // una connessione alla volta: due si pestano i piedi
     this.disposed = false;
-  }
-
-  /** Dimensione dello schermo del visore, chiesta una volta e tenuta da parte. */
-  async screenSize() {
-    if (this.screen) return this.screen;
-    this.screen = await apps.displaySize(this.serial, this.displayId);
-    return this.screen;
   }
 
   get displayName() {
@@ -118,7 +89,6 @@ export class Device extends EventEmitter {
       crop: this.crop,
       displayId: this.displayId,
       quality: this.quality,
-      pointerMode: this.pointerMode,
       playing: this.playing,
     };
   }
@@ -304,96 +274,8 @@ export class Device extends EventEmitter {
     return crop;
   }
 
-  /**
-   * Prova a toccare lo stesso punto per tutte le strade possibili, una alla
-   * volta, annunciando ognuna **prima** di mandarla.
-   *
-   * Serve perché un visore non ha un touchscreen e ogni modello scarta o
-   * accetta cose diverse: invece di indovinare la periferica giusta, si guarda
-   * il visore mentre l'app le prova tutte e si vede a quale reagisce.
-   *
-   * Prova anche gli altri schermi: su un visore ce n'è più d'uno — quello
-   * stereo che si vede e quelli virtuali su cui girano i pannelli 2D — e un
-   * tocco mandato allo schermo sbagliato non raggiunge nessuna finestra.
-   */
-  async diagnosePointer(nx, ny) {
-    const screen = await this.screenSize();
-    const punto = framePointToScreen(nx, ny, screen, this.crop);
-    if (!punto) throw new Error('non riesco a leggere la dimensione dello schermo del visore');
-
-    const displays = await apps.listDisplays(this.serial).catch(() => []);
-    this.log(
-      'info',
-      `— diagnostica tocco — schermo ${screen.width}×${screen.height}, ritaglio ${this.crop ?? 'nessuno'}, ` +
-        `punto ${punto.x},${punto.y}, schermi visti: ${displays.join(', ') || 'nessuno'}`,
-    );
-
-    // Le prove sullo schermo catturato usano il punto già calcolato. Quelle su
-    // un ALTRO schermo no: lì le coordinate dello schermo stereo non hanno
-    // senso, e riusarle vorrebbe dire cadere fuori dal pannello senza che
-    // nessuno se ne accorga — la prova sembrerebbe fallita per la periferica.
-    const prove = [
-      { source: '', displayId: null, punto },
-      { source: TRACKBALL, displayId: null, punto },
-      { source: 'touchpad', displayId: null, punto },
-      { source: 'touchnavigation', displayId: null, punto },
-      { source: 'mouse', displayId: null, punto },
-    ];
-
-    const visibile = visiblePoint(nx, ny, screen, this.crop);
-    for (const id of displays.filter((d) => d !== this.displayId)) {
-      const misura = await apps.displaySize(this.serial, id);
-      if (!misura) {
-        this.log('info', `schermo ${id}: non riesco a leggerne la misura, lo salto`);
-        continue;
-      }
-      this.log('info', `schermo ${id}: ${misura.width}×${misura.height}`);
-      prove.push({
-        source: '',
-        displayId: id,
-        punto: framePointToScreen(visibile.nx, visibile.ny, misura),
-      });
-    }
-
-    this.log('info', 'guarda il visore: ti dirò cosa sto per mandare, una prova ogni due secondi');
-
-    const esiti = [];
-    for (const [i, prova] of prove.entries()) {
-      const comando = apps.tapCommand(prova.punto.x, prova.punto.y, prova.source, prova.displayId);
-      this.log('info', `prova ${i + 1}/${prove.length}: ${comando}`);
-      try {
-        await apps.inputTap(this.serial, prova.punto.x, prova.punto.y, prova.source, prova.displayId);
-        esiti.push({ comando, ok: true });
-      } catch (err) {
-        // Un comando rifiutato è un'informazione, non un guasto: si prosegue.
-        this.log('error', `prova ${i + 1}: ${err.message}`);
-        esiti.push({ comando, ok: false, error: err.message });
-      }
-      await delay(2000);
-    }
-
-    const passate = esiti.filter((e) => e.ok).length;
-    this.log(
-      'info',
-      `— fine diagnostica — ${passate}/${esiti.length} comandi accettati dal visore. ` +
-        'Se il visore ha reagito a una di queste, dimmi il numero della prova.',
-    );
-    return { screen, crop: this.crop, punto, displays, esiti };
-  }
-
-  /** Come far arrivare il tocco: 'scrcpy' oppure 'trackball' (visori PICO). */
-  setPointerMode(mode) {
-    this.pointerMode = mode === 'trackball' ? 'trackball' : 'scrcpy';
-    this.pointerDown = false;
-    this.emit('state', this.toJSON());
-    return this.pointerMode;
-  }
-
   async setDisplayId(displayId) {
     this.displayId = displayId;
-    // Cambiando display cambia anche la dimensione dello schermo: la misura
-    // tenuta da parte non vale più.
-    this.screen = null;
     if (this.mirror === 'scrcpy') await this.connect();
   }
 
@@ -405,132 +287,6 @@ export class Device extends EventEmitter {
     this.#clearReconnect();
     await this.#stopMirror();
     this.#setState(STATE.OFFLINE);
-  }
-
-  // -------------------------------------------------------------------------
-  // Puntatore
-  // -------------------------------------------------------------------------
-
-  #frameSize() {
-    return this.videoSize ?? { width: 1920, height: 1080 };
-  }
-
-  /**
-   * Tocco per i visori PICO, che non hanno un touchscreen e scartano gli eventi
-   * che dicono di venirne. Lo stesso gesto, dichiarato come **trackball**,
-   * viene invece accettato.
-   *
-   * Qui le coordinate vanno in pixel dello schermo, non del video: il comando
-   * `input` non sa niente né del rimpicciolimento né del ritaglio, quindi la
-   * conversione la facciamo noi.
-   */
-  async #pointerViaInput(nx, ny, type) {
-    const screen = await this.screenSize();
-    const punto = framePointToScreen(nx, ny, screen, this.crop);
-    if (!punto) {
-      this.log('error', 'non riesco a leggere la dimensione dello schermo: tocco non inviato');
-      return;
-    }
-
-    if (type === 'down') {
-      this.pointerDown = true;
-      this._dragStart = { ...punto, at: Date.now() };
-      return;
-    }
-    if (type !== 'up' || !this.pointerDown) return;
-    this.pointerDown = false;
-
-    const start = this._dragStart ?? { ...punto, at: Date.now() };
-    const dist = Math.hypot(punto.x - start.x, punto.y - start.y);
-    // Sotto una decina di pixel è un clic, non un trascinamento: distinguerli
-    // evita che un tremolio del mouse diventi uno swipe involontario.
-    if (dist < 12) {
-      await apps.inputTap(this.serial, punto.x, punto.y, TRACKBALL);
-      // Il comando esatto va nel log: se il visore non reagisce, è la prima
-      // cosa da riprovare a mano con adb per capire dove si perde.
-      this.log('info', `input ${TRACKBALL} tap ${punto.x} ${punto.y}`);
-      return;
-    }
-    await apps.inputSwipe(
-      this.serial,
-      start.x,
-      start.y,
-      punto.x,
-      punto.y,
-      Math.max(80, Date.now() - start.at),
-      TRACKBALL,
-    );
-    this.log('info', `input ${TRACKBALL} swipe ${start.x} ${start.y} ${punto.x} ${punto.y}`);
-  }
-
-  /**
-   * Evento di puntatore con coordinate normalizzate 0..1 rispetto all'immagine.
-   * type: 'down' | 'move' | 'up' | 'cancel'
-   */
-  async pointer({ type, nx, ny, button = BUTTON.PRIMARY }) {
-    const { width, height } = this.#frameSize();
-    const x = Math.max(0, Math.min(1, nx)) * width;
-    const y = Math.max(0, Math.min(1, ny)) * height;
-
-    if (this.pointerMode === 'trackball') return this.#pointerViaInput(nx, ny, type);
-
-    if (this.session && this.mirror === 'scrcpy') {
-      const action =
-        type === 'down' ? ACTION.DOWN : type === 'up' ? ACTION.UP : type === 'cancel' ? ACTION.CANCEL : ACTION.MOVE;
-      if (action === ACTION.MOVE && !this.pointerDown) return; // niente hover: non serve
-      const msg = encodeTouch({
-        action,
-        pointerId: POINTER_ID_MOUSE,
-        x,
-        y,
-        width,
-        height,
-        pressure: action === ACTION.UP || action === ACTION.CANCEL ? 0 : 1,
-        actionButton: button,
-        buttons: action === ACTION.UP || action === ACTION.CANCEL ? 0 : button,
-      });
-      const inviato = this.session.sendControl(msg);
-      // Solo l'inizio e la fine del gesto: i movimenti intermedi sono decine al
-      // secondo e sommergerebbero il registro proprio quando serve leggerlo.
-      if (action === ACTION.DOWN || action === ACTION.UP) {
-        const verso = action === ACTION.DOWN ? 'premuto' : 'rilasciato';
-        this.log(
-          inviato === false ? 'error' : 'info',
-          inviato === false
-            ? `${verso} in ${Math.round(x)},${Math.round(y)} ma il canale di controllo non lo ha accettato`
-            : `${verso} in ${Math.round(x)},${Math.round(y)} su ${width}×${height} (via scrcpy)`,
-        );
-      }
-      if (action === ACTION.DOWN) this.pointerDown = true;
-      if (action === ACTION.UP || action === ACTION.CANCEL) this.pointerDown = false;
-      return;
-    }
-
-    // Modalità screencap: emuliamo tap e swipe con "input".
-    if (type === 'down') {
-      this.pointerDown = true;
-      this._dragStart = { x, y, at: Date.now() };
-      return;
-    }
-    if (type === 'up' && this.pointerDown) {
-      this.pointerDown = false;
-      const start = this._dragStart ?? { x, y, at: Date.now() };
-      const dist = Math.hypot(x - start.x, y - start.y);
-      if (dist < 12) await apps.inputTap(this.serial, x, y);
-      else await apps.inputSwipe(this.serial, start.x, start.y, x, y, Math.max(80, Date.now() - start.at));
-    }
-  }
-
-  async scroll({ nx, ny, hscroll = 0, vscroll = 0 }) {
-    const { width, height } = this.#frameSize();
-    const x = Math.max(0, Math.min(1, nx)) * width;
-    const y = Math.max(0, Math.min(1, ny)) * height;
-    if (this.pointerMode !== 'trackball' && this.session && this.mirror === 'scrcpy') {
-      this.session.sendControl(encodeScroll({ x, y, width, height, hscroll, vscroll }));
-      return;
-    }
-    const dy = vscroll > 0 ? -300 : 300;
-    await apps.inputSwipe(this.serial, x, y, x, y + dy, 150);
   }
 
   /** Invia un keycode Android (pressione + rilascio). */
@@ -550,18 +306,6 @@ export class Device extends EventEmitter {
   // -------------------------------------------------------------------------
   // Comandi
   // -------------------------------------------------------------------------
-
-  async launchApp(pkg, activity = null) {
-    const out = await apps.launchApp(this.serial, pkg, activity);
-    this.refreshStatus(1500);
-    return out;
-  }
-
-  async stopApp(pkg) {
-    const out = await apps.stopApp(this.serial, pkg);
-    this.refreshStatus(1500);
-    return out;
-  }
 
   async closeForegroundApp() {
     const pkg = this.status.foreground ?? (await apps.foregroundPackage(this.serial));
@@ -583,10 +327,6 @@ export class Device extends EventEmitter {
   async reboot() {
     await this.#stopMirror();
     return apps.reboot(this.serial);
-  }
-
-  async listPackages(includeSystem = false) {
-    return apps.listPackages(this.serial, { includeSystem });
   }
 
   async listDisplays() {

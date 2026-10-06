@@ -141,7 +141,6 @@ export class DeviceManager extends EventEmitter {
         mirror: entry.mirror ?? 'scrcpy',
         crop: entry.crop ?? null,
         displayId: entry.displayId ?? 0,
-        pointerMode: entry.pointerMode ?? this.config.data.pointerMode ?? 'scrcpy',
         quality: this.config.data.quality.grid,
         autoReconnect: this.config.data.autoReconnect,
         screencapIntervalMs: this.config.data.screencapIntervalMs,
@@ -382,21 +381,35 @@ export class DeviceManager extends EventEmitter {
   }
 
   /**
-   * Video trovati sui visori, raggruppati per nome del file.
+   * Video trovati sui visori, raggruppati per nome del file, e l'esito della
+   * ricerca su ogni visore.
    *
    * Il raggruppamento è per **nome**, non per percorso: lo stesso filmato
    * copiato in `/sdcard/Movies` su un visore e in `/sdcard/Download` su un
    * altro è lo stesso filmato, e chi lo cerca lo cerca per nome.
+   *
+   * Gli esiti tornano all'interfaccia, non solo al registro: «nessun filmato»
+   * detto e basta non distingue un visore vuoto da una ricerca fallita o da un
+   * visore che non è nemmeno collegato, e sono tre rimedi diversi.
    */
   async videoLibrary(serials) {
-    const perDevice = await this.each(serials, (d) => apps.listVideos(d.serial));
-    const perNome = new Map();
+    // quiet: l'errore lo scrive questa funzione, con il contesto; scriverlo
+    // anche in each() lo farebbe comparire due volte.
+    const perDevice = await this.each(serials, (d) => apps.listVideos(d.serial), { quiet: true });
+    const esiti = [];
+    // Un visore chiesto ma assente dall'elenco non viene interrogato affatto:
+    // senza questa riga sparirebbe in silenzio, e il totale direbbe «0 filmati».
+    if (Array.isArray(serials)) {
+      for (const serial of serials) {
+        if (!this.devices.has(serial)) esiti.push({ serial, nome: serial, ok: false, errore: 'non collegato' });
+      }
+    }
     for (const r of perDevice) {
       const device = this.devices.get(r.serial);
-      // L'esito va scritto per ogni visore: "nessun filmato" e "la ricerca è
-      // fallita" sono due risposte diverse, e senza il registro si confondono.
+      const nome = device?.displayName ?? r.serial;
       if (!r.ok) {
         device?.log('error', `ricerca video fallita: ${r.error}`);
+        esiti.push({ serial: r.serial, nome, ok: false, errore: r.error });
         continue;
       }
       // La cartella in cui ha cercato va detta insieme al numero: «0 file» è
@@ -405,7 +418,9 @@ export class DeviceManager extends EventEmitter {
         ? ` in ${r.value.roots.join(', ')}`
         : ' (nessuna memoria da guardare: il visore non espone /sdcard)';
       device?.log('info', `ricerca video: ${r.value.paths.length} file trovati${dove}`);
+      esiti.push({ serial: r.serial, nome, ok: true, file: r.value.paths.length, radici: r.value.roots });
     }
+    const perNome = new Map();
     for (const r of perDevice) {
       if (!r.ok) continue;
       for (const percorso of r.value.paths) {
@@ -421,9 +436,10 @@ export class DeviceManager extends EventEmitter {
       }
     }
     const totale = perDevice.filter((r) => r.ok).length;
-    return [...perNome.values()]
+    const filmati = [...perNome.values()]
       .map((v) => ({ ...v, count: v.on.length, total: totale, onAll: v.on.length === totale }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'it'));
+    return { filmati, esiti };
   }
 
   /**
@@ -592,18 +608,6 @@ export class DeviceManager extends EventEmitter {
       .map((d) => ({ serial: d.serial, path: d.playing.path, videoType: d.playing.videoType ?? null }));
     if (!voci.length) throw new Error('nessun filmato in corso: mandane uno dalla finestra «Video…»');
     return this.playVideoEverywhere(voci, { fromStart: true });
-  }
-
-  /** Pacchetti presenti su TUTTI i visori indicati (utile per la libreria app). */
-  async commonPackages(serials) {
-    const perDevice = await this.each(serials, (d) => d.listPackages());
-    const ok = perDevice.filter((r) => r.ok).map((r) => r.value);
-    if (!ok.length) return [];
-    const counts = new Map();
-    for (const list of ok) for (const pkg of new Set(list)) counts.set(pkg, (counts.get(pkg) ?? 0) + 1);
-    return [...counts.entries()]
-      .map(([pkg, n]) => ({ package: pkg, onAll: n === ok.length, count: n, total: ok.length }))
-      .sort((a, b) => Number(b.onAll) - Number(a.onAll) || a.package.localeCompare(b.package));
   }
 
   startStatusPolling() {

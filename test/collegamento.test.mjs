@@ -224,7 +224,7 @@ test('maiuscole e minuscole non spezzano un filmato in due', async () => {
   }
   manager.each = async (serials, fn) =>
     Object.entries(letture).map(([serial, paths]) => ({ serial, ok: true, value: { roots: ['/sdcard'], paths } }));
-  const elenco = await manager.videoLibrary('all');
+  const { filmati: elenco } = await manager.videoLibrary('all');
   assert.equal(elenco.length, 1, 'una riga sola');
   assert.equal(elenco[0].count, 2, 'presente su entrambi i visori');
   assert.equal(elenco[0].onAll, true);

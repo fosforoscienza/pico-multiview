@@ -1,45 +1,8 @@
-// Gestione applicazioni sul visore: elenco pacchetti, avvio, chiusura,
-// app in primo piano, batteria. Tutto via "adb shell".
+// Comandi verso il visore: filmati, app in primo piano, tasti, batteria.
+// Tutto via "adb shell".
 
 import { adb, shell, adbTry, delay } from './adb.js';
-
-/** Pacchetti che non ha senso mostrare nella libreria app. */
-const SYSTEM_PREFIXES = [
-  'com.android.',
-  'com.google.',
-  'android.',
-  'com.qualcomm.',
-  'com.pico.settings',
-  'com.picovr.assistantphoneservice',
-];
-
-export function isInterestingPackage(pkg) {
-  return !SYSTEM_PREFIXES.some((p) => pkg.startsWith(p));
-}
-
-/** Elenco dei pacchetti installati dall'utente (-3 = non di sistema). */
-export async function listPackages(serial, { includeSystem = false } = {}) {
-  const out = await shell(serial, `pm list packages${includeSystem ? '' : ' -3'}`);
-  return out
-    .split('\n')
-    .map((l) => l.trim().replace(/^package:/, ''))
-    .filter(Boolean)
-    .filter((p) => includeSystem || isInterestingPackage(p))
-    .sort();
-}
-
-/**
- * Avvia un'app. Se è nota l'activity usa "am start -n", altrimenti chiede al
- * monkey di lanciare l'intent LAUNCHER del pacchetto (funziona anche quando
- * non conosciamo il nome dell'activity, come succede spesso sui visori).
- */
-export async function launchApp(serial, pkg, activity = null) {
-  if (activity) {
-    const target = activity.includes('/') ? activity : `${pkg}/${activity}`;
-    return shell(serial, `am start -n ${target}`, { timeout: 20000 });
-  }
-  return shell(serial, `monkey -p ${pkg} -c android.intent.category.LAUNCHER 1`, { timeout: 20000 });
-}
+import { VIDEO_EXTENSIONS } from '../shared/formati-video.js';
 
 export async function stopApp(serial, pkg) {
   return shell(serial, `am force-stop ${pkg}`, { timeout: 20000 });
@@ -97,42 +60,6 @@ export async function changeVolume(serial, steps) {
   return shell(serial, Array.from({ length: n }, () => `input keyevent ${key}`).join('; '));
 }
 
-/**
- * Tap/swipe di riserva quando non passiamo dal canale di controllo scrcpy.
- *
- * `source` sceglie da quale periferica finta arriva l'evento. Serve perché i
- * visori PICO **ignorano** i tocchi che dicono di venire dal touchscreen — non
- * ne hanno uno — mentre accettano gli stessi eventi dichiarati come trackball.
- */
-export async function inputTap(serial, x, y, source = '', displayId = null) {
-  return shell(serial, tapCommand(x, y, source, displayId), { timeout: 8000 });
-}
-
-/**
- * Il comando `input` per un tocco, costruito a parte perché va anche scritto
- * nel registro: se il visore non reagisce, è la riga da riprovare a mano.
- *
- * `-d` sceglie lo schermo. Su un visore ce n'è più d'uno — quello stereo che
- * si vede e quelli virtuali su cui girano i pannelli 2D — e un tocco mandato
- * allo schermo sbagliato non raggiunge nessuna finestra.
- */
-export function tapCommand(x, y, source = '', displayId = null) {
-  const parti = ['input'];
-  if (source) parti.push(source);
-  if (displayId != null) parti.push('-d', String(displayId));
-  parti.push('tap', String(Math.round(x)), String(Math.round(y)));
-  return parti.join(' ');
-}
-
-export async function inputSwipe(serial, x1, y1, x2, y2, durationMs = 120, source = '') {
-  const da = source ? `${source} ` : '';
-  return shell(
-    serial,
-    `input ${da}swipe ${Math.round(x1)} ${Math.round(y1)} ${Math.round(x2)} ${Math.round(y2)} ${Math.round(durationMs)}`,
-    { timeout: 8000 },
-  );
-}
-
 export async function inputKeyevent(serial, keycode) {
   return shell(serial, `input keyevent ${keycode}`, { timeout: 8000 });
 }
@@ -186,8 +113,8 @@ export async function listDisplays(serial) {
 // Video sui visori
 // ---------------------------------------------------------------------------
 
-/** Estensioni che un visore sa riprodurre. Il resto non ha senso mostrarlo. */
-export const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'webm', 'mov', 'm4v', 'avi', '3gp', 'insv'];
+// Le estensioni stanno in shared/: le usa anche la finestra Video.
+export { VIDEO_EXTENSIONS };
 
 /**
  * Le radici da provare, in ordine.

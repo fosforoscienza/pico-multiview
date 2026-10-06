@@ -15,10 +15,6 @@ export const DEFAULT_CONFIG = {
   // Visori collegati che l'operatore ha tolto da uno slot: restano raggiungibili
   // ma non vengono riassegnati da soli alla prima postazione libera.
   unassigned: [],
-  // Libreria app mostrata nella barra comandi.
-  apps: [
-    // { id, name, package, activity }
-  ],
   quality: {
     grid: { maxSize: 800, bitRate: 2_000_000, maxFps: 20 },
     focus: { maxSize: 1280, bitRate: 6_000_000, maxFps: 30 },
@@ -28,12 +24,6 @@ export const DEFAULT_CONFIG = {
   // Il ritaglio vero sta poi in ogni visore (devices[].crop): questo serve solo
   // a ricordare come sta il pulsante.
   eyeMode: 'full',
-  // Come far arrivare il tocco al visore:
-  // 'scrcpy'    = canale di controllo, quello normale di Android
-  // 'trackball' = comando `input`, dichiarando un'altra periferica. Sui visori
-  //               PICO serve questo: non hanno un touchscreen e scartano gli
-  //               eventi che dicono di venirne.
-  pointerMode: 'scrcpy',
   // Con quali tasti si comanda il lettore video del visore. Non è una
   // preferenza di gusto: i lettori dei visori rispondono a tasti diversi, e
   // quelli «media» — gli unici standard — su molti non fanno proprio niente.
@@ -43,10 +33,6 @@ export const DEFAULT_CONFIG = {
   // Resta in configurazione perché in un evento i filmati sono tutti dello
   // stesso tipo: scelto una volta, vale per la giornata.
   videoMode: 'auto',
-  // Il segmento «Tocco» dell'anteprima. Sui visori dove il tocco non arriva è
-  // solo un modo per cliccare a vuoto davanti al pubblico: spento finché non
-  // si sceglie di mostrarlo (touchControls: true in questo file).
-  touchControls: false,
   // Telecomando da iPad: server spento finché non lo accendi tu.
   remote: { enabled: false, port: 8788, pin: null },
   autoConnect: true,

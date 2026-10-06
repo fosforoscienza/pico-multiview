@@ -4,8 +4,9 @@ Regia da Mac per una flotta di **PICO 4**: dieci postazioni da riempire, l'antep
 visore selezionato su metà schermo e le miniature di tutti gli altri sull'altra metà, così non
 perdi mai di vista la sala.
 
-Nato per gli eventi: dieci visori in mano al pubblico, una persona che li governa da un
-portatile senza toglierli dalla testa a nessuno.
+Nato per gli eventi: dieci visori in mano al pubblico, una persona che manda i filmati a tutti
+insieme da un portatile e li segue senza toglierli dalla testa a nessuno. Fa questo e basta:
+avviare o comandare altre app sui visori non è suo mestiere.
 
 ![Anteprima e miniature](docs/screenshot.png)
 
@@ -23,25 +24,19 @@ e a più risoluzione, a destra le miniature di tutti gli altri, sempre vive. Ogn
 cliccabile: passi da un visore all'altro con un clic.
 
 **Visuale libera.** Nell'anteprima, tieni premuto il tasto sinistro e muovi il mouse per
-spostarti dentro l'immagine del visore; la rotellina zooma. In questa modalità **non viene
-inviato nessun tocco al visore**: puoi guardare in giro mentre il visitatore sta usando l'app,
-senza disturbarlo.
+spostarti dentro l'immagine del visore; la rotellina zooma. **Al visore non arriva niente**:
+puoi guardare in giro mentre il visitatore sta guardando il filmato, senza disturbarlo.
 
 **Il pulsante con la faccia** 🙂 riporta l'inquadratura esattamente su quello che sta guardando
 chi indossa il visore. Si accende da solo quando ti sei spostato, così sai sempre se stai
 guardando la visuale del visitatore o una tua. Scorciatoia da tastiera: `0`.
 
-**Modo PICO.** Accanto a `Tocco` compare un pulsante `Modo PICO`. Serve perché un visore PICO non
-ha un touchscreen e scarta i tocchi normali: acceso, il tocco viene inviato in un modo che i
-visori accettano. Resta memorizzato.
+**Filmati.** **Video…** cerca i filmati nella memoria dei visori e li manda in riproduzione su
+tutti quelli che ce l'hanno, nello stesso momento; la barra del filmato li mette in pausa, li
+riporta da capo o li ferma.
 
-**Modalità Tocco.** Il segmento `Tocco` nella barra dell'anteprima trasforma il mouse in un dito:
-clic e trascinamenti diventano tocchi veri sullo schermo del visore, la rotellina scorre, il
-tasto destro fa "indietro". Si riparte sempre da `Visuale` quando cambi visore: durante un evento
-non vuoi cliccare per sbaglio nel visore di un visitatore.
-
-**Comandi di gruppo.** Avvia un'app, chiudi quella in primo piano, torna alla home, volume,
-riavvio: su una selezione (le caselle sulle miniature) o su tutte le postazioni.
+**Comandi di gruppo.** Home, Indietro, chiudi l'app in primo piano, volume, riavvio: su una
+selezione (le caselle sulle miniature) o su tutte le postazioni.
 
 **Telecomando da iPad.** Il Mac può servire la stessa identica interfaccia sulla wifi: apri Safari
 sull'iPad e ti ritrovi postazioni, anteprima e comandi, con i gesti al posto del mouse — un dito
@@ -71,12 +66,6 @@ Per un vero sguardo indipendente a 360° servirebbe una seconda telecamera **den
 (un piccolo componente Unity/Unreal che pubblica una view di regia). Se l'esperienza dell'evento
 è vostra, è la strada giusta: questa app è già pronta a mostrarne il flusso.
 
-Nelle **app immersive** vale lo stesso discorso per il tocco: l'app ascolta i controller, non il
-touchscreen, quindi il clic può non produrre nulla. Restano sempre validi i comandi di sistema
-(Home, Indietro, Chiudi app attiva, avvio app, volume) e, in modalità Tocco, i tasti freccia +
-Invio che diventano eventi DPAD. Sui **pannelli 2D** — home di PICO, menu di sistema, browser,
-app 2D — il puntatore funziona invece molto bene.
-
 ---
 
 ## Comandare tutto dall'iPad
@@ -97,8 +86,7 @@ telecomando che ti porti in giro per la sala.
 Funziona uguale da iPhone o da un secondo portatile: è una normale pagina web.
 
 **I gesti.** Un dito trascina l'inquadratura, due dita pizzicano per zoomare, il pulsante con la
-faccia riporta sulla visuale del visitatore. In modalità **Tocco** il dito diventa il dito del
-visitatore sullo schermo del visore.
+faccia riporta sulla visuale del visitatore.
 
 **Da sapere:**
 
@@ -370,11 +358,23 @@ isolano i client non vanno).
 Accendi i visori e apri l'app: le postazioni si ricollegano da sole. Se qualcuno manca, premi
 **Cerca in rete** (o clicca la sua postazione → **Cerca in rete**).
 
-### Prepara la libreria app
+### Metti i filmati sui visori
 
-**Libreria…** nella barra comandi → **Rileva app installate**: l'app elenca i pacchetti presenti
-sui visori (✓ = presente su tutti). Clicca quello dell'esperienza, dagli un nome leggibile e
-salva. Da quel momento lo lanci ovunque con **Avvia**.
+Il programma manda in riproduzione i filmati che **stanno già dentro i visori**: non li trasmette
+dal Mac. Vanno copiati prima, in una cartella qualsiasi della memoria (per esempio `Movies`), ma
+non dentro `Android`, che la ricerca salta. Con i visori collegati al programma, su tutti insieme:
+
+```bash
+ADB=~/Documents/pico-multiview/vendor/platform-tools/adb
+APP="/Applications/Pico MultiView.app/Contents/Resources"
+[ -x "$ADB" ] || ADB="$APP/app.asar.unpacked/vendor/platform-tools/adb"
+for s in $("$ADB" devices | awk 'NR>1 && $2=="device" {print $1}'); do
+  "$ADB" -s "$s" push ~/Movies/filmato.mp4 /sdcard/Movies/
+done
+```
+
+Poi **Video…** → **Rileggi i file**. Se un visore non ha il filmato, la finestra lo dice sotto il
+titolo, visore per visore.
 
 ## Su una wifi senza internet
 
@@ -400,13 +400,10 @@ nell'app, leggibile senza connessione.
 
 | Voglio… | Come |
 |---|---|
-| lanciare l'esperienza su tutti | **Apri app…** → scegli l'app → **Avvia** |
-| lanciarla solo su alcuni | spunta le caselle delle postazioni → **Avvia** |
 | vedere bene cosa fa una persona | clicca la sua miniatura → anteprima grande |
 | guardarmi intorno nella sua visuale | trascina nell'anteprima, rotellina per zoomare |
 | tornare a quello che vede lei | pulsante **Visuale visitatore** (o tasto `0`) |
-| aiutarla a cliccare | segmento **Tocco** (nascosto di default: `touchControls: true` in `config.json` per mostrarlo) |
-| far uscire uno dall'app | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
+| chiudere il lettore su un visore | **✕** sulla sua miniatura, o **Chiudi app attiva** nell'anteprima |
 | rimettere tutti alla home | **Home** senza selezione |
 | controllare le batterie | la percentuale su ogni miniatura (rossa sotto il 20%) |
 | mandare un filmato a tutti | **Video…** → scegli il file → **conferma** → parte su tutti quelli che ce l'hanno, **sempre dall'inizio** |
@@ -473,7 +470,7 @@ Una riga `PlaybackState {state=3, position=…}` vuol dire che la barra funzione
 
 Qualità, intervallo delle istantanee e altre preferenze stanno nel file di configurazione:
 `~/Library/Application Support/pico-multiview/config.json`. È anche il file da copiare per
-spostare postazioni, nomi e libreria app su un altro computer.
+spostare postazioni e nomi su un altro computer.
 
 ## Guida per chi parte da zero
 
@@ -499,20 +496,22 @@ Guida-Installazione-Mac.pdf    la Guida dell'app in PDF (generata da npm run gui
 assets/brand/                  logo Brown Enterprises (bianco e nero)
 assets/icona/                  icona del visore VR (sorgente SVG + PNG)
 src/
-  shared/protocol.js       codifica dei messaggi di controllo scrcpy (tocco, tasti, scroll)
+  shared/protocol.js       codifica dei messaggi di controllo scrcpy (tasti) e dell'header video
   shared/stream-parser.js  parser del flusso video (header 12B + frame Annex-B)
+  shared/formati-video.js  le estensioni dei filmati che si cercano sui visori
+  shared/ricerca-video.js  cosa dire dopo una ricerca dei filmati, visore per visore
   main/adb.js              wrapper adb, scoperta in rete, port forwarding
   main/scrcpy-session.js   push+avvio del server, socket video e di controllo
-  main/device.js           un visore: stato, mirroring, puntatore, comandi
+  main/device.js           un visore: stato, mirroring, comandi
   main/device-manager.js   registro dei visori e operazioni di gruppo
-  main/apps.js             pm/am/dumpsys: elenco app, avvio, chiusura, batteria
+  main/apps.js             comandi adb: filmati, lettore, app in primo piano, batteria
   main/brand.js            crediti e logo, in un punto solo
   main/demo.js             visori finti e immagine sintetica per --demo
   main/server.js           telecomando: HTTP + WebSocket, accesso con PIN
   main/main.js             finestra Electron e ponte verso finestra e telecomandi
   renderer/viewport.js     telecamera virtuale: visuale libera, zoom, "visuale visitatore"
   renderer/decoder.js      decodifica H.264 con WebCodecs, disegno sul canvas
-  renderer/pointer.js      mouse → spostamento visuale oppure tocchi sul visore
+  renderer/pointer.js      mouse e dita → spostamento e zoom della visuale
   renderer/pico-remote.js  stessa API della finestra, ma sopra un WebSocket
   renderer/bootstrap.js    sceglie il trasporto e avvia l'interfaccia
   renderer/app.js          postazioni, anteprima, comandi
@@ -548,30 +547,16 @@ in `src/main/scrcpy-session.js` alla versione scaricata in `scripts/fetch-deps.m
 la metà sinistra, e la vedi così anche nelle miniature. Se hai aggiunto altri visori dopo averlo
 premuto, ripremilo — vale su quelli collegati in quel momento.
 
-**Il clic sullo schermo non fa niente, ma i pulsanti funzionano** → nell'ordine in cui capita:
-
-1. sei in modalità **Visuale**, quella sicura, da cui si riparte a ogni cambio di visore. Il clic
-   lì non viene inviato di proposito, e l'app te lo dice con un avviso: passa a **Tocco**;
-2. accendi **Modo PICO**, il pulsante accanto a *Tocco*. Un visore PICO **non ha un touchscreen**
-   e scarta i tocchi che dicono di venirne — ed è esattamente il motivo per cui Home, Indietro e
-   volume funzionano lo stesso: quelli sono tasti, li gestisce il sistema. Con Modo PICO acceso
-   il tocco viene inviato dichiarandolo di un'altra periferica, che i PICO accettano;
-3. l'app sul visore è **immersiva**: ascolta i controller, e nessun tocco la raggiunge comunque.
-   Restano i comandi di sistema. Sui pannelli 2D — home di PICO, menu, browser — il puntatore
-   funziona;
-4. nel pannello **Log** compare «il visore ha rifiutato il tocco»: la misura dell'immagine non
-   combacia più con quella dello schermo. Premi ⟳ sulla miniatura.
-
-**Diagnostica.** Se dopo Modo PICO il clic ancora non fa niente, premi **Diagnostica**, accanto
-a *Modo PICO*: tocca il centro dell'anteprima provando tutte le strade — touchscreen, trackball,
-touchpad, touchnavigation, mouse, e ogni altro schermo del visore — una ogni due secondi,
-annunciando nel registro cosa sta per mandare. Guarda il visore: se reagisce a una delle prove,
-il numero di quella prova dice quale strada funziona su quel modello.
+**«Video…» non trova nessun filmato** → sotto il titolo la finestra dice, visore per visore, quanti
+file ha trovato e in quale memoria, oppure perché non ha potuto cercare. «Nessun file video»: il
+filmato non è su quel visore, sta dentro `Android`, o ha un formato non riconosciuto (mp4, mkv,
+webm, mov, m4v, avi, 3gp, insv) — vedi [Metti i filmati sui visori](#metti-i-filmati-sui-visori).
+«Non collegato»: il visore non risponde, **Cerca in rete**. «Nessun visore nelle postazioni»: la
+ricerca guarda solo i visori assegnati a una postazione.
 
 **Come leggere il Log.** Il pulsante **Log** in basso a sinistra apre il registro. Dentro ci sono
 **Svuota** e **Copia**: svuota, fai la prova, copia — ottieni le righe di quel gesto e basta.
-Ogni clic ne lascia una, anche quando non parte: dove è stato premuto, con quale strada, e il
-comando esatto inviato al visore, che è la prima cosa da riprovare a mano se non reagisce.
+Ogni comando ne lascia una, anche quando non va a buon fine, con il motivo.
 
 **Video a scatti con 10 visori** → abbassa `quality.grid.maxSize` (es. 640) e `maxFps` (es. 12)
 in `config.json`: dieci flussi video su una wifi affollata sono la parte più fragile del sistema.
@@ -629,7 +614,8 @@ gli altri telecomandi, oppure abbassa la qualità delle miniature.
 
 - Servono i permessi di debug ADB su ogni visore: preparazione da fare una volta, ma va fatta.
 - La visuale libera si muove dentro il fotogramma catturato, non oltre (vedi sopra).
-- Il tocco non sostituisce i controller nelle app immersive.
+- Dal Mac non si tocca dentro il visore: l'anteprima serve a guardare, i comandi sono Home,
+  Indietro, chiudi app, volume e i filmati.
 - Niente audio: lo streaming è solo video, di proposito (serve banda per dieci flussi).
 - Il telecomando richiede che il Mac resti acceso: è lui a parlare con i visori.
 - Testato per dieci visori su una rete dedicata; su wifi molto affollate conviene una rete a parte.

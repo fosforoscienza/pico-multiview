@@ -79,14 +79,22 @@ griglia resta quella anche dopo aver chiuso l'app.
 Suggerimento: attacca un'etichetta fisica con lo stesso nome sul visore. Quando qualcuno chiama,
 sapere *quale* riquadro guardare vale più di qualsiasi funzione software.
 
-## 5. Prepara la libreria app
+## 5. Metti i filmati sui visori
 
-**Libreria…** nella barra comandi → **Rileva app installate**: l'app elenca i pacchetti presenti
-sui visori (con ✓ quelli presenti su tutti). Clicca quello dell'esperienza, dai un nome leggibile
-e salva. Da quel momento lo lanci ovunque con **Avvia**.
+Il programma manda in riproduzione i filmati che **stanno già dentro i visori**: non li trasmette
+dal Mac. Copiali in una cartella qualsiasi della memoria del visore (per esempio `Movies`), ma non
+dentro `Android`, che la ricerca salta. Con i visori collegati, su tutti insieme:
 
-Se conosci anche l'activity puoi indicarla per un avvio più diretto; altrimenti l'app usa
-l'intent LAUNCHER del pacchetto, che va bene nella grande maggioranza dei casi.
+```bash
+ADB=~/Documents/pico-multiview/vendor/platform-tools/adb
+APP="/Applications/Pico MultiView.app/Contents/Resources"
+[ -x "$ADB" ] || ADB="$APP/app.asar.unpacked/vendor/platform-tools/adb"
+for s in $("$ADB" devices | awk 'NR>1 && $2=="device" {print $1}'); do
+  "$ADB" -s "$s" push ~/Movies/filmato.mp4 /sdcard/Movies/
+done
+```
+
+Poi nel programma **Video…** → **Rileggi i file**.
 
 ## 6. Se vuoi comandare dall'iPad
 
@@ -145,7 +153,7 @@ indossarlo, spuntare *"Consenti sempre da questo computer"* e confermare. Va fat
 dieci, ed è il motivo per cui la strada A conviene. Se la richiesta non compare, ricollega quel
 visore col cavo una volta sola e autorizza da lì.
 
-### Portarsi dietro postazioni, nomi e libreria app
+### Portarsi dietro postazioni e nomi
 
 Sono in un solo file, sul computer:
 
@@ -153,8 +161,7 @@ Sono in un solo file, sul computer:
 ~/Library/Application Support/pico-multiview/config.json
 ```
 
-Copialo sul computer nuovo (ad app chiusa) e ritrovi la stessa disposizione, gli stessi nomi e la
-stessa libreria app. Senza copiarlo il software funziona lo stesso: ritrova i visori con **Cerca
+Copialo sul computer nuovo (ad app chiusa) e ritrovi la stessa disposizione e gli stessi nomi. Senza copiarlo il software funziona lo stesso: ritrova i visori con **Cerca
 in rete**, ma le postazioni ripartono vuote.
 
 ### La scorciatoia: non installare niente
@@ -169,10 +176,9 @@ il Mac di sempre, accendi il **Telecomando** e apri l'indirizzo nel browser dell
 2. Mac sulla stessa rete, app aperta: le postazioni si ricollegano da sole
    (altrimenti **Cerca in rete**).
 3. Controlla le percentuali di batteria su ogni miniatura.
-4. **Avvia** l'app dell'evento su tutti.
-5. Ricorda che l'anteprima parte sempre in modalità **Visuale**: puoi guardarti intorno nel
-   visore di un visitatore senza toccargli niente. Passa a **Tocco** solo quando devi
-   intervenire davvero.
+4. Apri **Video…** e controlla che il filmato dell'evento ci sia, su tutti i visori.
+5. L'anteprima serve solo a guardare: puoi guardarti intorno nel visore di un visitatore senza
+   toccargli niente.
 6. Se usi l'iPad, accendi il telecomando sul Mac e collegalo prima che arrivi il pubblico.
 
 ## Se qualcosa non torna
